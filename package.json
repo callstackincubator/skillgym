@@ -1,0 +1,67 @@
+{
+  "name": "skillgym",
+  "version": "0.1.0",
+  "description": "Test your agent skills with JavaScript in a real environment",
+  "author": "Szymon Chmal",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/callstackincubator/skillgym.git"
+  },
+  "bugs": {
+    "url": "https://github.com/callstackincubator/skillgym/issues"
+  },
+  "homepage": "https://github.com/callstackincubator/skillgym#readme",
+  "keywords": [
+    "benchmark",
+    "agents",
+    "cli",
+    "codex",
+    "opencode",
+    "testing"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "exports": {
+    ".": "./dist/index.js",
+    "./cli": "./dist/cli.js"
+  },
+  "bin": {
+    "skillgym": "./bin.js"
+  },
+  "type": "module",
+  "private": false,
+  "files": [
+    "dist",
+    "bin.js"
+  ],
+  "scripts": {
+    "bench": "tsx ./index.ts",
+    "bench:help": "tsx ./index.ts help",
+    "build": "esbuild ./src/index.ts ./src/cli.ts --bundle --platform=node --format=esm --target=node20 --outdir=./dist",
+    "example:basic": "tsx ./index.ts run ./examples/basic-suite.ts",
+    "example:skill-selection": "tsx ./index.ts run ./examples/skill-selection-suite.ts",
+    "test": "vitest run",
+    "opencode:export-smoke": "tsx ./scripts/opencode-export-smoke.ts",
+    "opencode:export-repro": "tsx ./scripts/opencode-export-repro.ts"
+  },
+  "dependencies": {
+    "cli-spinners": "^3.4.0",
+    "nano-spawn": "^2.1.0",
+    "picocolors": "^1.1.1",
+    "pretty-ms": "^9.2.0",
+    "string-width": "^7.2.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.3",
+    "tsx": "^4.19.4",
+    "vitest": "^3.1.2"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "packageManager": "pnpm@9.15.3+sha512.1f79bc245a66eb0b07c5d4d83131240774642caaa86ef7d0434ab47c0d16f66b04e21e0c086eb61e62c77efc4d7f7ec071afad3796af64892fae66509173893a"
+}

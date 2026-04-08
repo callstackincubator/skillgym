@@ -1,0 +1,76 @@
+import path from "node:path";
+import { loadConfig, resolveReporterOptions, resolveRunOptions } from "../config.ts";
+import { loadReporter } from "../reporters/index.ts";
+import { createSnapshotRuntimeOptions } from "../snapshots/store.ts";
+import { executeSuite } from "../runner/execute-suite.ts";
+import { loadSuite } from "../runner/load-suite.ts";
+import { resolveEffectiveWorkspace } from "../runner/workspace.ts";
+
+export async function runCommand(options: {
+  suitePath: string;
+  cwd?: string;
+  outputDir?: string;
+  schedule?: string;
+  caseId?: string;
+  runner?: string;
+  reporter?: string;
+  reporterCwd?: string;
+  configPath?: string;
+  updateSnapshots?: boolean;
+  snapshotsPath?: string;
+}): Promise<void> {
+  const loadedConfig = await loadConfig({
+    suitePath: options.suitePath,
+    configPath: options.configPath,
+  });
+  const runOptions = resolveRunOptions(
+    {
+      cwd: options.cwd,
+      outputDir: options.outputDir,
+      schedule: options.schedule,
+    },
+    loadedConfig.config,
+  );
+  const reporterOptions = resolveReporterOptions(
+    {
+      reporter: options.reporter,
+      cwd: options.reporterCwd,
+    },
+    loadedConfig,
+  );
+  const suite = await loadSuite(options.suitePath);
+  const effectiveWorkspace = resolveEffectiveWorkspace({
+    baseCwd: path.resolve(runOptions.cwd),
+    suiteWorkspace: suite.workspace,
+    configWorkspace: loadedConfig.config.run?.workspace,
+    suiteDir: suite.dirPath,
+  });
+
+  if (options.cwd !== undefined && effectiveWorkspace.mode === "isolated") {
+    throw new Error("CLI option --cwd is only supported when the effective workspace mode is shared.");
+  }
+
+  const reporter = await loadReporter(reporterOptions.reporter, reporterOptions.cwd);
+  const snapshots = createSnapshotRuntimeOptions({
+    snapshotConfig: loadedConfig.config.snapshots,
+    updateSnapshots: options.updateSnapshots,
+    snapshotPath: options.snapshotsPath,
+    configPath: loadedConfig.filePath,
+  });
+
+  const result = await executeSuite(options.suitePath, suite.cases, {
+    cwd: path.resolve(runOptions.cwd),
+    outputDir: runOptions.outputDir,
+    schedule: runOptions.schedule,
+    caseId: options.caseId,
+    runner: options.runner,
+    config: loadedConfig.config,
+    suiteWorkspace: suite.workspace,
+    snapshots,
+    reporter,
+  });
+
+  if (result.cases.some((caseResult) => caseResult.runnerResults.some((runnerResult) => !runnerResult.passed))) {
+    throw new Error("One or more runs failed.");
+  }
+}
