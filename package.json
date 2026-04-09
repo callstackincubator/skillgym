@@ -46,6 +46,7 @@
     "build": "npm run build:runtime && npm run build:declarations",
     "build:declarations": "tsc -p ./tsconfig.build.json",
     "build:runtime": "esbuild ./src/index.ts ./src/cli.ts --bundle --platform=node --format=esm --target=node22 --outdir=./dist",
+    "prepublish": "npm run build",
     "skillgym": "tsx ./index.ts",
     "skillgym:help": "tsx ./index.ts help",
     "skillgym:example:basic": "tsx ./index.ts run ./examples/basic-suite.ts",
