@@ -78,6 +78,10 @@ export type SessionEvent =
   | { type: "skillSignal"; skill: string; signal: string; at?: string };
 ```
 
+`files.observedReads`, `files.observedSkillReads`, and `events[fileRead].path` use canonical absolute filesystem paths.
+
+When a runner emits a relative path, normalization resolves it against the best available working directory for that tool call, then falls back to the message or run cwd.
+
 ## Token semantics
 
 Preferred source order:

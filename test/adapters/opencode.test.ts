@@ -201,6 +201,47 @@ test("OpenCodeAdapter normalize sums message tokens across the exported conversa
   expect(report.usage.outputTokens).toBe(27);
   expect(report.usage.reasoningTokens).toBe(4);
   expect(report.usage.completionTokens).toBe(31);
+  expect(report.files.observedReads).toEqual(["/tmp/find-skills/SKILL.md"]);
+  expect(report.events).toEqual(expect.arrayContaining([
+    expect.objectContaining({ type: "fileRead", path: "/tmp/find-skills/SKILL.md" }),
+  ]));
+});
+
+test("OpenCodeAdapter normalize resolves relative read paths against message cwd", async () => {
+  const adapter = new OpenCodeAdapter();
+  const input = createRunInput();
+
+  const report = await adapter.normalize(input, {
+    ...createArtifacts(),
+    rawSession: {
+      info: { id: "ses_123" },
+      messages: [
+        {
+          info: {
+            role: "assistant",
+            path: {
+              cwd: "/tmp/isolated-workspace",
+              root: "/tmp/isolated-workspace",
+            },
+          },
+          parts: [
+            {
+              type: "tool",
+              tool: "read",
+              state: {
+                input: { filePath: "docs/guide.md" },
+              },
+            },
+          ],
+        },
+      ],
+    },
+  });
+
+  expect(report.files.observedReads).toEqual(["/tmp/isolated-workspace/docs/guide.md"]);
+  expect(report.events).toEqual(expect.arrayContaining([
+    expect.objectContaining({ type: "fileRead", path: "/tmp/isolated-workspace/docs/guide.md" }),
+  ]));
 });
 
 test("OpenCodeAdapter run seeds isolated runtime and auth file", async () => {

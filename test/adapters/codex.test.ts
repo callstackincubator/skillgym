@@ -107,10 +107,95 @@ test("CodexAdapter normalize extracts separate file reads from chained shell com
     ],
   });
 
-  expect(report.files.observedReads).toEqual(["README.md", "bootstrap-output.txt"]);
+  expect(report.files.observedReads).toEqual([
+    "/tmp/workspace/README.md",
+    "/tmp/workspace/bootstrap-output.txt",
+  ]);
   expect(report.events).toEqual(expect.arrayContaining([
-    expect.objectContaining({ type: "fileRead", path: "README.md" }),
-    expect.objectContaining({ type: "fileRead", path: "bootstrap-output.txt" }),
+    expect.objectContaining({ type: "fileRead", path: "/tmp/workspace/README.md" }),
+    expect.objectContaining({ type: "fileRead", path: "/tmp/workspace/bootstrap-output.txt" }),
+  ]));
+});
+
+test("CodexAdapter normalize resolves reads against function call workdir", async () => {
+  const adapter = new CodexAdapter();
+  const input = createRunInput();
+
+  const report = await adapter.normalize(input, {
+    ...createArtifacts(),
+    rawSession: [
+      {
+        timestamp: "2026-04-03T10:00:00.500Z",
+        type: "response_item",
+        payload: {
+          type: "function_call",
+          name: "exec_command",
+          call_id: "call_1",
+          arguments: JSON.stringify({
+            cmd: "sed -n '1,200p' README.md",
+            workdir: "/tmp/isolated-workspace",
+          }),
+        },
+      },
+      {
+        timestamp: "2026-04-03T10:00:01.000Z",
+        type: "response_item",
+        payload: {
+          type: "function_call_output",
+          call_id: "call_1",
+          output: "Command: /bin/zsh -lc \"sed -n '1,200p' README.md\"\nOutput: ok",
+        },
+      },
+    ],
+  });
+
+  expect(report.files.observedReads).toEqual(["/tmp/isolated-workspace/README.md"]);
+  expect(report.events).toEqual(expect.arrayContaining([
+    expect.objectContaining({ type: "fileRead", path: "/tmp/isolated-workspace/README.md" }),
+  ]));
+});
+
+test("CodexAdapter normalize falls back to turn_context cwd when workdir is missing", async () => {
+  const adapter = new CodexAdapter();
+  const input = createRunInput();
+
+  const report = await adapter.normalize(input, {
+    ...createArtifacts(),
+    rawSession: [
+      {
+        timestamp: "2026-04-03T10:00:00.250Z",
+        type: "turn_context",
+        payload: {
+          cwd: "/tmp/turn-workspace",
+        },
+      },
+      {
+        timestamp: "2026-04-03T10:00:00.500Z",
+        type: "response_item",
+        payload: {
+          type: "function_call",
+          name: "exec_command",
+          call_id: "call_1",
+          arguments: JSON.stringify({
+            cmd: "sed -n '1,200p' README.md",
+          }),
+        },
+      },
+      {
+        timestamp: "2026-04-03T10:00:01.000Z",
+        type: "response_item",
+        payload: {
+          type: "function_call_output",
+          call_id: "call_1",
+          output: "Command: /bin/zsh -lc \"sed -n '1,200p' README.md\"\nOutput: ok",
+        },
+      },
+    ],
+  });
+
+  expect(report.files.observedReads).toEqual(["/tmp/turn-workspace/README.md"]);
+  expect(report.events).toEqual(expect.arrayContaining([
+    expect.objectContaining({ type: "fileRead", path: "/tmp/turn-workspace/README.md" }),
   ]));
 });
 

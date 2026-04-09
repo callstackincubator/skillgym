@@ -2,6 +2,7 @@ import path from "node:path";
 import { copyFile, readFile } from "node:fs/promises";
 import type { OpenCodeAgentConfig, RawRunArtifacts, RunHandle, RunInput, RunnerAdapter } from "../domain/adapter.ts";
 import type { SessionEvent, SessionReport } from "../domain/session-report.ts";
+import { resolveReportedPath } from "../normalize/reported-path.ts";
 import { inferSkillsFromPaths } from "../normalize/skill-detection.ts";
 import { ensureDir, writeJson, writeText } from "../utils/fs.ts";
 import { BaseAdapter } from "./base.ts";
@@ -23,6 +24,10 @@ interface OpenCodeExport {
 interface OpenCodeMessage {
   info?: {
     role?: string;
+    path?: {
+      cwd?: string;
+      root?: string;
+    };
     tokens?: {
       total?: number;
       input?: number;
@@ -172,6 +177,7 @@ export class OpenCodeAdapter extends BaseAdapter implements RunnerAdapter {
     for (const message of messages) {
       const role = message.info?.role;
       const at = unixMsToIso(message.info?.time?.created);
+      const messageCwd = message.info?.path?.cwd ?? input.cwd;
 
       for (const part of message.parts ?? []) {
         const partAt = at ?? unixMsToIso(part.state?.time?.start);
@@ -236,7 +242,10 @@ export class OpenCodeAdapter extends BaseAdapter implements RunnerAdapter {
             events.push({ type: "command", command, at: partAt });
           }
 
-          const filePath = extractReadPath(part.tool, part.state?.input);
+          const filePath = resolveReportedPath(
+            extractReadPath(part.tool, part.state?.input),
+            resolveOpenCodePartBaseDir(part.state?.input, messageCwd),
+          );
           if (filePath !== undefined) {
             observedReads.push(filePath);
             events.push({ type: "fileRead", path: filePath, at: partAt });
@@ -520,6 +529,10 @@ function extractReadPath(tool: string, input: unknown): string | undefined {
   }
 
   return undefined;
+}
+
+function resolveOpenCodePartBaseDir(input: unknown, fallbackDir: string): string {
+  return readStringFromUnknown(input, "workdir") ?? readStringFromUnknown(input, "cwd") ?? fallbackDir;
 }
 
 function unixMsToIso(value: number | undefined): string | undefined {

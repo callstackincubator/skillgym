@@ -3,6 +3,7 @@ import { cp, readdir, readFile, stat } from "node:fs/promises";
 import os from "node:os";
 import type { CodexAgentConfig, RawRunArtifacts, RunHandle, RunInput, RunnerAdapter } from "../domain/adapter.ts";
 import type { SessionEvent, SessionReport } from "../domain/session-report.ts";
+import { resolveReportedPath } from "../normalize/reported-path.ts";
 import { inferSkillsFromPaths } from "../normalize/skill-detection.ts";
 import { ensureDir, writeText } from "../utils/fs.ts";
 import { BaseAdapter } from "./base.ts";
@@ -83,10 +84,13 @@ export class CodexAdapter extends BaseAdapter implements RunnerAdapter {
     const records = Array.isArray(artifacts.rawSession) ? artifacts.rawSession : [];
     const events: SessionEvent[] = [];
     const observedReads: string[] = [];
+    const callBaseDirs = new Map<string, string>();
     let totalTokens: number | undefined;
     let inputTokens: number | undefined;
     let outputTokens: number | undefined;
     let reasoningTokens: number | undefined;
+    let sessionCwd: string | undefined;
+    let turnCwd: string | undefined;
 
     for (const record of records) {
       if (!isRecord(record)) {
@@ -96,6 +100,14 @@ export class CodexAdapter extends BaseAdapter implements RunnerAdapter {
       const type = readString(record, "type");
       const payload = isRecord(record.payload) ? record.payload : undefined;
       const at = readString(record, "timestamp");
+
+      if (type === "session_meta") {
+        sessionCwd = readString(payload ?? {}, "cwd") ?? sessionCwd;
+      }
+
+      if (type === "turn_context") {
+        turnCwd = readString(payload ?? {}, "cwd") ?? turnCwd;
+      }
 
       if (type === "turn.completed" && isRecord(record.usage)) {
         inputTokens = readNumber(record.usage, "input_tokens") ?? inputTokens;
@@ -172,11 +184,18 @@ export class CodexAdapter extends BaseAdapter implements RunnerAdapter {
 
       if (type === "response_item" && payload?.type === "function_call") {
         const tool = readString(payload, "name") ?? readString(payload, "tool");
+        const args = parseMaybeJson(readString(payload, "arguments")) ?? payload.arguments ?? payload.args;
+        const callId = readString(payload, "call_id") ?? readString(payload, "callId");
+
+        if (callId !== undefined) {
+          callBaseDirs.set(callId, resolveCodexCallBaseDir(args, turnCwd ?? sessionCwd ?? input.cwd));
+        }
+
         if (tool !== undefined) {
           events.push({
             type: "toolCall",
             tool,
-            args: parseMaybeJson(readString(payload, "arguments")) ?? payload.arguments ?? payload.args,
+            args,
             at,
           });
         }
@@ -185,6 +204,8 @@ export class CodexAdapter extends BaseAdapter implements RunnerAdapter {
       if (type === "response_item" && payload?.type === "function_call_output") {
         const output = readString(payload, "output") ?? stringifyUnknown(payload.output ?? payload);
         const toolName = resolveCodexToolName(output);
+        const callId = readString(payload, "call_id") ?? readString(payload, "callId");
+        const baseDir = (callId === undefined ? undefined : callBaseDirs.get(callId)) ?? turnCwd ?? sessionCwd ?? input.cwd;
 
         events.push({
           type: "toolResult",
@@ -200,8 +221,13 @@ export class CodexAdapter extends BaseAdapter implements RunnerAdapter {
 
         const filePaths = extractFilePathsFromCommand(output);
         for (const filePath of filePaths) {
-          observedReads.push(filePath);
-          events.push({ type: "fileRead", path: filePath, at });
+          const resolvedPath = resolveReportedPath(filePath, baseDir);
+          if (resolvedPath === undefined) {
+            continue;
+          }
+
+          observedReads.push(resolvedPath);
+          events.push({ type: "fileRead", path: resolvedPath, at });
         }
       }
     }
@@ -435,6 +461,14 @@ function parseMaybeJson(value: string | undefined): unknown {
   } catch {
     return value;
   }
+}
+
+function resolveCodexCallBaseDir(args: unknown, fallbackDir: string): string {
+  if (!isRecord(args)) {
+    return fallbackDir;
+  }
+
+  return readString(args, "workdir") ?? readString(args, "cwd") ?? fallbackDir;
 }
 
 function resolveCodexToolName(output: string): string | undefined {

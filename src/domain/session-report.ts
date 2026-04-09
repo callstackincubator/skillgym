@@ -34,6 +34,7 @@ export interface UsageReport {
 }
 
 export interface SessionFiles {
+  /** Canonical absolute paths resolved against the best available working directory. */
   observedReads: string[];
   observedSkillReads: string[];
 }
@@ -89,6 +90,7 @@ export interface CommandEvent {
 
 export interface FileReadEvent {
   type: "fileRead";
+  /** Canonical absolute path resolved against the best available working directory. */
   path: string;
   at?: string;
 }
