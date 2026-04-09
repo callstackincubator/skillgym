@@ -215,8 +215,11 @@ export function createExecutionFailureResult(
     runner: options.runner,
     prompt: options.testCase.prompt,
     usage: {
+      inputTokens: undefined,
+      outputTokens: undefined,
+      reasoningTokens: undefined,
+      cacheTokens: undefined,
       totalTokens: undefined,
-      completionTokens: undefined,
       inputChars: options.testCase.prompt.length,
       outputChars: 0,
       reasoningChars: 0,

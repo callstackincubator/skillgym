@@ -89,6 +89,7 @@ export class CodexAdapter extends BaseAdapter implements RunnerAdapter {
     let inputTokens: number | undefined;
     let outputTokens: number | undefined;
     let reasoningTokens: number | undefined;
+    let cacheTokens: number | undefined;
     let sessionCwd: string | undefined;
     let turnCwd: string | undefined;
 
@@ -112,6 +113,7 @@ export class CodexAdapter extends BaseAdapter implements RunnerAdapter {
       if (type === "turn.completed" && isRecord(record.usage)) {
         inputTokens = readNumber(record.usage, "input_tokens") ?? inputTokens;
         outputTokens = readNumber(record.usage, "output_tokens") ?? outputTokens;
+        cacheTokens = readNumber(record.usage, "cached_input_tokens") ?? cacheTokens;
       }
 
       if (type === "item.completed" && isRecord(record.item)) {
@@ -139,6 +141,7 @@ export class CodexAdapter extends BaseAdapter implements RunnerAdapter {
         inputTokens = readNumber(usage, "input_tokens") ?? inputTokens;
         outputTokens = readNumber(usage, "output_tokens") ?? outputTokens;
         reasoningTokens = readNumber(usage, "reasoning_output_tokens") ?? reasoningTokens;
+        cacheTokens = readNumber(usage, "cached_input_tokens") ?? cacheTokens;
       }
 
       if (type === "response_item" && payload?.type === "message") {
@@ -239,18 +242,20 @@ export class CodexAdapter extends BaseAdapter implements RunnerAdapter {
     const reasoningChars = events
       .filter((event): event is Extract<SessionEvent, { type: "message" }> => event.type === "message" && event.phase === "thinking")
       .reduce((sum, event) => sum + event.text.length, 0);
-    const completionTokens =
-      outputTokens !== undefined && reasoningTokens !== undefined ? outputTokens + reasoningTokens : undefined;
+    const normalizedTotalTokens =
+      inputTokens !== undefined && outputTokens !== undefined && reasoningTokens !== undefined
+        ? inputTokens + outputTokens + reasoningTokens - (cacheTokens ?? 0)
+        : totalTokens;
 
     return {
       runner: input.runner,
       prompt: input.prompt,
       usage: {
-        totalTokens,
         inputTokens,
         outputTokens,
         reasoningTokens,
-        completionTokens,
+        cacheTokens,
+        totalTokens: normalizedTotalTokens,
         inputChars: input.prompt.length,
         outputChars: finalOutput.length,
         reasoningChars,

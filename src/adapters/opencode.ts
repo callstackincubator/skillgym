@@ -33,6 +33,10 @@ interface OpenCodeMessage {
       input?: number;
       output?: number;
       reasoning?: number;
+      cache?: {
+        write?: number;
+        read?: number;
+      };
     };
     time?: {
       created?: number;
@@ -265,21 +269,16 @@ export class OpenCodeAdapter extends BaseAdapter implements RunnerAdapter {
     const finalOutput = [...events]
       .reverse()
       .find((event): event is Extract<SessionEvent, { type: "message" }> => event.type === "message" && event.role === "assistant")?.text ?? "";
-    const completionTokens =
-      tokenUsage.outputTokens !== undefined && tokenUsage.reasoningTokens !== undefined
-        ? tokenUsage.outputTokens + tokenUsage.reasoningTokens
-        : undefined;
-
     return {
       runner: input.runner,
       sessionId: artifacts.sessionId,
       prompt: input.prompt,
       usage: {
-        totalTokens: tokenUsage.totalTokens,
         inputTokens: tokenUsage.inputTokens,
         outputTokens: tokenUsage.outputTokens,
         reasoningTokens: tokenUsage.reasoningTokens,
-        completionTokens,
+        cacheTokens: tokenUsage.cacheTokens,
+        totalTokens: tokenUsage.totalTokens,
         inputChars: input.prompt.length,
         outputChars: finalOutput.length,
         reasoningChars,
@@ -468,21 +467,23 @@ function inferAssistantPhase(text: string): "commentary" | "final" {
 }
 
 function sumOpenCodeTokenUsage(messages: OpenCodeMessage[]): {
-  totalTokens?: number;
   inputTokens?: number;
   outputTokens?: number;
   reasoningTokens?: number;
+  cacheTokens?: number;
+  totalTokens?: number;
 } {
   const totals = {
     inputTokens: 0,
     outputTokens: 0,
     reasoningTokens: 0,
+    cacheTokens: 0,
   };
-  let totalTokens: number | undefined;
   const seen = {
     inputTokens: false,
     outputTokens: false,
     reasoningTokens: false,
+    cacheTokens: false,
   };
 
   for (const message of messages) {
@@ -496,10 +497,6 @@ function sumOpenCodeTokenUsage(messages: OpenCodeMessage[]): {
       seen.inputTokens = true;
     }
 
-    if (typeof tokens.total === "number" && Number.isFinite(tokens.total)) {
-      totalTokens = Math.max(totalTokens ?? 0, tokens.total);
-    }
-
     if (typeof tokens.output === "number" && Number.isFinite(tokens.output)) {
       totals.outputTokens += tokens.output;
       seen.outputTokens = true;
@@ -509,13 +506,27 @@ function sumOpenCodeTokenUsage(messages: OpenCodeMessage[]): {
       totals.reasoningTokens += tokens.reasoning;
       seen.reasoningTokens = true;
     }
+
+    if (typeof tokens.cache?.read === "number" && Number.isFinite(tokens.cache.read)) {
+      totals.cacheTokens += tokens.cache.read;
+      seen.cacheTokens = true;
+    }
   }
 
+  const inputTokens = seen.inputTokens ? totals.inputTokens + totals.cacheTokens : undefined;
+  const outputTokens = seen.outputTokens ? totals.outputTokens : undefined;
+  const reasoningTokens = seen.reasoningTokens ? totals.reasoningTokens : undefined;
+  const cacheTokens = seen.cacheTokens ? totals.cacheTokens : undefined;
+  const totalTokens = inputTokens !== undefined && outputTokens !== undefined && reasoningTokens !== undefined
+    ? inputTokens + outputTokens + reasoningTokens - (cacheTokens ?? 0)
+    : undefined;
+
   return {
+    inputTokens,
+    outputTokens,
+    reasoningTokens,
+    cacheTokens,
     totalTokens,
-    inputTokens: seen.inputTokens ? totals.inputTokens : undefined,
-    outputTokens: seen.outputTokens ? totals.outputTokens : undefined,
-    reasoningTokens: seen.reasoningTokens ? totals.reasoningTokens : undefined,
   };
 }
 

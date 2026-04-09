@@ -6,8 +6,11 @@ export function createSessionReport(overrides: Partial<SessionReport> = {}): Ses
     runner: overrides.runner ?? createRunnerInfo("opencode", { type: "opencode", model: "openai/gpt-5" }),
     prompt: "test prompt",
     usage: {
+      inputTokens: undefined,
+      outputTokens: undefined,
+      reasoningTokens: undefined,
+      cacheTokens: undefined,
       totalTokens: undefined,
-      completionTokens: undefined,
       inputChars: 10,
       outputChars: 5,
       reasoningChars: 0,

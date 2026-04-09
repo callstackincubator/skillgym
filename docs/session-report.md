@@ -19,7 +19,7 @@ export interface SessionReport {
     inputTokens?: number;
     outputTokens?: number;
     reasoningTokens?: number;
-    completionTokens?: number;
+    cacheTokens?: number;
     inputChars: number;
     outputChars: number;
     reasoningChars: number;
@@ -89,15 +89,19 @@ Preferred source order:
 2. derived estimate from structured artifacts
 3. character counts for diagnostics only
 
-`totalTokens` should represent the runner-reported total token usage for the retry when the provider exposes that metric.
+`inputTokens` is normalized to mean gross input, including cached input when the provider reports cache separately.
 
-For OpenCode, this should come from the final cumulative `messages[].info.tokens.total` value.
+`outputTokens` is non-reasoning output.
 
-`completionTokens` is a derived metric for completion cost and is defined as:
+`reasoningTokens` is reasoning output reported by the provider.
 
-1. `outputTokens + reasoningTokens`
+`cacheTokens` is cached input reused during the run.
 
-It is only present when both `outputTokens` and `reasoningTokens` are available as numbers.
+`totalTokens` is the non-cached total used for comparisons and snapshots:
+
+1. `inputTokens + outputTokens + reasoningTokens - cacheTokens`
+
+This keeps OpenCode and Codex comparable even though the raw provider fields use different cache semantics.
 
 Snapshot enforcement uses the selected token metric directly and does not fall back to character counts when token usage is unavailable.
 

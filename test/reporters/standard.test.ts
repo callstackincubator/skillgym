@@ -89,11 +89,14 @@ test("standard reporter prints runner-grouped results and failure artifacts", as
   expect(output).toContain("Runs      4");
   expect(output).toContain("Runner: open-main");
   expect(output).toContain("Runner: code-main");
+  expect(output).toContain("case                       time           tokens in / out / reason / cache / billable");
   expect(output).toContain("✓ case-a");
   expect(output).toContain("✗ case-a");
-  expect(output).toContain("Passed runs    3/4");
+  expect(output).toContain("Passed runs   3/4");
   expect(output).toContain("75.0%");
-  expect(output).toContain("Avg tok/run   15,201");
+  expect(output).toContain("9,830 / 1,104 / 0 / 7,233 / 16,604");
+  expect(output).toContain("9,830 / 1,104 / 0 / 7,233 / 12,000");
+  expect(output).toContain("Avg billable  9,830 / 1,104 / 0 / 7,233 / 15,201");
   expect(output).toContain("Failures");
   expect(output).toContain("AssertionError: expected skill to be loaded before command execution");
   expect(output).toContain("Artifacts: .skillgym-results/run-1/case-a/code-main");
@@ -405,11 +408,11 @@ function createRunnerResult(options: {
     report: createSessionReport({
       runner: options.runner,
       usage: {
+        cacheTokens: 7_233,
         totalTokens: options.totalTokens,
         inputTokens: 9_830,
         outputTokens: 1_104,
         reasoningTokens: 0,
-        completionTokens: 1_104,
         inputChars: 10,
         outputChars: 5,
         reasoningChars: 0,
@@ -440,7 +443,10 @@ function createRunnerSummary(options: {
     passedCases: options.passedCases,
     successRate: options.passedCases / options.totalCases,
     averageDurationMs: options.averageDurationMs,
+    averageInputTokens: 9_830,
+    averageOutputTokens: 1_104,
+    averageReasoningTokens: 0,
+    averageCacheTokens: 7_233,
     averageTotalTokens: options.averageTotalTokens,
-    averageCompletionTokens: undefined,
   };
 }

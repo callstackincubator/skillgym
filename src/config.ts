@@ -30,7 +30,7 @@ export const SNAPSHOT_METRICS = [
   "inputTokens",
   "outputTokens",
   "reasoningTokens",
-  "completionTokens",
+  "cacheTokens",
 ] as const;
 
 export type SnapshotMetric = typeof SNAPSHOT_METRICS[number];

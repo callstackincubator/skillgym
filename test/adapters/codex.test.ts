@@ -78,11 +78,11 @@ test("CodexAdapter normalize uses cumulative total_token_usage metrics", async (
     ],
   });
 
-  expect(report.usage.totalTokens).toBe(76_443);
+  expect(report.usage.totalTokens).toBe(24_315);
   expect(report.usage.inputTokens).toBe(75_611);
   expect(report.usage.outputTokens).toBe(832);
   expect(report.usage.reasoningTokens).toBe(96);
-  expect(report.usage.completionTokens).toBe(928);
+  expect(report.usage.cacheTokens).toBe(52_224);
   expect(report.finalOutput).toBe("final answer");
 });
 

@@ -340,8 +340,11 @@ test("executeSuite aggregates runner summaries from case-centric results", async
       passedCases: 2,
       successRate: 1,
       averageDurationMs: 30,
+      averageInputTokens: 225,
+      averageOutputTokens: 20,
+      averageReasoningTokens: 5,
+      averageCacheTokens: 0,
       averageTotalTokens: 250,
-      averageCompletionTokens: 25,
     },
     {
       runner: { id: "code" },
@@ -349,8 +352,11 @@ test("executeSuite aggregates runner summaries from case-centric results", async
       passedCases: 1,
       successRate: 0.5,
       averageDurationMs: 60,
+      averageInputTokens: 370,
+      averageOutputTokens: 30,
+      averageReasoningTokens: undefined,
+      averageCacheTokens: 0,
       averageTotalTokens: 400,
-      averageCompletionTokens: undefined,
     },
   ]);
 });
@@ -480,6 +486,10 @@ function createRunnerResult(options: {
   reasoningTokens?: number;
   observedReads: number;
 }): RunnerResult {
+  const inputTokens = options.totalTokens === undefined
+    ? undefined
+    : options.totalTokens - options.outputTokens - (options.reasoningTokens ?? 0);
+
   return {
     runner: options.runner,
     passed: options.passed,
@@ -495,13 +505,10 @@ function createRunnerResult(options: {
       runner: options.runner,
       usage: {
         totalTokens: options.totalTokens,
-        inputTokens: 100,
+        inputTokens,
         outputTokens: options.outputTokens,
         reasoningTokens: options.reasoningTokens,
-        completionTokens:
-          options.outputTokens !== undefined && options.reasoningTokens !== undefined
-            ? options.outputTokens + options.reasoningTokens
-            : undefined,
+        cacheTokens: 0,
         inputChars: 10,
         outputChars: 5,
         reasoningChars: 0,
@@ -570,7 +577,7 @@ function createSnapshotAdapter(runner: RunnerInfo, totalTokens: number): RunnerA
           inputTokens: totalTokens,
           outputTokens: 20,
           reasoningTokens: 2,
-          completionTokens: 22,
+          cacheTokens: 0,
           inputChars: 10,
           outputChars: 5,
           reasoningChars: 0,

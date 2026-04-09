@@ -55,6 +55,9 @@ interface ReporterSymbols {
 
 const ACCENT_OPEN = "\x1b[38;5;141m";
 const ACCENT_CLOSE = "\x1b[0m";
+const RUNNER_CASE_WIDTH = 24;
+const RUNNER_TIME_WIDTH = 12;
+const SUMMARY_LABEL_WIDTH = 13;
 
 export function createStandardReporter(options: StandardReporterOptions = {}): BenchmarkReporter {
   const stdout = options.stdout ?? process.stdout;
@@ -143,8 +146,9 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
       writeLine("", stdout);
       for (const summary of event.result.runners) {
         writeLine(formatRunnerHeading(summary.runner), stdout);
+        writeLine(formatRunnerLegend(colors), stdout);
         for (const caseResult of getRunnerCases(event.result, summary.runner.id)) {
-          writeLine(formatRunnerCaseRow(caseResult.caseId, caseResult.runnerResult, symbols), stdout);
+          writeLine(formatRunnerCaseRow(caseResult.caseId, caseResult.runnerResult, symbols, accent), stdout);
         }
         writeLine("", stdout);
       }
@@ -152,23 +156,27 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
       writeLine(colors.bold("Summary"), stdout);
       writeLine("", stdout);
       writeLine(
-        `${colors.dim("Passed cases   ")}${formatRate(countPassedCases(event.result.cases), event.result.cases.length)}`,
+        formatSummaryLine("Passed cases", formatRate(countPassedCases(event.result.cases), event.result.cases.length), colors),
         stdout,
       );
       writeLine(
-        `${colors.dim("Passed runs    ")}${formatRate(countPassedRuns(event.result.cases), countTotalRuns(event.result.cases))}`,
+        formatSummaryLine("Passed runs", formatRate(countPassedRuns(event.result.cases), countTotalRuns(event.result.cases)), colors),
         stdout,
       );
       writeLine(
-        `${colors.dim("Success rate   ")}${formatPercent(countPassedRuns(event.result.cases) / Math.max(1, countTotalRuns(event.result.cases)))}`,
+        formatSummaryLine(
+          "Success rate",
+          formatPercent(countPassedRuns(event.result.cases) / Math.max(1, countTotalRuns(event.result.cases))),
+          colors,
+        ),
         stdout,
       );
       writeLine(
-        `${colors.dim("Avg tok/run   ")}${formatTokens(averageSuiteTokens(event.result))}`,
+        formatSummaryLine("Avg billable", formatTokenSummary(averageSuiteTokens(event.result), accent), colors),
         stdout,
       );
-      writeLine(`${colors.dim("Total time     ")}${formatDuration(event.result.durationMs)}`, stdout);
-      writeLine(`${colors.dim("Output dir     ")}${event.result.outputDir}`, stdout);
+      writeLine(formatSummaryLine("Total time", formatDuration(event.result.durationMs), colors), stdout);
+      writeLine(formatSummaryLine("Output dir", event.result.outputDir, colors), stdout);
 
       if (failures.length > 0) {
         writeLine("", stdout);
@@ -211,13 +219,26 @@ function formatRunnerHeading(runner: RunnerInfo): string {
   return pc.bold(`Runner: ${runner.id}`) + pc.dim(` (${runner.agent.type}${model})`);
 }
 
-function formatRunnerCaseRow(caseId: string, result: RunnerResult, symbols: ReturnType<typeof getSymbols>): string {
+function formatRunnerCaseRow(
+  caseId: string,
+  result: RunnerResult,
+  symbols: ReturnType<typeof getSymbols>,
+  accent: (value: string) => string,
+): string {
   const color = result.passed ? pc.green : pc.red;
   return [
-    color(padCell(`${result.passed ? symbols.pass : symbols.fail} ${caseId}`, 24)),
-    padCell(formatDuration(result.durationMs), 12),
-    `${formatTokens(result.report.usage.totalTokens ?? result.report.usage.completionTokens)} tok`,
+    color(padCell(`${result.passed ? symbols.pass : symbols.fail} ${caseId}`, RUNNER_CASE_WIDTH)),
+    padCell(formatDuration(result.durationMs), RUNNER_TIME_WIDTH),
+    formatTokenSummary(result.report.usage, accent),
   ].join("   ");
+}
+
+function formatRunnerLegend(colors: ReturnType<typeof pc.createColors>): string {
+  return colors.dim([
+    padCell("case", RUNNER_CASE_WIDTH),
+    padCell("time", RUNNER_TIME_WIDTH),
+    "tokens in / out / reason / cache / billable",
+  ].join("   "));
 }
 
 function formatFailureMessage(failure: FailureEntry): string {
@@ -230,6 +251,14 @@ function formatFailureMessage(failure: FailureEntry): string {
   }
 
   return `${failure.error.name}: ${failure.error.message}`;
+}
+
+function formatSummaryLine(
+  label: string,
+  value: string,
+  colors: ReturnType<typeof pc.createColors>,
+): string {
+  return `${colors.dim(padCell(label, SUMMARY_LABEL_WIDTH))} ${value}`;
 }
 
 function countPassedCases(cases: CaseResult[]): number {
@@ -248,16 +277,46 @@ function countPassedRunnerResults(caseResult: CaseResult): number {
   return caseResult.runnerResults.filter((result) => result.passed).length;
 }
 
-function averageSuiteTokens(result: SuiteRunResult): number | undefined {
-  const values = result.runners
-    .map((runner) => runner.averageTotalTokens ?? runner.averageCompletionTokens)
-    .filter((value): value is number => value !== undefined);
+function averageSuiteTokens(result: SuiteRunResult): {
+  inputTokens?: number;
+  outputTokens?: number;
+  reasoningTokens?: number;
+  cacheTokens?: number;
+  totalTokens?: number;
+} {
+  const values = result.runners;
+  return {
+    inputTokens: averageDefined(values.map((runner) => runner.averageInputTokens)),
+    outputTokens: averageDefined(values.map((runner) => runner.averageOutputTokens)),
+    reasoningTokens: averageDefined(values.map((runner) => runner.averageReasoningTokens)),
+    cacheTokens: averageDefined(values.map((runner) => runner.averageCacheTokens)),
+    totalTokens: averageDefined(values.map((runner) => runner.averageTotalTokens)),
+  };
+}
 
-  if (values.length === 0) {
+function formatTokenSummary(usage: {
+  inputTokens?: number;
+  outputTokens?: number;
+  reasoningTokens?: number;
+  cacheTokens?: number;
+  totalTokens?: number;
+}, accent?: (value: string) => string): string {
+  return [
+    formatTokens(usage.inputTokens),
+    formatTokens(usage.outputTokens),
+    formatTokens(usage.reasoningTokens),
+    formatTokens(usage.cacheTokens),
+    accent === undefined ? formatTokens(usage.totalTokens) : accent(formatTokens(usage.totalTokens)),
+  ].join(" / ");
+}
+
+function averageDefined(values: Array<number | undefined>): number | undefined {
+  const defined = values.filter((value): value is number => value !== undefined);
+  if (defined.length === 0) {
     return undefined;
   }
 
-  return values.reduce((sum, value) => sum + value, 0) / values.length;
+  return defined.reduce((sum, value) => sum + value, 0) / defined.length;
 }
 
 function getRunnerCases(

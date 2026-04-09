@@ -29,6 +29,7 @@ export interface RunnerAdapter {
 - messages
 - reasoning blocks
 - token usage
+- cache read and write counts
 - tool calls
 - timing
 - final output
@@ -53,6 +54,7 @@ export interface RunnerAdapter {
 
 `~/.codex/sessions/**/*.jsonl` contains:
 - token count events
+- cached input token counts
 - tool or function calls
 - tool outputs
 - assistant messages

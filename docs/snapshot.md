@@ -54,7 +54,7 @@ Supported metrics:
 - `inputTokens`
 - `outputTokens`
 - `reasoningTokens`
-- `completionTokens`
+- `cacheTokens`
 
 Snapshot checks require the selected token metric to be present in the normalized report. Character counts are diagnostics only and are not used as a token fallback for snapshot enforcement.
 

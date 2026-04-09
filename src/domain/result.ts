@@ -23,8 +23,11 @@ export interface RunnerSummary {
   passedCases: number;
   successRate: number;
   averageDurationMs: number;
+  averageInputTokens?: number;
+  averageOutputTokens?: number;
+  averageReasoningTokens?: number;
+  averageCacheTokens?: number;
   averageTotalTokens?: number;
-  averageCompletionTokens?: number;
 }
 
 export interface SuiteRunResult {

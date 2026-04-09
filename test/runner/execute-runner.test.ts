@@ -282,11 +282,11 @@ function createSuccessfulAdapter(
         runner,
         prompt: input.prompt,
         usage: {
+          cacheTokens: 30,
           totalTokens: usage.totalTokens,
-          inputTokens: usage.totalTokens,
+          inputTokens: usage.totalTokens === undefined ? undefined : usage.totalTokens + 30,
           outputTokens: 10,
           reasoningTokens: 2,
-          completionTokens: 12,
           inputChars: 0,
           outputChars: 0,
           reasoningChars: 0,

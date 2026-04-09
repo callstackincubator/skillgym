@@ -287,8 +287,11 @@ function summarizeRunners(caseResults: CaseResult[], runners: RunnerInfo[]): Run
     const runnerResults = caseResults
       .map((caseResult) => caseResult.runnerResults.find((result) => result.runner.id === runner.id))
       .filter((result): result is RunnerResult => result !== undefined);
+    const inputTokens = runnerResults.map((result) => result.report.usage.inputTokens).filter(isNumber);
+    const outputTokens = runnerResults.map((result) => result.report.usage.outputTokens).filter(isNumber);
+    const reasoningTokens = runnerResults.map((result) => result.report.usage.reasoningTokens).filter(isNumber);
+    const cacheTokens = runnerResults.map((result) => result.report.usage.cacheTokens).filter(isNumber);
     const totalTokens = runnerResults.map((result) => result.report.usage.totalTokens).filter(isNumber);
-    const completionTokens = runnerResults.map((result) => result.report.usage.completionTokens).filter(isNumber);
     const passedCases = runnerResults.filter((result) => result.passed).length;
 
     return {
@@ -297,8 +300,11 @@ function summarizeRunners(caseResults: CaseResult[], runners: RunnerInfo[]): Run
       passedCases,
       successRate: runnerResults.length === 0 ? 0 : passedCases / runnerResults.length,
       averageDurationMs: average(runnerResults.map((result) => result.durationMs)),
+      averageInputTokens: inputTokens.length > 0 ? average(inputTokens) : undefined,
+      averageOutputTokens: outputTokens.length > 0 ? average(outputTokens) : undefined,
+      averageReasoningTokens: reasoningTokens.length > 0 ? average(reasoningTokens) : undefined,
+      averageCacheTokens: cacheTokens.length > 0 ? average(cacheTokens) : undefined,
       averageTotalTokens: totalTokens.length > 0 ? average(totalTokens) : undefined,
-      averageCompletionTokens: completionTokens.length > 0 ? average(completionTokens) : undefined,
     };
   });
 }

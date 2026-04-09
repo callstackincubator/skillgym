@@ -99,16 +99,15 @@ The built-in `standard` reporter is optimized for polished CLI output.
 - Interactive TTY mode can show multiple live running entries at once.
 - Non-interactive mode avoids redraws and prints stable lines only.
 - Non-serial schedules print a warning because runs may overlap in the same workspace.
-- Every run prints suite metadata, one summary row per case including average total tokens per run when available, a final summary, and failure artifact paths.
+- Every run prints suite metadata, compact per-run token columns (`in`, `out`, `reason`, `cache`, `billable`) when available, a final summary, and failure artifact paths.
 - Full stack traces are not shown by default.
 
-Reporter-visible token metrics on `CaseResult` include:
+Reporter-visible token metrics on `RunnerSummary` include:
 
-- `averageTotalTokens`
+- `averageInputTokens`
 - `averageOutputTokens`
 - `averageReasoningTokens`
-- `averageCompletionTokens`
+- `averageCacheTokens`
+- `averageTotalTokens`
 
-Suite reporters can also read `SuiteRunResult.averageTotalTokensPerRun` and `SuiteRunResult.averageCompletionTokensPerRun`.
-
-`averageCompletionTokens` is derived from retry reports only when both `outputTokens` and `reasoningTokens` are available for a retry.
+`averageTotalTokens` is shown as `billable` and uses normalized non-cached totals so different runner providers stay comparable.

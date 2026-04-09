@@ -18,11 +18,11 @@ export interface SessionReport {
 }
 
 export interface UsageReport {
-  totalTokens?: number;
   inputTokens?: number;
   outputTokens?: number;
   reasoningTokens?: number;
-  completionTokens?: number;
+  cacheTokens?: number;
+  totalTokens?: number;
   inputChars: number;
   outputChars: number;
   reasoningChars: number;

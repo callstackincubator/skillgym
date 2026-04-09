@@ -74,11 +74,11 @@ test("OpenCodeAdapter collect parses export payload wrapped in extra text", asyn
   const report = await adapter.normalize(input, artifacts);
 
   expect(report.sessionId).toBe("ses_123");
-  expect(report.usage.totalTokens).toBeUndefined();
+  expect(report.usage.totalTokens).toBe(136);
   expect(report.usage.inputTokens).toBe(111);
   expect(report.usage.outputTokens).toBe(22);
   expect(report.usage.reasoningTokens).toBe(3);
-  expect(report.usage.completionTokens).toBe(25);
+  expect(report.usage.cacheTokens).toBeUndefined();
   expect(report.usage.source).toEqual({
     input: "provider",
     output: "provider",
@@ -159,6 +159,9 @@ test("OpenCodeAdapter normalize sums message tokens across the exported conversa
               input: 111,
               output: 22,
               reasoning: 3,
+              cache: {
+                read: 9_544,
+              },
             },
           },
           parts: [
@@ -183,6 +186,9 @@ test("OpenCodeAdapter normalize sums message tokens across the exported conversa
               input: 13,
               output: 5,
               reasoning: 1,
+              cache: {
+                read: 16_465,
+              },
             },
           },
           parts: [
@@ -196,11 +202,11 @@ test("OpenCodeAdapter normalize sums message tokens across the exported conversa
     },
   });
 
-  expect(report.usage.totalTokens).toBe(16_604);
-  expect(report.usage.inputTokens).toBe(124);
+  expect(report.usage.totalTokens).toBe(155);
+  expect(report.usage.inputTokens).toBe(26_133);
   expect(report.usage.outputTokens).toBe(27);
   expect(report.usage.reasoningTokens).toBe(4);
-  expect(report.usage.completionTokens).toBe(31);
+  expect(report.usage.cacheTokens).toBe(26_009);
   expect(report.files.observedReads).toEqual(["/tmp/find-skills/SKILL.md"]);
   expect(report.events).toEqual(expect.arrayContaining([
     expect.objectContaining({ type: "fileRead", path: "/tmp/find-skills/SKILL.md" }),
