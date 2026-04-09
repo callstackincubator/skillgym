@@ -1,9 +1,9 @@
 import { readdir } from "node:fs/promises";
 import path from "node:path";
-import type { RunnerConfig } from "./domain/runner.ts";
-import type { SuiteWorkspaceConfig, WorkspaceBootstrapConfig } from "./domain/test-case.ts";
-import { SCHEDULE_MODES, type ScheduleMode } from "./domain/schedule.ts";
-import { importFromPath } from "./utils/import.ts";
+import type { RunnerConfig } from "./domain/runner.js";
+import type { SuiteWorkspaceConfig, WorkspaceBootstrapConfig } from "./domain/test-case.js";
+import { SCHEDULE_MODES, type ScheduleMode } from "./domain/schedule.js";
+import { importFromPath } from "./utils/import.js";
 
 const CONFIG_FILENAMES = [
   "skillgym.config.ts",

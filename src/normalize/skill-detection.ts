@@ -1,5 +1,5 @@
 import path from "node:path";
-import type { SkillDetection } from "../domain/session-report.ts";
+import type { SkillDetection } from "../domain/session-report.js";
 
 export function inferSkillsFromPaths(paths: string[]): SkillDetection[] {
   const detections = new Map<string, SkillDetection>();

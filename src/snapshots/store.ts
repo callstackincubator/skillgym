@@ -1,9 +1,9 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import type { SnapshotConfig, SnapshotMetric } from "../config.ts";
-import type { RunnerInfo } from "../domain/runner.ts";
-import { writeJson } from "../utils/fs.ts";
-import { nowIso } from "../utils/time.ts";
+import type { SnapshotConfig, SnapshotMetric } from "../config.js";
+import type { RunnerInfo } from "../domain/runner.js";
+import { writeJson } from "../utils/fs.js";
+import { nowIso } from "../utils/time.js";
 
 export interface SnapshotEntry {
   caseId: string;

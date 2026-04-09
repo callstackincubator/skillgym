@@ -1,8 +1,8 @@
 import path from "node:path";
-import type { RawRunArtifacts, RunHandle, RunInput } from "../domain/adapter.ts";
-import { nowIso } from "../utils/time.ts";
-import { CommandTimeoutError, execFileCapture } from "../utils/process.ts";
-import { writeText } from "../utils/fs.ts";
+import type { RawRunArtifacts, RunHandle, RunInput } from "../domain/adapter.js";
+import { nowIso } from "../utils/time.js";
+import { CommandTimeoutError, execFileCapture } from "../utils/process.js";
+import { writeText } from "../utils/fs.js";
 
 export abstract class BaseAdapter {
   protected async runCommand(

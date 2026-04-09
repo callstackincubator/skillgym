@@ -2,13 +2,13 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, expect, test } from "vitest";
-import type { RawRunArtifacts, RunHandle, RunInput, RunnerAdapter } from "../../src/domain/adapter.ts";
-import type { SnapshotRuntimeOptions } from "../../src/snapshots/store.ts";
-import { executeRunner } from "../../src/runner/execute-runner.ts";
-import { createRunnerInfo } from "../../src/runner/runner-info.ts";
-import { SnapshotStore } from "../../src/snapshots/store.ts";
-import { createSessionReport } from "../helpers/session-report.ts";
-import { CommandTimeoutError } from "../../src/utils/process.ts";
+import type { RawRunArtifacts, RunHandle, RunInput, RunnerAdapter } from "../../src/domain/adapter.js";
+import type { SnapshotRuntimeOptions } from "../../src/snapshots/store.js";
+import { executeRunner } from "../../src/runner/execute-runner.js";
+import { createRunnerInfo } from "../../src/runner/runner-info.js";
+import { SnapshotStore } from "../../src/snapshots/store.js";
+import { createSessionReport } from "../helpers/session-report.js";
+import { CommandTimeoutError } from "../../src/utils/process.js";
 
 const tempDirs: string[] = [];
 

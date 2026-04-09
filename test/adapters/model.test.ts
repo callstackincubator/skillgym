@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
-import type { RunHandle, RunInput } from "../../src/domain/adapter.ts";
-import { CodexAdapter } from "../../src/adapters/codex.ts";
-import { OpenCodeAdapter } from "../../src/adapters/opencode.ts";
+import type { RunHandle, RunInput } from "../../src/domain/adapter.js";
+import { CodexAdapter } from "../../src/adapters/codex.js";
+import { OpenCodeAdapter } from "../../src/adapters/opencode.js";
 
 test("OpenCodeAdapter passes configured model to opencode run", async () => {
   const adapter = new RecordingOpenCodeAdapter({
@@ -50,6 +50,7 @@ function createRunInput(): RunInput {
       pathKey: "runner-id",
       agent: {
         type: "codex",
+        model: "gpt-5",
       },
     },
     prompt: "solve it",

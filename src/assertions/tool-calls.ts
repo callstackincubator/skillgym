@@ -1,4 +1,4 @@
-import type { SessionReport } from "../domain/session-report.ts";
+import type { SessionReport } from "../domain/session-report.js";
 import {
   assertToolCallAtLeast,
   assertToolCallAtMost,
@@ -8,8 +8,8 @@ import {
   assertToolCallOnly,
   assertToolCallSequence,
   getToolCalls,
-} from "./matchers.ts";
-import type { ToolCallAssertions } from "./types.ts";
+} from "./matchers.js";
+import type { ToolCallAssertions } from "./types.js";
 
 export const toolCallAssertions: ToolCallAssertions = {
   has(report, matcher, options) {

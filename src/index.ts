@@ -1,10 +1,10 @@
-export type { SessionReport, SessionEvent, SkillDetection } from "./domain/session-report.ts";
-export type { AgentConfig, AgentType, RunnerConfig, RunnerId, RunnerInfo } from "./domain/runner.ts";
-export type { ScheduleMode } from "./domain/schedule.ts";
-export type { TestCase, TestSuite, AssertionContext, SuiteWorkspaceConfig, WorkspaceBootstrapConfig } from "./domain/test-case.ts";
-export type { RunnerResult, CaseResult, RunnerSummary, SuiteRunResult } from "./domain/result.ts";
-export type { SkillGymConfig } from "./config.ts";
-export { loadConfig, parseConfig } from "./config.ts";
+export type { SessionReport, SessionEvent, SkillDetection } from "./domain/session-report.js";
+export type { AgentConfig, AgentType, RunnerConfig, RunnerId, RunnerInfo } from "./domain/runner.js";
+export type { ScheduleMode } from "./domain/schedule.js";
+export type { TestCase, TestSuite, AssertionContext, SuiteWorkspaceConfig, WorkspaceBootstrapConfig } from "./domain/test-case.js";
+export type { RunnerResult, CaseResult, RunnerSummary, SuiteRunResult } from "./domain/result.js";
+export type { SkillGymConfig } from "./config.js";
+export { loadConfig, parseConfig } from "./config.js";
 export type {
   BenchmarkReporter,
   CaseFinishEvent,
@@ -15,9 +15,9 @@ export type {
   SuiteErrorEvent,
   SuiteFinishEvent,
   SuiteStartEvent,
-} from "./reporters/index.ts";
-export { assert } from "./assertions/index.ts";
-export { createStandardReporter, loadReporter } from "./reporters/index.ts";
+} from "./reporters/index.js";
+export { assert } from "./assertions/index.js";
+export { createStandardReporter, loadReporter } from "./reporters/index.js";
 export type {
   AssertionOptions,
   CommandAssertions,
@@ -30,4 +30,4 @@ export type {
   SkillConfidence,
   ToolCallAssertions,
   ToolCallMatcher,
-} from "./assertions/index.ts";
+} from "./assertions/index.js";

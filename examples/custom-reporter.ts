@@ -1,4 +1,4 @@
-import type { BenchmarkReporter } from "../src/index.ts";
+import type { BenchmarkReporter } from "../src/index.js";
 
 const reporter: BenchmarkReporter = {
   onSuiteStart(event) {

@@ -2,8 +2,8 @@ import { mkdtemp, mkdir, readFile, rm, stat, utimes, writeFile } from "node:fs/p
 import os from "node:os";
 import path from "node:path";
 import { afterEach, expect, test } from "vitest";
-import { CodexAdapter } from "../../src/adapters/codex.ts";
-import type { RawRunArtifacts, RunHandle, RunInput } from "../../src/domain/adapter.ts";
+import { CodexAdapter } from "../../src/adapters/codex.js";
+import type { RawRunArtifacts, RunHandle, RunInput } from "../../src/domain/adapter.js";
 
 const tempDirs: string[] = [];
 

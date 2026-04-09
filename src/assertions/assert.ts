@@ -1,10 +1,10 @@
 import nodeAssert from "node:assert/strict";
-import { commandAssertions } from "./commands.ts";
-import { fileReadAssertions } from "./file-reads.ts";
-import { outputAssertions } from "./output.ts";
-import { skillAssertions } from "./skills.ts";
-import { toolCallAssertions } from "./tool-calls.ts";
-import type { SkillGymAssert } from "./types.ts";
+import { commandAssertions } from "./commands.js";
+import { fileReadAssertions } from "./file-reads.js";
+import { outputAssertions } from "./output.js";
+import { skillAssertions } from "./skills.js";
+import { toolCallAssertions } from "./tool-calls.js";
+import type { SkillGymAssert } from "./types.js";
 
 export const assert: SkillGymAssert = Object.assign(nodeAssert, {
   skills: skillAssertions,

@@ -1,4 +1,4 @@
-export { assert } from "./assert.ts";
+export { assert } from "./assert.js";
 export type {
   AssertionOptions,
   CommandAssertions,
@@ -11,4 +11,4 @@ export type {
   SkillConfidence,
   ToolCallAssertions,
   ToolCallMatcher,
-} from "./types.ts";
+} from "./types.js";

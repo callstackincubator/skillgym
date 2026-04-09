@@ -1,5 +1,5 @@
-import type { AgentConfig, CodexAgentConfig, OpenCodeAgentConfig, RunnerInfo } from "./runner.ts";
-import type { SessionReport } from "./session-report.ts";
+import type { AgentConfig, CodexAgentConfig, OpenCodeAgentConfig, RunnerInfo } from "./runner.js";
+import type { SessionReport } from "./session-report.js";
 
 export interface RunInput {
   runner: RunnerInfo;

@@ -1,4 +1,4 @@
-import { assert, type TestCase } from "../src/index.ts";
+import { assert, type TestCase } from "../src/index.js";
 
 const suite: TestCase[] = [
   {

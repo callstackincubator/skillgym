@@ -1,4 +1,4 @@
-import { assert, type TestCase } from "../src/index.ts";
+import { assert, type TestCase } from "../src/index.js";
 
 const prompt = "Find a skill for upgrading Expo SDK and tell me how to install it.";
 

@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { formatCliError } from "../src/cli/error.ts";
+import { formatCliError } from "../src/cli/error.js";
 
 test("formatCliError formats known errors through declarative rules", () => {
   const rendered = formatCliError(new Error("No runners matched the requested filter: open-main"));

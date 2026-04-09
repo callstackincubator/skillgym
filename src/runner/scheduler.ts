@@ -1,4 +1,4 @@
-import type { ScheduleMode } from "../domain/schedule.ts";
+import type { ScheduleMode } from "../domain/schedule.js";
 
 export interface PlannedExecution<TItem = unknown> {
   runnerId: string;

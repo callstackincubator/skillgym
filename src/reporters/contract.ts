@@ -1,7 +1,7 @@
-import type { CaseResult, RunnerResult, SuiteRunResult } from "../domain/result.ts";
-import type { RunnerInfo } from "../domain/runner.ts";
-import type { ScheduleMode } from "../domain/schedule.ts";
-import type { TestCase } from "../domain/test-case.ts";
+import type { CaseResult, RunnerResult, SuiteRunResult } from "../domain/result.js";
+import type { RunnerInfo } from "../domain/runner.js";
+import type { ScheduleMode } from "../domain/schedule.js";
+import type { TestCase } from "../domain/test-case.js";
 
 export interface ReporterContext {
   isInteractive: boolean;

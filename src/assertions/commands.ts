@@ -1,4 +1,4 @@
-import type { SessionReport } from "../domain/session-report.ts";
+import type { SessionReport } from "../domain/session-report.js";
 import {
   assertAtLeast,
   assertAtMost,
@@ -11,8 +11,8 @@ import {
   assertOnly,
   assertSize,
   getCommands,
-} from "./matchers.ts";
-import type { CommandAssertions } from "./types.ts";
+} from "./matchers.js";
+import type { CommandAssertions } from "./types.js";
 
 export const commandAssertions: CommandAssertions = {
   includes(report, matcher, options) {

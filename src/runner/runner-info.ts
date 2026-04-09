@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { AgentConfig, RunnerInfo } from "../domain/runner.ts";
+import type { AgentConfig, RunnerInfo } from "../domain/runner.js";
 
 export function createRunnerInfo(id: string, agent: Pick<AgentConfig, "type" | "model">): RunnerInfo {
   return {

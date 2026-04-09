@@ -4,7 +4,7 @@ Benchmark coding-agent skills by running real agent sessions and asserting on no
 
 ## Why it's useful
 
-When you evaluate agent skills manually, it is hard to tell whether the agent actually selected the right skill, used it at the right time, and behaved correctly end to end. `skillgym` gives you a repeatable way to run real sessions, preserve session artifacts, verify outcomes with JavaScript assertions, and catch token regressions with snapshots.
+When you evaluate agent skills manually, it is hard to tell whether the agent actually selected the right skill, used it at the right time, and behaved correctly end to end. `skillgym` gives you a repeatable way to run real sessions, preserve session artifacts, verify outcomes with TypeScript assertions, and catch token regressions with snapshots.
 
 ## Supported runners
 
@@ -22,10 +22,12 @@ pnpm add --save-dev skillgym
 bun add --dev skillgym
 ```
 
-Create `skillgym.config.mjs` in your project root, or in a parent directory that the suite can discover upward:
+Create `skillgym.config.ts` in your project root, or in a parent directory that the suite can discover upward:
 
-```js
-export default {
+```ts
+import type { SkillGymConfig } from "skillgym";
+
+const config: SkillGymConfig = {
   run: {
     cwd: ".",
     outputDir: "./.skillgym-results",
@@ -50,14 +52,17 @@ export default {
     },
   },
 };
+
+export default config;
 ```
 
-Create a suite file such as `./skillgym/basic-suite.mjs`:
+Create a suite file such as `./skillgym/basic-suite.ts`:
 
-```js
+```ts
+import type { TestSuite } from "skillgym";
 import { assert } from "skillgym";
 
-const suite = [
+const suite: TestSuite = [
   {
     id: "basic-ready",
     prompt: "Say only: skillgym ready",
@@ -73,10 +78,10 @@ export default suite;
 Run the suite with the package manager you use in that project:
 
 ```bash
-npx skillgym run ./skillgym/basic-suite.mjs
-yarn skillgym run ./skillgym/basic-suite.mjs
-pnpm exec skillgym run ./skillgym/basic-suite.mjs
-bunx skillgym run ./skillgym/basic-suite.mjs
+npx skillgym run ./skillgym/basic-suite.ts
+yarn skillgym run ./skillgym/basic-suite.ts
+pnpm exec skillgym run ./skillgym/basic-suite.ts
+bunx skillgym run ./skillgym/basic-suite.ts
 ```
 
 View CLI help:
@@ -87,7 +92,16 @@ npx skillgym help
 
 By default, `skillgym` uses the built-in `standard` reporter.
 
-If you prefer TypeScript for config or suite files, use `skillgym.config.ts` and `*.ts` suite files instead, but make sure your project already has a working TypeScript runtime/loader.
+TypeScript config, suite, and reporter modules work out of the box on Node `>=22.18.0` using Node's built-in TypeScript stripping.
+
+TypeScript runtime limitations:
+
+- `.ts`, `.mts`, and `.cts` modules are supported
+- `.tsx` is not supported
+- runtime `tsconfig` path aliases are not supported
+- use explicit file extensions in relative imports, for example `./helpers.js`
+- use `import type` for type-only imports
+- TypeScript features that need code generation, such as `enum`, are not supported by default
 
 ## What you need to run a suite
 
@@ -148,7 +162,7 @@ You can configure workspaces in `skillgym.config.*` with `run.workspace`, or per
 
 Isolated workspace example in a suite:
 
-```js
+```ts
 export const workspace = {
   mode: "isolated",
   templateDir: "./fixtures/base-project",

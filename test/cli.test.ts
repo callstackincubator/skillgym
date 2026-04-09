@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { afterEach, expect, test } from "vitest";
-import { execFileCapture } from "../src/utils/process.ts";
+import { execFileCapture } from "../src/utils/process.js";
 
 const repoRoot = process.cwd();
 const tsxLoaderPath = path.join(repoRoot, "node_modules", "tsx", "dist", "loader.mjs");

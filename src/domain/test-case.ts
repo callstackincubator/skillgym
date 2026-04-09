@@ -1,4 +1,4 @@
-import type { SessionEvent, SessionReport, SkillDetection } from "./session-report.ts";
+import type { SessionEvent, SessionReport, SkillDetection } from "./session-report.js";
 
 export interface WorkspaceBootstrapConfig {
   command: string;

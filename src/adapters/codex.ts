@@ -1,12 +1,12 @@
 import path from "node:path";
 import { cp, readdir, readFile, stat } from "node:fs/promises";
 import os from "node:os";
-import type { CodexAgentConfig, RawRunArtifacts, RunHandle, RunInput, RunnerAdapter } from "../domain/adapter.ts";
-import type { SessionEvent, SessionReport } from "../domain/session-report.ts";
-import { resolveReportedPath } from "../normalize/reported-path.ts";
-import { inferSkillsFromPaths } from "../normalize/skill-detection.ts";
-import { ensureDir, writeText } from "../utils/fs.ts";
-import { BaseAdapter } from "./base.ts";
+import type { CodexAgentConfig, RawRunArtifacts, RunHandle, RunInput, RunnerAdapter } from "../domain/adapter.js";
+import type { SessionEvent, SessionReport } from "../domain/session-report.js";
+import { resolveReportedPath } from "../normalize/reported-path.js";
+import { inferSkillsFromPaths } from "../normalize/skill-detection.js";
+import { ensureDir, writeText } from "../utils/fs.js";
+import { BaseAdapter } from "./base.js";
 
 export class CodexAdapter extends BaseAdapter implements RunnerAdapter {
   constructor(private readonly options: CodexAgentConfig = { type: "codex", model: "gpt-5" }) {

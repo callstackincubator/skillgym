@@ -1,7 +1,7 @@
 {
   "name": "skillgym",
   "version": "0.1.0",
-  "description": "Test your agent skills with JavaScript in a real environment",
+  "description": "Test your agent skills with TypeScript in a real environment",
   "author": "Szymon Chmal",
   "license": "MIT",
   "repository": {
@@ -21,12 +21,16 @@
     "testing"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=22.18.0"
   },
   "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "module": "./dist/index.js",
   "exports": {
-    ".": "./dist/index.js",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
     "./cli": "./dist/cli.js"
   },
   "bin": {
@@ -39,14 +43,15 @@
     "bin.js"
   ],
   "scripts": {
-    "bench": "tsx ./index.ts",
-    "bench:help": "tsx ./index.ts help",
-    "build": "esbuild ./src/index.ts ./src/cli.ts --bundle --platform=node --format=esm --target=node20 --outdir=./dist",
-    "example:basic": "tsx ./index.ts run ./examples/basic-suite.ts",
-    "example:skill-selection": "tsx ./index.ts run ./examples/skill-selection-suite.ts",
+    "build": "npm run build:runtime && npm run build:declarations",
+    "build:declarations": "tsc -p ./tsconfig.build.json",
+    "build:runtime": "esbuild ./src/index.ts ./src/cli.ts --bundle --platform=node --format=esm --target=node22 --outdir=./dist",
+    "skillgym": "tsx ./index.ts",
+    "skillgym:help": "tsx ./index.ts help",
+    "skillgym:example:basic": "tsx ./index.ts run ./examples/basic-suite.ts",
+    "skillgym:example:skill-selection": "tsx ./index.ts run ./examples/skill-selection-suite.ts",
     "test": "vitest run",
-    "opencode:export-smoke": "tsx ./scripts/opencode-export-smoke.ts",
-    "opencode:export-repro": "tsx ./scripts/opencode-export-repro.ts"
+    "typecheck": "tsc -p ./tsconfig.json --noEmit"
   },
   "dependencies": {
     "cli-spinners": "^3.4.0",
@@ -57,11 +62,9 @@
   },
   "devDependencies": {
     "esbuild": "^0.25.3",
+    "typescript": "^5.8.3",
     "tsx": "^4.19.4",
     "vitest": "^3.1.2"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
   },
   "packageManager": "pnpm@9.15.3+sha512.1f79bc245a66eb0b07c5d4d83131240774642caaa86ef7d0434ab47c0d16f66b04e21e0c086eb61e62c77efc4d7f7ec071afad3796af64892fae66509173893a"
 }

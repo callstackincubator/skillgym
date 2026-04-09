@@ -1,14 +1,14 @@
 import path from "node:path";
-import type { RunnerAdapter } from "../domain/adapter.ts";
-import type { RunnerResult } from "../domain/result.ts";
-import type { RunnerInfo } from "../domain/runner.ts";
-import type { SessionReport } from "../domain/session-report.ts";
-import type { TestCase } from "../domain/test-case.ts";
-import { createAssertionContext } from "../assertions/context.ts";
-import type { SnapshotRuntimeOptions, SnapshotStore } from "../snapshots/store.ts";
-import { ensureDir, writeJson } from "../utils/fs.ts";
-import { isCommandTimeoutError } from "../utils/process.ts";
-import { createExecutionFailureResult } from "./workspace.ts";
+import type { RunnerAdapter } from "../domain/adapter.js";
+import type { RunnerResult } from "../domain/result.js";
+import type { RunnerInfo } from "../domain/runner.js";
+import type { SessionReport } from "../domain/session-report.js";
+import type { TestCase } from "../domain/test-case.js";
+import { createAssertionContext } from "../assertions/context.js";
+import type { SnapshotRuntimeOptions, SnapshotStore } from "../snapshots/store.js";
+import { ensureDir, writeJson } from "../utils/fs.js";
+import { isCommandTimeoutError } from "../utils/process.js";
+import { createExecutionFailureResult } from "./workspace.js";
 
 export async function executeRunner(
   testCase: TestCase,

@@ -1,8 +1,8 @@
 import nodeAssert from "node:assert/strict";
 import { test } from "vitest";
-import { assert } from "../../src/assertions/index.ts";
-import type { SessionEvent, SessionReport } from "../../src/domain/session-report.ts";
-import { createRunnerInfo } from "../../src/runner/runner-info.ts";
+import { assert } from "../../src/assertions/index.js";
+import type { SessionEvent, SessionReport } from "../../src/domain/session-report.js";
+import { createRunnerInfo } from "../../src/runner/runner-info.js";
 
 test("fileReads includes support string and regex matchers", () => {
   const report = createReport({

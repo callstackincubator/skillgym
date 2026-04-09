@@ -1,5 +1,5 @@
-import { assertIncludes, composeAssertionMessage } from "./matchers.ts";
-import type { OutputAssertions } from "./types.ts";
+import { assertIncludes, composeAssertionMessage } from "./matchers.js";
+import type { OutputAssertions } from "./types.js";
 
 export const outputAssertions: OutputAssertions = {
   includes(report, matcher, options) {

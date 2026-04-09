@@ -1,5 +1,5 @@
 import process from "node:process";
-import { createCliTheme } from "./branding.ts";
+import { createCliTheme } from "./branding.js";
 
 export function printHelp(): void {
   const theme = createCliTheme(process.stdout);

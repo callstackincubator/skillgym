@@ -1,6 +1,6 @@
 import process from "node:process";
 import { expect, test } from "vitest";
-import { execFileCapture } from "../../src/utils/process.ts";
+import { execFileCapture } from "../../src/utils/process.js";
 
 test("execFileCapture mirrors stdout and stderr while still capturing both", async () => {
   const mirroredStdout: string[] = [];

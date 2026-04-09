@@ -2,8 +2,8 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, expect, test } from "vitest";
-import type { RawRunArtifacts, RunInput } from "../../src/domain/adapter.ts";
-import { OpenCodeAdapter } from "../../src/adapters/opencode.ts";
+import type { RawRunArtifacts, RunInput } from "../../src/domain/adapter.js";
+import { OpenCodeAdapter } from "../../src/adapters/opencode.js";
 
 const tempDirs: string[] = [];
 

@@ -2,9 +2,9 @@ import path from "node:path";
 import process from "node:process";
 import cliSpinners from "cli-spinners";
 import pc from "picocolors";
-import type { CaseResult, RunnerFailureType, RunnerResult, SerializedError, SuiteRunResult } from "../domain/result.ts";
-import type { RunnerInfo } from "../domain/runner.ts";
-import type { BenchmarkReporter, RunnerStartEvent, SuiteStartEvent } from "./contract.ts";
+import type { CaseResult, RunnerFailureType, RunnerResult, SerializedError, SuiteRunResult } from "../domain/result.js";
+import type { RunnerInfo } from "../domain/runner.js";
+import type { BenchmarkReporter, RunnerStartEvent, SuiteStartEvent } from "./contract.js";
 import {
   formatDuration,
   formatPercent,
@@ -13,7 +13,7 @@ import {
   getSymbols,
   padCell,
   visibleWidth,
-} from "./format.ts";
+} from "./format.js";
 
 interface FailureEntry {
   caseId: string;

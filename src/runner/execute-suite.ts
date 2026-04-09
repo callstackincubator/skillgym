@@ -1,19 +1,19 @@
 import path from "node:path";
 import process from "node:process";
-import { getCaseExecutionOptions } from "../config.ts";
-import type { CaseResult, RunnerResult, RunnerSummary, SuiteRunResult } from "../domain/result.ts";
-import type { ResolvedRunner, RunnerConfig, RunnerInfo } from "../domain/runner.ts";
-import type { ScheduleMode } from "../domain/schedule.ts";
-import type { SuiteWorkspaceConfig, TestCase } from "../domain/test-case.ts";
-import { getAdapter } from "../adapters/index.ts";
-import type { BenchmarkReporter, ReporterContext } from "../reporters/contract.ts";
-import { SnapshotStore, type SnapshotRuntimeOptions } from "../snapshots/store.ts";
-import { ensureDir, writeJson } from "../utils/fs.ts";
-import { average, nowIso } from "../utils/time.ts";
-import { createRunnerInfo } from "./runner-info.ts";
-import { executeRunner } from "./execute-runner.ts";
-import { scheduleExecutions, type PlannedExecution } from "./scheduler.ts";
-import { createExecutionFailureResult, finalizeWorkspace, prepareWorkspace, resolveEffectiveWorkspace } from "./workspace.ts";
+import { getCaseExecutionOptions } from "../config.js";
+import type { CaseResult, RunnerResult, RunnerSummary, SuiteRunResult } from "../domain/result.js";
+import type { ResolvedRunner, RunnerConfig, RunnerInfo } from "../domain/runner.js";
+import type { ScheduleMode } from "../domain/schedule.js";
+import type { SuiteWorkspaceConfig, TestCase } from "../domain/test-case.js";
+import { getAdapter } from "../adapters/index.js";
+import type { BenchmarkReporter, ReporterContext } from "../reporters/contract.js";
+import { SnapshotStore, type SnapshotRuntimeOptions } from "../snapshots/store.js";
+import { ensureDir, writeJson } from "../utils/fs.js";
+import { average, nowIso } from "../utils/time.js";
+import { createRunnerInfo } from "./runner-info.js";
+import { executeRunner } from "./execute-runner.js";
+import { scheduleExecutions, type PlannedExecution } from "./scheduler.js";
+import { createExecutionFailureResult, finalizeWorkspace, prepareWorkspace, resolveEffectiveWorkspace } from "./workspace.js";
 
 interface PlannedSuiteExecution {
   testCase: TestCase;

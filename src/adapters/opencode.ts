@@ -1,11 +1,11 @@
 import path from "node:path";
 import { copyFile, readFile } from "node:fs/promises";
-import type { OpenCodeAgentConfig, RawRunArtifacts, RunHandle, RunInput, RunnerAdapter } from "../domain/adapter.ts";
-import type { SessionEvent, SessionReport } from "../domain/session-report.ts";
-import { resolveReportedPath } from "../normalize/reported-path.ts";
-import { inferSkillsFromPaths } from "../normalize/skill-detection.ts";
-import { ensureDir, writeJson, writeText } from "../utils/fs.ts";
-import { BaseAdapter } from "./base.ts";
+import type { OpenCodeAgentConfig, RawRunArtifacts, RunHandle, RunInput, RunnerAdapter } from "../domain/adapter.js";
+import type { SessionEvent, SessionReport } from "../domain/session-report.js";
+import { resolveReportedPath } from "../normalize/reported-path.js";
+import { inferSkillsFromPaths } from "../normalize/skill-detection.js";
+import { ensureDir, writeJson, writeText } from "../utils/fs.js";
+import { BaseAdapter } from "./base.js";
 
 const OPEN_CODE_EXPORT_RETRY_DELAYS_MS = [250, 500, 1_000, 2_000] as const;
 

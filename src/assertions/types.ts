@@ -1,5 +1,5 @@
 import type nodeAssert from "node:assert/strict";
-import type { SessionReport, ToolCallEvent } from "../domain/session-report.ts";
+import type { SessionReport, ToolCallEvent } from "../domain/session-report.js";
 
 export type Matcher = string | RegExp;
 export type SkillConfidence = "weak" | "medium" | "strong" | "explicit";

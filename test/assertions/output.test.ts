@@ -1,8 +1,8 @@
 import nodeAssert from "node:assert/strict";
 import { test } from "vitest";
-import { assert } from "../../src/assertions/index.ts";
-import type { SessionReport } from "../../src/domain/session-report.ts";
-import { createRunnerInfo } from "../../src/runner/runner-info.ts";
+import { assert } from "../../src/assertions/index.js";
+import type { SessionReport } from "../../src/domain/session-report.js";
+import { createRunnerInfo } from "../../src/runner/runner-info.js";
 
 test("output includes and notEmpty validate final output", () => {
   const report = createReport("Found MMKV storages: user-storage, cache-storage");

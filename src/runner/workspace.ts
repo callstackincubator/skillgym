@@ -1,12 +1,12 @@
 import path from "node:path";
 import process from "node:process";
-import type { RunnerFailureType, RunnerResult } from "../domain/result.ts";
-import type { RunnerInfo } from "../domain/runner.ts";
-import type { SessionReport } from "../domain/session-report.ts";
-import type { SuiteWorkspaceConfig, TestCase, WorkspaceBootstrapConfig } from "../domain/test-case.ts";
-import { serializeError } from "../utils/error.ts";
-import { copyDir, ensureDir, ensureDirectoryExists, removeDir, writeJson, writeText } from "../utils/fs.ts";
-import { execFileCapture } from "../utils/process.ts";
+import type { RunnerFailureType, RunnerResult } from "../domain/result.js";
+import type { RunnerInfo } from "../domain/runner.js";
+import type { SessionReport } from "../domain/session-report.js";
+import type { SuiteWorkspaceConfig, TestCase, WorkspaceBootstrapConfig } from "../domain/test-case.js";
+import { serializeError } from "../utils/error.js";
+import { copyDir, ensureDir, ensureDirectoryExists, removeDir, writeJson, writeText } from "../utils/fs.js";
+import { execFileCapture } from "../utils/process.js";
 
 export interface ResolvedWorkspaceConfig {
   mode: "shared" | "isolated";

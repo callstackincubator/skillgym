@@ -1,4 +1,4 @@
-import type { SessionReport } from "../domain/session-report.ts";
+import type { SessionReport } from "../domain/session-report.js";
 import {
   assertAtLeast,
   assertAtMost,
@@ -11,8 +11,8 @@ import {
   assertOnly,
   assertSize,
   getFileReads,
-} from "./matchers.ts";
-import type { FileReadAssertions } from "./types.ts";
+} from "./matchers.js";
+import type { FileReadAssertions } from "./types.js";
 
 export const fileReadAssertions: FileReadAssertions = {
   includes(report, matcher, options) {

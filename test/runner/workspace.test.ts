@@ -2,11 +2,11 @@ import { mkdtemp, mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/
 import os from "node:os";
 import path from "node:path";
 import { afterEach, expect, test } from "vitest";
-import type { TestCase } from "../../src/index.ts";
-import { executeSuite } from "../../src/runner/execute-suite.ts";
-import { loadSuite } from "../../src/runner/load-suite.ts";
-import { createRunnerInfo } from "../../src/runner/runner-info.ts";
-import { createSessionReport } from "../helpers/session-report.ts";
+import type { TestCase } from "../../src/index.js";
+import { executeSuite } from "../../src/runner/execute-suite.js";
+import { loadSuite } from "../../src/runner/load-suite.js";
+import { createRunnerInfo } from "../../src/runner/runner-info.js";
+import { createSessionReport } from "../helpers/session-report.js";
 
 const tempDirs: string[] = [];
 

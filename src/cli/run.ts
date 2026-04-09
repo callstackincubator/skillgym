@@ -1,10 +1,10 @@
 import path from "node:path";
-import { loadConfig, resolveReporterOptions, resolveRunOptions } from "../config.ts";
-import { loadReporter } from "../reporters/index.ts";
-import { createSnapshotRuntimeOptions } from "../snapshots/store.ts";
-import { executeSuite } from "../runner/execute-suite.ts";
-import { loadSuite } from "../runner/load-suite.ts";
-import { resolveEffectiveWorkspace } from "../runner/workspace.ts";
+import { loadConfig, resolveReporterOptions, resolveRunOptions } from "../config.js";
+import { loadReporter } from "../reporters/index.js";
+import { createSnapshotRuntimeOptions } from "../snapshots/store.js";
+import { executeSuite } from "../runner/execute-suite.js";
+import { loadSuite } from "../runner/load-suite.js";
+import { resolveEffectiveWorkspace } from "../runner/workspace.js";
 
 export async function runCommand(options: {
   suitePath: string;

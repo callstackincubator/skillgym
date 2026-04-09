@@ -1,8 +1,8 @@
 import { afterEach, expect, test, vi } from "vitest";
-import type { CaseResult, RunnerInfo, RunnerResult, RunnerSummary, SuiteRunResult } from "../../src/index.ts";
-import { createStandardReporter } from "../../src/reporters/standard.ts";
-import { createRunnerInfo } from "../../src/runner/runner-info.ts";
-import { createSessionReport } from "../helpers/session-report.ts";
+import type { CaseResult, RunnerInfo, RunnerResult, RunnerSummary, SuiteRunResult } from "../../src/index.js";
+import { createStandardReporter } from "../../src/reporters/standard.js";
+import { createRunnerInfo } from "../../src/runner/runner-info.js";
+import { createSessionReport } from "../helpers/session-report.js";
 
 afterEach(() => {
   vi.useRealTimers();

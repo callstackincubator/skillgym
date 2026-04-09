@@ -1,4 +1,4 @@
-import { assert, type SuiteWorkspaceConfig, type TestCase } from "../src/index.ts";
+import { assert, type SuiteWorkspaceConfig, type TestCase } from "../src/index.js";
 
 export const workspace: SuiteWorkspaceConfig = {
   mode: "isolated",

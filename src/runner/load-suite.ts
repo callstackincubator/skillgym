@@ -1,7 +1,7 @@
 import path from "node:path";
-import type { SuiteWorkspaceConfig, TestCase, TestSuite } from "../domain/test-case.ts";
-import { importFromPath } from "../utils/import.ts";
-import { validateSuiteWorkspaceConfig } from "./workspace.ts";
+import type { SuiteWorkspaceConfig, TestCase, TestSuite } from "../domain/test-case.js";
+import { importFromPath } from "../utils/import.js";
+import { validateSuiteWorkspaceConfig } from "./workspace.js";
 
 interface ImportedSuite {
   default?: TestSuite;

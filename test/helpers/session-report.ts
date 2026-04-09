@@ -1,5 +1,5 @@
-import type { SessionEvent, SessionReport } from "../../src/index.ts";
-import { createRunnerInfo } from "../../src/runner/runner-info.ts";
+import type { SessionEvent, SessionReport } from "../../src/index.js";
+import { createRunnerInfo } from "../../src/runner/runner-info.js";
 
 export function createSessionReport(overrides: Partial<SessionReport> = {}): SessionReport {
   return {

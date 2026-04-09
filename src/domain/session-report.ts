@@ -1,4 +1,4 @@
-import type { RunnerInfo } from "./runner.ts";
+import type { RunnerInfo } from "./runner.js";
 
 export type UsageSource = "provider" | "derived" | "chars";
 

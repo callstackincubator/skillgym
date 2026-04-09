@@ -1,5 +1,5 @@
-import type { AssertionContext } from "../domain/test-case.ts";
-import type { SessionEvent, SessionReport } from "../domain/session-report.ts";
+import type { AssertionContext } from "../domain/test-case.js";
+import type { SessionEvent, SessionReport } from "../domain/session-report.js";
 
 export function createAssertionContext(report: SessionReport): AssertionContext {
   return {

@@ -2,11 +2,11 @@ import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
-import type { RunnerResult, TestCase } from "../src/index.ts";
-import { loadConfig, parseConfig, resolveReporterOptions, resolveRunOptions } from "../src/config.ts";
-import { executeSuite } from "../src/runner/execute-suite.ts";
-import { createRunnerInfo } from "../src/runner/runner-info.ts";
-import { createSessionReport } from "./helpers/session-report.ts";
+import type { RunnerResult, TestCase } from "../src/index.js";
+import { loadConfig, parseConfig, resolveReporterOptions, resolveRunOptions } from "../src/config.js";
+import { executeSuite } from "../src/runner/execute-suite.js";
+import { createRunnerInfo } from "../src/runner/runner-info.js";
+import { createSessionReport } from "./helpers/session-report.js";
 
 describe("config", () => {
   let tempDir: string;

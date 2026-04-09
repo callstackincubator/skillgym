@@ -1,7 +1,7 @@
 import path from "node:path";
-import type { BenchmarkReporter } from "./contract.ts";
-import { createStandardReporter } from "./standard.ts";
-import { importFromPath } from "../utils/import.ts";
+import type { BenchmarkReporter } from "./contract.js";
+import { createStandardReporter } from "./standard.js";
+import { importFromPath } from "../utils/import.js";
 
 const reporterHooks = new Set([
   "onSuiteStart",

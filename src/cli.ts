@@ -1,8 +1,8 @@
-import { printHelp } from "./cli/help.ts";
-import { printBanner } from "./cli/branding.ts";
-import { formatCliError } from "./cli/error.ts";
-import { runCommand } from "./cli/run.ts";
-import { parseArgs } from "./utils/cli.ts";
+import { printHelp } from "./cli/help.js";
+import { printBanner } from "./cli/branding.js";
+import { formatCliError } from "./cli/error.js";
+import { runCommand } from "./cli/run.js";
+import { parseArgs } from "./utils/cli.js";
 
 async function main(): Promise<void> {
   const parsed = parseArgs(process.argv.slice(2));

@@ -8,6 +8,6 @@ export type {
   SuiteErrorEvent,
   SuiteFinishEvent,
   SuiteStartEvent,
-} from "./contract.ts";
-export { loadReporter } from "./load-reporter.ts";
-export { createStandardReporter } from "./standard.ts";
+} from "./contract.js";
+export { loadReporter } from "./load-reporter.js";
+export { createStandardReporter } from "./standard.js";

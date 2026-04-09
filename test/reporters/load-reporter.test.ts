@@ -2,7 +2,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
-import { loadReporter } from "../../src/reporters/load-reporter.ts";
+import { loadReporter } from "../../src/reporters/load-reporter.js";
 
 describe("loadReporter", () => {
   let tempDir: string;

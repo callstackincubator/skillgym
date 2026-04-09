@@ -1,8 +1,8 @@
 import nodeAssert from "node:assert/strict";
 import { test } from "vitest";
-import { assert } from "../../src/assertions/index.ts";
-import type { SessionReport } from "../../src/domain/session-report.ts";
-import { createRunnerInfo } from "../../src/runner/runner-info.ts";
+import { assert } from "../../src/assertions/index.js";
+import type { SessionReport } from "../../src/domain/session-report.js";
+import { createRunnerInfo } from "../../src/runner/runner-info.js";
 
 test("package root exports library assert without executing CLI", () => {
   nodeAssert.equal(typeof assert, "function");

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import type { SessionReport, ToolCallEvent } from "../domain/session-report.ts";
-import type { AssertionOptions, Matcher, ToolCallMatcher } from "./types.ts";
+import type { SessionReport, ToolCallEvent } from "../domain/session-report.js";
+import type { AssertionOptions, Matcher, ToolCallMatcher } from "./types.js";
 
 export function describeMatcher(matcher: Matcher): string {
   return typeof matcher === "string" ? JSON.stringify(matcher) : matcher.toString();

@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
-import type { SkillDetection } from "../domain/session-report.ts";
-import type { SessionReport } from "../domain/session-report.ts";
-import { composeAssertionMessage } from "./matchers.ts";
-import type { SkillAssertionOptions, SkillAssertions } from "./types.ts";
+import type { SkillDetection } from "../domain/session-report.js";
+import type { SessionReport } from "../domain/session-report.js";
+import { composeAssertionMessage } from "./matchers.js";
+import type { SkillAssertionOptions, SkillAssertions } from "./types.js";
 
 const confidenceRank = {
   weak: 0,

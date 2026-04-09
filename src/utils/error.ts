@@ -1,4 +1,4 @@
-import type { SerializedError } from "../domain/result.ts";
+import type { SerializedError } from "../domain/result.js";
 
 export function serializeError(error: unknown): SerializedError {
   if (error instanceof Error) {
