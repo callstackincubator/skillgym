@@ -97,7 +97,7 @@ test("standard reporter prints runner-grouped results and failure artifacts", as
   expect(output).toContain("Duration    1m 42s");
   expect(output).toContain("9,830 / 1,104 / 0 / 7,233 / 16,604");
   expect(output).toContain("9,830 / 1,104 / 0 / 7,233 / 12,000");
-  expect(output).toContain("Billable    9,830 / 1,104 / 0 / 7,233 / 15,201");
+  expect(output).toContain("Tokens      9,830 / 1,104 / 0 / 7,233 / 15,201");
   expect(output).toContain("Output      .skillgym-results/run-1");
   expect(output).toContain("Failures");
   expect(output).toContain("✗ case-a > code-main (codex, gpt-5.4)");

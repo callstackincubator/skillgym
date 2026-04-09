@@ -186,7 +186,7 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
         stdout,
       );
       writeLine(formatSummaryDetailLine("Duration", formatDuration(event.result.durationMs), colors), stdout);
-      writeLine(formatSummaryDetailLine("Billable", formatTokenSummary(averageSuiteTokens(event.result), accent), colors), stdout);
+      writeLine(formatSummaryDetailLine("Tokens", formatTokenSummary(averageSuiteTokens(event.result), accent), colors), stdout);
       writeLine(formatSummaryDetailLine("Output", event.result.outputDir, colors), stdout);
     },
     onError() {
