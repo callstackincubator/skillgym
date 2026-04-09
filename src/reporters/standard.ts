@@ -66,7 +66,7 @@ const ACCENT_OPEN = "\x1b[38;5;141m";
 const ACCENT_CLOSE = "\x1b[0m";
 const RUNNER_CASE_WIDTH = 24;
 const RUNNER_TIME_WIDTH = 12;
-const SUMMARY_LABEL_WIDTH = 13;
+const SUMMARY_LABEL_WIDTH = 11;
 
 export function createStandardReporter(options: StandardReporterOptions = {}): BenchmarkReporter {
   const stdout = options.stdout ?? process.stdout;
@@ -178,27 +178,16 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
       writeLine(colors.bold("Summary"), stdout);
       writeLine("", stdout);
       writeLine(
-        formatSummaryLine("Passed cases", formatRate(countPassedCases(event.result.cases), event.result.cases.length), colors),
+        formatSummaryCountLine("Cases", countPassedCases(event.result.cases), event.result.cases.length, colors),
         stdout,
       );
       writeLine(
-        formatSummaryLine("Passed runs", formatRate(countPassedRuns(event.result.cases), countTotalRuns(event.result.cases)), colors),
+        formatSummaryCountLine("Runs", countPassedRuns(event.result.cases), countTotalRuns(event.result.cases), colors),
         stdout,
       );
-      writeLine(
-        formatSummaryLine(
-          "Success rate",
-          formatPercent(countPassedRuns(event.result.cases) / Math.max(1, countTotalRuns(event.result.cases))),
-          colors,
-        ),
-        stdout,
-      );
-      writeLine(
-        formatSummaryLine("Avg billable", formatTokenSummary(averageSuiteTokens(event.result), accent), colors),
-        stdout,
-      );
-      writeLine(formatSummaryLine("Total time", formatDuration(event.result.durationMs), colors), stdout);
-      writeLine(formatSummaryLine("Output dir", event.result.outputDir, colors), stdout);
+      writeLine(formatSummaryDetailLine("Duration", formatDuration(event.result.durationMs), colors), stdout);
+      writeLine(formatSummaryDetailLine("Billable", formatTokenSummary(averageSuiteTokens(event.result), accent), colors), stdout);
+      writeLine(formatSummaryDetailLine("Output", event.result.outputDir, colors), stdout);
     },
     onError() {
       if (interactiveState === undefined) {
@@ -377,13 +366,30 @@ function getCrashDetail(origin: RunnerFailureOrigin | undefined): string {
   }
 }
 
-function formatSummaryLine(
+function formatSummaryCountLine(
+  label: string,
+  passed: number,
+  total: number,
+  colors: ReturnType<typeof pc.createColors>,
+): string {
+  const failed = Math.max(0, total - passed);
+  const segments = [colors.green(`${passed} passed`)];
+
+  if (failed > 0) {
+    segments.unshift(colors.red(`${failed} failed`));
+  }
+
+  return `${colors.dim(padCell(label, SUMMARY_LABEL_WIDTH))} ${segments.join(colors.dim(" | "))}${colors.dim(` (${total})`)}`;
+}
+
+function formatSummaryDetailLine(
   label: string,
   value: string,
   colors: ReturnType<typeof pc.createColors>,
 ): string {
   return `${colors.dim(padCell(label, SUMMARY_LABEL_WIDTH))} ${value}`;
 }
+
 
 function countPassedCases(cases: CaseResult[]): number {
   return cases.filter((caseResult) => caseResult.passed).length;
