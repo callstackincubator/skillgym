@@ -78,8 +78,8 @@ Flags:
 {
   "version": 1,
   "entries": {
-    "basic-help::open-main": {
-      "caseId": "basic-help",
+    "always-passes::open-main": {
+      "caseId": "always-passes",
       "runnerId": "open-main",
       "metric": "totalTokens",
       "value": 16604,

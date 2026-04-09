@@ -1,7 +1,7 @@
 import { printHelp } from "./cli/help.js";
 import { printBanner } from "./cli/branding.js";
 import { formatCliError } from "./cli/error.js";
-import { runCommand } from "./cli/run.js";
+import { RunFailuresError, runCommand } from "./cli/run.js";
 import { parseArgs } from "./utils/cli.js";
 
 async function main(): Promise<void> {
@@ -51,6 +51,11 @@ async function main(): Promise<void> {
 }
 
 main().catch((error: unknown) => {
+  if (error instanceof RunFailuresError) {
+    process.exitCode = 1;
+    return;
+  }
+
   console.error(formatCliError(error));
   process.exitCode = 1;
 });

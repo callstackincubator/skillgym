@@ -1,6 +1,7 @@
 import path from "node:path";
+import { AssertionError } from "node:assert";
 import type { RunnerAdapter } from "../domain/adapter.js";
-import type { RunnerResult } from "../domain/result.js";
+import type { RunnerFailureOrigin, RunnerResult } from "../domain/result.js";
 import type { RunnerInfo } from "../domain/runner.js";
 import type { SessionReport } from "../domain/session-report.js";
 import type { TestCase } from "../domain/test-case.js";
@@ -38,15 +39,50 @@ export async function executeRunner(
   };
 
   const startedMs = Date.now();
-  let report: SessionReport | undefined;
 
   try {
     const handle = await adapter.run(input);
-    const artifacts = await adapter.collect(handle, input);
-    report = await adapter.normalize(input, artifacts);
+    let artifacts: Awaited<ReturnType<typeof adapter.collect>>;
+
+    try {
+      artifacts = await adapter.collect(handle, input);
+    } catch (error) {
+      return await writeAndReturnFailure(error, {
+        testCase,
+        runner,
+        artifactDir,
+        durationMs: Date.now() - startedMs,
+        failureOrigin: "collection",
+      });
+    }
+
+    let report: SessionReport;
+
+    try {
+      report = await adapter.normalize(input, artifacts);
+    } catch (error) {
+      return await writeAndReturnFailure(error, {
+        testCase,
+        runner,
+        artifactDir,
+        durationMs: Date.now() - startedMs,
+        failureOrigin: "normalization",
+      });
+    }
 
     if (options.snapshots !== undefined) {
-      applySnapshotCheck(testCase.id, runner, report, options.snapshots.store, options.snapshots.runtime);
+      try {
+        applySnapshotCheck(testCase.id, runner, report, options.snapshots.store, options.snapshots.runtime);
+      } catch (error) {
+        return await writeAndReturnFailure(error, {
+          testCase,
+          runner,
+          artifactDir,
+          durationMs: Date.now() - startedMs,
+          failureOrigin: "snapshot",
+          report,
+        });
+      }
     }
 
     const ctx = createAssertionContext(report);
@@ -54,19 +90,16 @@ export async function executeRunner(
     try {
       await testCase.assert(report, ctx);
     } catch (error) {
-      const result = createExecutionFailureResult(error, {
+      const isAssertionFailure = error instanceof AssertionError;
+      return await writeAndReturnFailure(error, {
         testCase,
         runner,
         artifactDir,
         durationMs: Date.now() - startedMs,
-        failureType: "assertion",
+        failureType: isAssertionFailure ? "assertion" : "runner-crash",
+        failureOrigin: isAssertionFailure ? "assertion" : "assert-hook",
         report,
       });
-
-      await writeJson(path.join(artifactDir, "error.json"), result.error);
-      await writeJson(path.join(artifactDir, "report.json"), result.report);
-
-      return result;
     }
 
     await writeJson(path.join(artifactDir, "report.json"), report);
@@ -79,19 +112,15 @@ export async function executeRunner(
       report,
     };
   } catch (error) {
-    const result = createExecutionFailureResult(error, {
+    return await writeAndReturnFailure(error, {
       testCase,
       runner,
       artifactDir,
       durationMs: Date.now() - startedMs,
       failureType: isCommandTimeoutError(error) ? "timeout" : undefined,
-      report,
+      failureOrigin: "runner",
+      failureLogPath: path.join(artifactDir, "stderr.log"),
     });
-
-    await writeJson(path.join(artifactDir, "error.json"), result.error);
-    await writeJson(path.join(artifactDir, "report.json"), result.report);
-
-    return result;
   }
 }
 
@@ -116,6 +145,25 @@ function applySnapshotCheck(
     runner,
     actual,
   }, runtime);
+}
+
+async function writeAndReturnFailure(
+  error: unknown,
+  options: {
+    testCase: TestCase;
+    runner: RunnerInfo;
+    artifactDir: string;
+    durationMs: number;
+    failureType?: RunnerResult["failureType"];
+    failureOrigin?: RunnerFailureOrigin;
+    failureLogPath?: string;
+    report?: SessionReport;
+  },
+): Promise<RunnerResult> {
+  const result = createExecutionFailureResult(error, options);
+  await writeJson(path.join(options.artifactDir, "error.json"), result.error);
+  await writeJson(path.join(options.artifactDir, "report.json"), result.report);
+  return result;
 }
 
 function sanitizePathSegment(value: string): string {

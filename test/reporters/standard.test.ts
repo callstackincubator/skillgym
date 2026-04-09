@@ -98,7 +98,11 @@ test("standard reporter prints runner-grouped results and failure artifacts", as
   expect(output).toContain("9,830 / 1,104 / 0 / 7,233 / 12,000");
   expect(output).toContain("Avg billable  9,830 / 1,104 / 0 / 7,233 / 15,201");
   expect(output).toContain("Failures");
+  expect(output).toContain("✗ case-a > code-main (codex, gpt-5.4)");
   expect(output).toContain("AssertionError: expected skill to be loaded before command execution");
+  expect(output).toContain("at /workspace/examples/basic-suite.ts:14:15");
+  expect(output).not.toContain("skillgym could not complete the run");
+  expect(output).not.toContain("Run did not complete because the runner crashed");
   expect(output).toContain("Artifacts: .skillgym-results/run-1/case-a/code-main");
 });
 
@@ -306,14 +310,97 @@ test("standard reporter prints friendly runner crash message with log path", asy
       createCaseResult({
         caseId: "case-a",
         runnerResults: [
+           {
+             ...createRunnerResult({
+               runner,
+               passed: false,
+               artifactDir: ".skillgym-results/run-1/case-a/code-main",
+               totalTokens: 12_000,
+             }),
+             failureType: "runner-crash",
+             failureOrigin: "runner",
+             failureLogPath: ".skillgym-results/run-1/case-a/code-main/stderr.log",
+           },
+         ],
+       }),
+    ],
+    runners: [
+      createRunnerSummary({ runner, passedCases: 0, totalCases: 1, averageDurationMs: 19_300, averageTotalTokens: 13_500 }),
+    ],
+  };
+
+  await reporter.onSuiteStart?.({ context, cases: [], runners: [runner], startedAt: suiteResult.startedAt });
+  await reporter.onRunnerFinish?.({
+    context,
+    testCase: { id: "case-a", prompt: "", assert() {} },
+    runner,
+    result: suiteResult.cases[0]!.runnerResults[0]!,
+    caseIndex: 1,
+    totalCases: 1,
+  });
+  await reporter.onCaseFinish?.({ context, testCase: { id: "case-a", prompt: "", assert() {} }, result: suiteResult.cases[0]!, caseIndex: 1, totalCases: 1 });
+  await reporter.onSuiteFinish?.({ context, result: suiteResult });
+
+  const output = writes.join("");
+
+  expect(output).toContain("✗ case-a > code-main (codex, gpt-5.4)");
+  expect(output).toContain("Run did not complete because the runner crashed.");
+  expect(output).toContain("AssertionError: expected skill to be loaded before command execution");
+  expect(output).toContain("Log: .skillgym-results/run-1/case-a/code-main/stderr.log");
+  expect(output).toContain("Artifacts: .skillgym-results/run-1/case-a/code-main");
+});
+
+test("standard reporter points workspace bootstrap failures to bootstrap logs", async () => {
+  const writes: string[] = [];
+  const reporter = createStandardReporter({
+    stdout: {
+      isTTY: false,
+      columns: 120,
+      write(chunk: string) {
+        writes.push(chunk);
+        return true;
+      },
+    },
+    isInteractive: false,
+    isUnicode: true,
+  });
+
+  const runner = createRunnerInfo("open-main", { type: "opencode", model: "openai/gpt-5" });
+  const context = {
+    isInteractive: false,
+    cwd: "/workspace",
+    workspaceMode: "isolated" as const,
+    suitePath: "examples/basic-suite.ts",
+    outputDir: ".skillgym-results/run-1",
+    selectedCaseCount: 1,
+    selectedRunnerCount: 1,
+    selectedExecutionCount: 1,
+    scheduleMode: "serial" as const,
+  };
+  const suiteResult: SuiteRunResult = {
+    suitePath: context.suitePath,
+    startedAt: "2026-04-02T12:00:00.000Z",
+    endedAt: "2026-04-02T12:01:42.000Z",
+    durationMs: 102_000,
+    outputDir: context.outputDir,
+    cases: [
+      createCaseResult({
+        caseId: "case-a",
+        runnerResults: [
           {
             ...createRunnerResult({
               runner,
               passed: false,
-              artifactDir: ".skillgym-results/run-1/case-a/code-main",
+              artifactDir: ".skillgym-results/run-1/case-a/open-main",
               totalTokens: 12_000,
             }),
+            error: {
+              name: "Error",
+              message: "Workspace bootstrap failed: sh ./bootstrap.sh (exit 4)",
+            },
             failureType: "runner-crash",
+            failureOrigin: "workspace-bootstrap",
+            failureLogPath: ".skillgym-results/run-1/case-a/open-main/bootstrap.stderr.log",
           },
         ],
       }),
@@ -337,8 +424,11 @@ test("standard reporter prints friendly runner crash message with log path", asy
 
   const output = writes.join("");
 
-  expect(output).toContain("Runner crashed. See .skillgym-results/run-1/case-a/code-main/stderr.log for details.");
-  expect(output).toContain("Artifacts: .skillgym-results/run-1/case-a/code-main");
+  expect(output).toContain("✗ case-a > open-main (opencode, openai/gpt-5)");
+  expect(output).toContain("Workspace bootstrap failed.");
+  expect(output).toContain("Error: Workspace bootstrap failed: sh ./bootstrap.sh (exit 4)");
+  expect(output).toContain("Log: .skillgym-results/run-1/case-a/open-main/bootstrap.stderr.log");
+  expect(output).toContain("Artifacts: .skillgym-results/run-1/case-a/open-main");
 });
 
 test("standard reporter suppresses shared-workspace warning for isolated mode", async () => {
@@ -400,11 +490,19 @@ function createRunnerResult(options: {
     durationMs: 24_800,
     artifactDir: options.artifactDir,
     error: options.passed
-      ? undefined
-      : {
+        ? undefined
+        : {
           name: "AssertionError",
           message: "expected skill to be loaded before command execution",
+          stack: [
+            "AssertionError: expected skill to be loaded before command execution",
+            "    at assert (/workspace/src/assertions/output.ts:88:10)",
+            "    at Object.assert (/workspace/examples/basic-suite.ts:14:15)",
+            "    at executeRunner (/workspace/src/runner/execute-runner.ts:91:7)",
+          ].join("\n"),
         },
+    failureType: options.passed ? undefined : "assertion",
+    failureOrigin: options.passed ? undefined : "assertion",
     report: createSessionReport({
       runner: options.runner,
       usage: {

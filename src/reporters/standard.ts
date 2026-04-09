@@ -2,7 +2,14 @@ import path from "node:path";
 import process from "node:process";
 import cliSpinners from "cli-spinners";
 import pc from "picocolors";
-import type { CaseResult, RunnerFailureType, RunnerResult, SerializedError, SuiteRunResult } from "../domain/result.js";
+import type {
+  CaseResult,
+  RunnerFailureOrigin,
+  RunnerFailureType,
+  RunnerResult,
+  SerializedError,
+  SuiteRunResult,
+} from "../domain/result.js";
 import type { RunnerInfo } from "../domain/runner.js";
 import type { BenchmarkReporter, RunnerStartEvent, SuiteStartEvent } from "./contract.js";
 import {
@@ -21,6 +28,8 @@ interface FailureEntry {
   artifactDir: string;
   error?: SerializedError;
   failureType?: RunnerFailureType;
+  failureOrigin?: RunnerFailureOrigin;
+  failureLogPath?: string;
 }
 
 interface StandardReporterOptions {
@@ -126,6 +135,8 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
           artifactDir: event.result.artifactDir,
           error: event.result.error,
           failureType: event.result.failureType,
+          failureOrigin: event.result.failureOrigin,
+          failureLogPath: event.result.failureLogPath,
         });
       }
     },
@@ -153,6 +164,17 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
         writeLine("", stdout);
       }
 
+      if (failures.length > 0) {
+        writeLine("", stdout);
+        writeLine(colors.bold("Failures"), stdout);
+        writeLine("", stdout);
+
+        for (const failure of failures) {
+          writeLine(formatFailureBlock(failure, colors, symbols), stdout);
+          writeLine("", stdout);
+        }
+      }
+
       writeLine(colors.bold("Summary"), stdout);
       writeLine("", stdout);
       writeLine(
@@ -177,19 +199,6 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
       );
       writeLine(formatSummaryLine("Total time", formatDuration(event.result.durationMs), colors), stdout);
       writeLine(formatSummaryLine("Output dir", event.result.outputDir, colors), stdout);
-
-      if (failures.length > 0) {
-        writeLine("", stdout);
-        writeLine(colors.bold("Failures"), stdout);
-        writeLine("", stdout);
-
-        for (const failure of failures) {
-          writeLine(`${failure.caseId}  ${colors.dim(failure.runner.id)}`, stdout);
-          writeLine(formatFailureMessage(failure), stdout);
-          writeLine(`${colors.dim("Artifacts:")} ${failure.artifactDir}`, stdout);
-          writeLine("", stdout);
-        }
-      }
     },
     onError() {
       if (interactiveState === undefined) {
@@ -246,8 +255,23 @@ function formatRunnerLegend(colors: ReturnType<typeof pc.createColors>): string 
 }
 
 function formatFailureMessage(failure: FailureEntry): string {
+  if (failure.failureType === "assertion") {
+    if (failure.error === undefined) {
+      return "Assertion failed.";
+    }
+
+    const location = formatErrorLocation(failure.error);
+    return location === undefined
+      ? `${failure.error.name}: ${failure.error.message}`
+      : `${failure.error.name}: ${failure.error.message}\n${pc.dim(`at ${location}`)}`;
+  }
+
+  if (failure.failureType === "timeout") {
+    return failure.error === undefined ? "Run timed out." : `${failure.error.name}: ${failure.error.message}`;
+  }
+
   if (failure.failureType === "runner-crash") {
-    return `Runner crashed. See ${path.join(failure.artifactDir, "stderr.log")} for details.`;
+    return formatCrashMessage(failure);
   }
 
   if (failure.error === undefined) {
@@ -255,6 +279,102 @@ function formatFailureMessage(failure: FailureEntry): string {
   }
 
   return `${failure.error.name}: ${failure.error.message}`;
+}
+
+function formatFailureBlock(
+  failure: FailureEntry,
+  colors: ReturnType<typeof pc.createColors>,
+  symbols: ReporterSymbols,
+): string {
+  const lines = [
+    `${colors.red(`${symbols.fail} ${failure.caseId} > ${failure.runner.id}`)}${colors.dim(` ${formatRunnerAgentLabel(failure.runner)}`)}`,
+    formatFailureMessage(failure),
+  ];
+
+  if (failure.failureLogPath !== undefined && failure.failureType !== "assertion") {
+    lines.push(colors.dim(`Log: ${failure.failureLogPath}`));
+  }
+
+  lines.push(colors.dim(`Artifacts: ${failure.artifactDir}`));
+  return lines.join("\n");
+}
+
+function formatErrorLocation(error: SerializedError): string | undefined {
+  if (error.stack === undefined) {
+    return undefined;
+  }
+
+  const frames = error.stack.split("\n").slice(1);
+  for (const frame of frames) {
+    const parsed = parseStackFrame(frame);
+    if (parsed === undefined) {
+      continue;
+    }
+
+    if (isInternalStackFrame(parsed.filePath)) {
+      continue;
+    }
+
+    return `${parsed.filePath}:${parsed.line}:${parsed.column}`;
+  }
+
+  return undefined;
+}
+
+function parseStackFrame(frame: string): { filePath: string; line: string; column: string } | undefined {
+  const trimmed = frame.trim().replace(/^at\s+/, "");
+  const match = /\(?(.+):(\d+):(\d+)\)?$/.exec(trimmed);
+  if (match === null) {
+    return undefined;
+  }
+
+  let [, filePath, line, column] = match;
+  if (filePath === undefined || line === undefined || column === undefined) {
+    return undefined;
+  }
+
+  const openParenIndex = filePath.lastIndexOf("(");
+  if (openParenIndex !== -1) {
+    filePath = filePath.slice(openParenIndex + 1);
+  }
+
+  return { filePath, line, column };
+}
+
+function isInternalStackFrame(filePath: string): boolean {
+  return filePath.startsWith("node:")
+    || filePath.includes("/node:internal/")
+    || filePath.includes("/src/assertions/")
+    || filePath.includes("/src/runner/")
+    || filePath.includes("/src/reporters/")
+    || filePath.includes("/node_modules/");
+}
+
+function formatCrashMessage(failure: FailureEntry): string {
+  const detail = getCrashDetail(failure.failureOrigin);
+  return failure.error === undefined ? detail : `${detail}\n${failure.error.name}: ${failure.error.message}`;
+}
+
+function getCrashDetail(origin: RunnerFailureOrigin | undefined): string {
+  switch (origin) {
+    case "workspace-bootstrap":
+      return "Workspace bootstrap failed.";
+    case "workspace-setup":
+      return "Workspace setup failed.";
+    case "assert-hook":
+      return "Run finished, but the suite assert hook crashed.";
+    case "collection":
+      return "Runner finished, but artifact collection failed.";
+    case "normalization":
+      return "Runner finished, but report normalization failed.";
+    case "snapshot":
+      return "Run finished, but snapshot verification failed.";
+    case "runner":
+    case undefined:
+      return "Run did not complete because the runner crashed.";
+    case "assertion":
+      return "Assertion failed.";
+  }
 }
 
 function formatSummaryLine(

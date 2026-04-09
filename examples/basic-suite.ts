@@ -2,17 +2,24 @@ import { assert, type TestCase } from "../src/index.js";
 
 const suite: TestCase[] = [
   {
-    id: "basic-help",
-    prompt: "Print help for the current workspace tool and summarize what it does.",
-    async assert(report, ctx) {
-      assert.ok(ctx.finalOutput().length > 0, "Expected non-empty final output");
+    id: "always-passes",
+    prompt: "Say only: skillgym ready",
+    async assert(_report, ctx) {
+      assert.match(ctx.finalOutput(), /skillgym ready/);
     },
   },
   {
-    id: "basic-ready",
+    id: "assertion-fails",
     prompt: "Say only: skillgym ready",
-    async assert(report, ctx) {
-      assert.match(ctx.finalOutput(), /skillgym ready/);
+    async assert(_report, ctx) {
+      assert.match(ctx.finalOutput(), /this will never match/);
+    },
+  },
+  {
+    id: "assert-crashes",
+    prompt: "Say only: skillgym ready",
+    async assert() {
+      throw new Error("assert hook crashed intentionally");
     },
   },
 ];

@@ -124,6 +124,8 @@ test("executeSuite preserves failed isolated workspaces and writes bootstrap log
 
   expect(result.cases[0]?.runnerResults[0]?.passed).toBe(false);
   expect(result.cases[0]?.runnerResults[0]?.error?.message).toContain("Workspace bootstrap failed");
+  expect(result.cases[0]?.runnerResults[0]?.failureOrigin).toBe("workspace-bootstrap");
+  expect(result.cases[0]?.runnerResults[0]?.failureLogPath).toBe(path.join(runOutputDir, "alpha", runner.pathKey, "bootstrap.stderr.log"));
 
   const workspaceRoot = path.join(runOutputDir, "workspaces", "alpha");
   const entries = await readdir(workspaceRoot);

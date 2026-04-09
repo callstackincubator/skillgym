@@ -14,7 +14,7 @@ import { assert, type TestCase } from "skillgym";
 
 const suite: TestCase[] = [
   {
-    id: "basic-ready",
+    id: "always-passes",
     prompt: "Say only: skillgym ready",
     assert(report, ctx) {
       assert.match(ctx.finalOutput(), /skillgym ready/);
@@ -29,8 +29,8 @@ export default suite;
 import { assert, type TestSuite } from "skillgym";
 
 const suite: TestSuite = {
-  "basic-ready": {
-    id: "basic-ready",
+  "always-passes": {
+    id: "always-passes",
     prompt: "Say only: skillgym ready",
     assert(report, ctx) {
       assert.match(ctx.finalOutput(), /skillgym ready/);

@@ -1,6 +1,7 @@
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { AssertionError } from "node:assert";
 import { afterEach, expect, test } from "vitest";
 import type { RawRunArtifacts, RunHandle, RunInput, RunnerAdapter } from "../../src/domain/adapter.js";
 import type { SnapshotRuntimeOptions } from "../../src/snapshots/store.js";
@@ -102,6 +103,8 @@ test("executeRunner marks run as failed when adapter export collection fails", a
 
   expect(result.passed).toBe(false);
   expect(result.failureType).toBe("runner-crash");
+  expect(result.failureOrigin).toBe("collection");
+  expect(result.failureLogPath).toBeUndefined();
   expect(result.error).toMatchObject({
     name: "Error",
     message: "OpenCode export returned invalid JSON: Unterminated string",
@@ -111,7 +114,7 @@ test("executeRunner marks run as failed when adapter export collection fails", a
   expect(errorJson).toContain("OpenCode export returned invalid JSON: Unterminated string");
 });
 
-test("executeRunner marks assertion failures separately from runner crashes", async () => {
+test("executeRunner marks AssertionError failures separately from runner crashes", async () => {
   const outputDir = await createTempDir();
   const runner = createRunnerInfo("open-main", { type: "opencode", model: "openai/gpt-5" });
   const adapter = createSuccessfulAdapter(runner, { totalTokens: 120 });
@@ -121,7 +124,9 @@ test("executeRunner marks assertion failures separately from runner crashes", as
       id: "alpha",
       prompt: "prompt",
       assert() {
-        throw new Error("expected a skill read");
+        throw new AssertionError({
+          message: "expected a skill read",
+        });
       },
     },
     runner,
@@ -135,7 +140,37 @@ test("executeRunner marks assertion failures separately from runner crashes", as
 
   expect(result.passed).toBe(false);
   expect(result.failureType).toBe("assertion");
+  expect(result.failureOrigin).toBe("assertion");
   expect(result.error?.message).toBe("expected a skill read");
+  expect(result.report.usage.totalTokens).toBe(120);
+});
+
+test("executeRunner treats non-AssertionError exceptions from assert as run failures", async () => {
+  const outputDir = await createTempDir();
+  const runner = createRunnerInfo("open-main", { type: "opencode", model: "openai/gpt-5" });
+  const adapter = createSuccessfulAdapter(runner, { totalTokens: 120 });
+
+  const result = await executeRunner(
+    {
+      id: "alpha",
+      prompt: "prompt",
+      assert() {
+        throw new Error("assert hook crashed intentionally");
+      },
+    },
+    runner,
+    adapter,
+    {
+      cwd: outputDir,
+      artifactDir: path.join(outputDir, "alpha", runner.pathKey),
+      timeoutMs: 5_000,
+    },
+  );
+
+  expect(result.passed).toBe(false);
+  expect(result.failureType).toBe("runner-crash");
+  expect(result.failureOrigin).toBe("assert-hook");
+  expect(result.error?.message).toBe("assert hook crashed intentionally");
   expect(result.report.usage.totalTokens).toBe(120);
 });
 
@@ -167,6 +202,8 @@ test("executeRunner marks timeout failures separately from runner crashes", asyn
 
   expect(result.passed).toBe(false);
   expect(result.failureType).toBe("timeout");
+  expect(result.failureOrigin).toBe("runner");
+  expect(result.failureLogPath).toBe(path.join(result.artifactDir, "stderr.log"));
   expect(result.error?.message).toBe("Command timed out after 5000ms: opencode run prompt");
 });
 
@@ -223,6 +260,7 @@ test("executeRunner fails when snapshot absolute tolerance is exceeded", async (
 
   expect(result.passed).toBe(false);
   expect(result.failureType).toBe("runner-crash");
+  expect(result.failureOrigin).toBe("snapshot");
   expect(result.error?.message).toContain("Snapshot mismatch for totalTokens");
   expect(result.error?.message).toContain("alpha / open-main");
 });
@@ -249,6 +287,7 @@ test("executeRunner fails when snapshot metric is unavailable", async () => {
 
   expect(result.passed).toBe(false);
   expect(result.failureType).toBe("runner-crash");
+  expect(result.failureOrigin).toBe("snapshot");
   expect(result.error?.message).toContain("Snapshot check requires provider token metric totalTokens");
 });
 

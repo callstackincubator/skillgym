@@ -64,7 +64,7 @@ import { assert } from "skillgym";
 
 const suite: TestSuite = [
   {
-    id: "basic-ready",
+    id: "always-passes",
     prompt: "Say only: skillgym ready",
     assert(report, ctx) {
       assert.match(ctx.finalOutput(), /skillgym ready/);

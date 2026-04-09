@@ -2,7 +2,7 @@ import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
-import { afterEach, expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 import { execFileCapture } from "../src/utils/process.js";
 
 const repoRoot = process.cwd();
@@ -70,6 +70,63 @@ test("cli run reports missing config with suggested fixes", async () => {
   expect(result.stderr).toContain("Create `skillgym.config.ts`, `skillgym.config.mjs`");
   expect(result.stderr).toContain("Use `--config <path>` if your config lives somewhere else.");
   expect(result.stderr).not.toContain("at loadConfig");
+});
+
+test("cli run exits non-zero for assertion failures without printing a generic skillgym error", async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), "skillgym-cli-"));
+  tempDirs.push(tempDir);
+
+  vi.resetModules();
+  vi.doMock("../src/config.js", () => ({
+    loadConfig: vi.fn(async () => ({
+      config: {
+        runners: {
+          open: { agent: { type: "opencode", model: "openai/gpt-5" } },
+        },
+      },
+      filePath: path.join(tempDir, "skillgym.config.ts"),
+    })),
+    resolveReporterOptions: vi.fn(() => ({ reporter: undefined, cwd: tempDir })),
+    resolveRunOptions: vi.fn(() => ({ cwd: tempDir, outputDir: path.join(tempDir, ".skillgym-results"), schedule: "serial" })),
+  }));
+  vi.doMock("../src/reporters/index.js", () => ({
+    loadReporter: vi.fn(async () => undefined),
+  }));
+  vi.doMock("../src/snapshots/store.js", () => ({
+    createSnapshotRuntimeOptions: vi.fn(() => undefined),
+  }));
+  vi.doMock("../src/runner/load-suite.js", () => ({
+    loadSuite: vi.fn(async () => ({
+      cases: [{ id: "alpha", prompt: "Say hello", assert() {} }],
+      workspace: undefined,
+      dirPath: tempDir,
+    })),
+  }));
+  vi.doMock("../src/runner/workspace.js", () => ({
+    resolveEffectiveWorkspace: vi.fn(() => ({ mode: "shared", cwd: tempDir })),
+  }));
+  vi.doMock("../src/runner/execute-suite.js", () => ({
+    executeSuite: vi.fn(async () => ({
+      suitePath: path.join(tempDir, "suite.ts"),
+      startedAt: "2026-04-02T12:00:00.000Z",
+      endedAt: "2026-04-02T12:00:01.000Z",
+      durationMs: 1_000,
+      outputDir: path.join(tempDir, ".skillgym-results", "run-1"),
+      cases: [{ caseId: "alpha", passed: false, runnerResults: [{ passed: false }] }],
+      runners: [],
+    })),
+  }));
+
+  const { RunFailuresError, runCommand } = await import("../src/cli/run.js");
+
+  await expect(runCommand({ suitePath: "./suite.ts", cwd: tempDir })).rejects.toBeInstanceOf(RunFailuresError);
+
+  vi.doUnmock("../src/config.js");
+  vi.doUnmock("../src/reporters/index.js");
+  vi.doUnmock("../src/snapshots/store.js");
+  vi.doUnmock("../src/runner/load-suite.js");
+  vi.doUnmock("../src/runner/workspace.js");
+  vi.doUnmock("../src/runner/execute-suite.js");
 });
 
 async function execCli(args: string[], cwd = repoRoot) {

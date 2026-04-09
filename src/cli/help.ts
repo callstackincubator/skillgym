@@ -25,7 +25,7 @@ ${theme.bold("Run Options:")}
 ${theme.bold("Examples:")}
   ${theme.dim("$")} ${theme.light("skillgym run ./examples/basic-suite.ts")}
   ${theme.dim("$")} ${theme.light("skillgym run ./examples/basic-suite.ts --runner open-main")}
-  ${theme.dim("$")} ${theme.light("skillgym run ./examples/basic-suite.ts --case case-a")}
+  ${theme.dim("$")} ${theme.light("skillgym run ./examples/basic-suite.ts --case always-passes")}
   ${theme.dim("$")} ${theme.light("skillgym run ./examples/basic-suite.ts --reporter standard")}
   ${theme.dim("$")} ${theme.light("skillgym run ./examples/basic-suite.ts --schedule isolated-by-runner")}
   ${theme.dim("$")} ${theme.light("skillgym run ./examples/basic-suite.ts --update-snapshots")}

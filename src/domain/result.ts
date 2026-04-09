@@ -9,6 +9,8 @@ export interface RunnerResult {
   report: SessionReport;
   error?: SerializedError;
   failureType?: RunnerFailureType;
+  failureOrigin?: RunnerFailureOrigin;
+  failureLogPath?: string;
 }
 
 export interface CaseResult {
@@ -47,3 +49,13 @@ export interface SerializedError {
 }
 
 export type RunnerFailureType = "assertion" | "runner-crash" | "timeout";
+
+export type RunnerFailureOrigin =
+  | "assertion"
+  | "assert-hook"
+  | "runner"
+  | "workspace-bootstrap"
+  | "workspace-setup"
+  | "collection"
+  | "normalization"
+  | "snapshot";

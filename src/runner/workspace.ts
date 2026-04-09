@@ -1,6 +1,6 @@
 import path from "node:path";
 import process from "node:process";
-import type { RunnerFailureType, RunnerResult } from "../domain/result.js";
+import type { RunnerFailureOrigin, RunnerFailureType, RunnerResult } from "../domain/result.js";
 import type { RunnerInfo } from "../domain/runner.js";
 import type { SessionReport } from "../domain/session-report.js";
 import type { SuiteWorkspaceConfig, TestCase, WorkspaceBootstrapConfig } from "../domain/test-case.js";
@@ -207,6 +207,8 @@ export function createExecutionFailureResult(
     artifactDir: string;
     durationMs: number;
     failureType?: RunnerFailureType;
+    failureOrigin?: RunnerFailureOrigin;
+    failureLogPath?: string;
     report?: SessionReport;
   },
 ): RunnerResult {
@@ -247,6 +249,8 @@ export function createExecutionFailureResult(
     report: fallbackReport,
     error: serializedError,
     failureType: options.failureType ?? "runner-crash",
+    failureOrigin: options.failureOrigin,
+    failureLogPath: options.failureLogPath,
   };
 }
 

@@ -195,11 +195,18 @@ export async function executeSuite(
             : undefined,
         });
       } catch (error) {
+        const isWorkspaceFailure = preparedWorkspace === undefined;
         result = createExecutionFailureResult(error, {
           testCase: item.testCase,
           runner: item.runner.info,
           artifactDir,
           durationMs: Date.now() - executionStartedMs,
+          failureOrigin: isWorkspaceFailure
+            ? classifyWorkspaceFailureOrigin(error)
+            : undefined,
+          failureLogPath: isWorkspaceFailure
+            ? resolveWorkspaceFailureLogPath(artifactDir, error)
+            : undefined,
         });
         await writeJson(path.join(artifactDir, "error.json"), result.error);
         await writeJson(path.join(artifactDir, "report.json"), result.report);
@@ -258,6 +265,22 @@ export async function executeSuite(
     await options.reporter?.onError?.({ context, error });
     throw error;
   }
+}
+
+function classifyWorkspaceFailureOrigin(error: unknown): import("../domain/result.js").RunnerFailureOrigin {
+  if (error instanceof Error && error.message.startsWith("Workspace bootstrap failed:")) {
+    return "workspace-bootstrap";
+  }
+
+  return "workspace-setup";
+}
+
+function resolveWorkspaceFailureLogPath(artifactDir: string, error: unknown): string | undefined {
+  if (error instanceof Error && error.message.startsWith("Workspace bootstrap failed:")) {
+    return path.join(artifactDir, "bootstrap.stderr.log");
+  }
+
+  return undefined;
 }
 
 function aggregatePlannedCaseResult(plannedCaseResult: PlannedCaseResult): CaseResult {
