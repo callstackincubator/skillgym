@@ -145,10 +145,10 @@ test("standard reporter interactive mode renders queued, running, and finished r
 
   const queuedOutput = writes.join("");
 
-  expect(queuedOutput).toContain("\u001b[2m• skill-selection  /  open-main\u001b[22m");
-  expect(queuedOutput).toContain("\u001b[2m• skill-selection  /  code-main\u001b[22m");
-  expect(queuedOutput).toContain("\u001b[2m• snapshot-reuse   /  open-main\u001b[22m");
-  expect(queuedOutput).toContain("\u001b[2m• snapshot-reuse   /  code-main\u001b[22m");
+  expect(queuedOutput).toContain("\u001b[2m• skill-selection  /  open-main (opencode, openai/gpt-5)\u001b[22m");
+  expect(queuedOutput).toContain("\u001b[2m• skill-selection  /  code-main (codex, gpt-5)\u001b[22m");
+  expect(queuedOutput).toContain("\u001b[2m• snapshot-reuse   /  open-main (opencode, openai/gpt-5)\u001b[22m");
+  expect(queuedOutput).toContain("\u001b[2m• snapshot-reuse   /  code-main (codex, gpt-5)\u001b[22m");
 
   await reporter.onRunnerStart?.({
     context,
@@ -168,15 +168,15 @@ test("standard reporter interactive mode renders queued, running, and finished r
 
   const firstFrameOutput = writes.join("");
 
-  expect(firstFrameOutput).toContain("\u001b[38;5;141m⠋\u001b[0m skill-selection  /  open-main");
-  expect(firstFrameOutput).toContain("\u001b[38;5;141m⠋\u001b[0m snapshot-reuse   /  code-main");
+  expect(firstFrameOutput).toContain("\u001b[38;5;141m⠋\u001b[0m skill-selection  /  open-main\u001b[2m (opencode, openai/gpt-5)\u001b[22m");
+  expect(firstFrameOutput).toContain("\u001b[38;5;141m⠋\u001b[0m snapshot-reuse   /  code-main\u001b[2m (codex, gpt-5)\u001b[22m");
 
   await vi.advanceTimersByTimeAsync(80);
 
   const animatedOutput = writes.join("");
 
-  expect(animatedOutput).toContain("\u001b[38;5;141m⠙\u001b[0m skill-selection  /  open-main");
-  expect(animatedOutput).toContain("\u001b[38;5;141m⠙\u001b[0m snapshot-reuse   /  code-main");
+  expect(animatedOutput).toContain("\u001b[38;5;141m⠙\u001b[0m skill-selection  /  open-main\u001b[2m (opencode, openai/gpt-5)\u001b[22m");
+  expect(animatedOutput).toContain("\u001b[38;5;141m⠙\u001b[0m snapshot-reuse   /  code-main\u001b[2m (codex, gpt-5)\u001b[22m");
 
   await reporter.onRunnerFinish?.({
     context,
@@ -198,8 +198,8 @@ test("standard reporter interactive mode renders queued, running, and finished r
 
   const finishedOutput = writes.join("");
 
-  expect(finishedOutput).toContain("\u001b[32m✓ skill-selection  /  open-main\u001b[39m");
-  expect(finishedOutput).toContain("\u001b[31m✗ snapshot-reuse   /  code-main\u001b[39m");
+  expect(finishedOutput).toContain("\u001b[32m✓ skill-selection  /  open-main\u001b[39m\u001b[2m (opencode, openai/gpt-5)\u001b[22m");
+  expect(finishedOutput).toContain("\u001b[31m✗ snapshot-reuse   /  code-main\u001b[39m\u001b[2m (codex, gpt-5)\u001b[22m");
   expect(finishedOutput).toContain("\u001b[2K");
 });
 

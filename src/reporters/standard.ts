@@ -34,7 +34,7 @@ type InteractiveRunStatus = "queued" | "running" | "passed" | "failed";
 interface InteractiveRunEntry {
   key: string;
   caseId: string;
-  runnerId: string;
+  runner: RunnerInfo;
   status: InteractiveRunStatus;
 }
 
@@ -215,8 +215,12 @@ function formatCaseRow(result: CaseResult, symbols: ReturnType<typeof getSymbols
 }
 
 function formatRunnerHeading(runner: RunnerInfo): string {
+  return pc.bold(`Runner: ${runner.id}`) + pc.dim(` ${formatRunnerAgentLabel(runner)}`);
+}
+
+function formatRunnerAgentLabel(runner: RunnerInfo): string {
   const model = runner.agent.model === undefined ? "" : `, ${runner.agent.model}`;
-  return pc.bold(`Runner: ${runner.id}`) + pc.dim(` (${runner.agent.type}${model})`);
+  return `(${runner.agent.type}${model})`;
 }
 
 function formatRunnerCaseRow(
@@ -334,7 +338,7 @@ function createInteractiveState(event: SuiteStartEvent): InteractiveState {
     return event.runners.map((runner) => ({
       key: createRunKey(testCase.id, runner.id),
       caseId: testCase.id,
-      runnerId: runner.id,
+      runner,
       status: "queued" as const,
     }));
   });
@@ -416,17 +420,18 @@ function formatInteractiveRunRow(
   caseWidth: number,
 ): string {
   const statusIcon = formatInteractiveStatusIcon(entry, state, colors, symbols, frames);
-  const row = `${statusIcon} ${padCell(entry.caseId, caseWidth)}  /  ${entry.runnerId}`;
+  const row = `${statusIcon} ${padCell(entry.caseId, caseWidth)}  /  ${entry.runner.id}`;
+  const runnerMeta = ` ${formatRunnerAgentLabel(entry.runner)}`;
 
   switch (entry.status) {
     case "queued":
-      return colors.dim(row);
+      return colors.dim(`${row}${runnerMeta}`);
     case "running":
-      return row;
+      return `${row}${colors.dim(runnerMeta)}`;
     case "passed":
-      return colors.green(row);
+      return `${colors.green(row)}${colors.dim(runnerMeta)}`;
     case "failed":
-      return colors.red(row);
+      return `${colors.red(row)}${colors.dim(runnerMeta)}`;
   }
 }
 
