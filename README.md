@@ -11,19 +11,20 @@ When you evaluate agent skills manually, it is hard to tell whether the agent ac
 - OpenCode CLI
 - Codex CLI
 
-The package root exports the library API, including the built-in `assert` helper for suite authors. The CLI remains available through the top-level entrypoint and package bin.
-
 ## Quick start
 
-Install dependencies:
+Install `skillgym` in the project where you want to benchmark agent behavior:
 
 ```bash
-pnpm install
+npm install --save-dev skillgym
+yarn add --dev skillgym
+pnpm add --save-dev skillgym
+bun add --dev skillgym
 ```
 
-Create `skillgym.config.*` next to your suite, or in a parent directory that the suite can discover upward:
+Create `skillgym.config.mjs` in your project root, or in a parent directory that the suite can discover upward:
 
-```ts
+```js
 export default {
   run: {
     cwd: ".",
@@ -51,12 +52,12 @@ export default {
 };
 ```
 
-Define a suite:
+Create a suite file such as `./skillgym/basic-suite.mjs`:
 
-```ts
-import { assert, type TestCase } from "skillgym";
+```js
+import { assert } from "skillgym";
 
-const suite: TestCase[] = [
+const suite = [
   {
     id: "basic-ready",
     prompt: "Say only: skillgym ready",
@@ -69,19 +70,24 @@ const suite: TestCase[] = [
 export default suite;
 ```
 
-Run the [basic suite](examples/basic-suite.ts):
+Run the suite with the package manager you use in that project:
 
 ```bash
-node --import tsx ./index.ts run ./examples/basic-suite.ts
+npx skillgym run ./skillgym/basic-suite.mjs
+yarn skillgym run ./skillgym/basic-suite.mjs
+pnpm exec skillgym run ./skillgym/basic-suite.mjs
+bunx skillgym run ./skillgym/basic-suite.mjs
 ```
 
 View CLI help:
 
 ```bash
-node --import tsx ./index.ts help
+npx skillgym help
 ```
 
 By default, `skillgym` uses the built-in `standard` reporter.
+
+If you prefer TypeScript for config or suite files, use `skillgym.config.ts` and `*.ts` suite files instead, but make sure your project already has a working TypeScript runtime/loader.
 
 ## What you need to run a suite
 
@@ -95,47 +101,27 @@ Config is discovered upward from the suite file directory. CLI flags override co
 Runner model selection is required per runner in `runners.<name>.agent.model`.
 Use `agent.model` instead of `commandArgs` when you need to select the agent model, especially for Codex where `--model` must be passed to `codex exec` rather than the outer launcher.
 
+## Runners
+
+A runner is one configured agent target. It tells `skillgym` which CLI to launch and which model to use for a run.
+
+Each test case runs once per selected runner. For example, 3 cases and 2 runners produce 6 executions.
+
 ## Configuration
 
-Shared defaults live in `skillgym.config.*`:
+Most important config properties:
 
-```ts
-export default {
-  run: {
-    cwd: "./workspace-under-test",
-    outputDir: "./bench-results",
-    reporter: "./examples/custom-reporter.ts",
-    schedule: "serial",
-    workspace: {
-      mode: "shared",
-    },
-  },
-  defaults: {
-    timeoutMs: 120_000,
-  },
-  runners: {
-    open-main: {
-      agent: {
-        type: "opencode",
-        model: "openai/gpt-5",
-      },
-    },
-    code-main: {
-      agent: {
-        type: "codex",
-        model: "gpt-5",
-      },
-    },
-  },
-  snapshots: {
-    path: "./skillgym.snapshots.json",
-    tolerance: {
-      absolute: 300,
-      percent: 15,
-    },
-  },
-};
-```
+- `run.cwd`: working directory used for shared-workspace runs
+- `run.outputDir`: where artifacts, reports, and preserved workspaces are written
+- `run.reporter`: built-in `standard` reporter or a custom reporter module path
+- `run.schedule`: execution scheduling mode for case x runner pairs
+- `run.workspace`: default workspace mode for the suite
+- `defaults.timeoutMs`: default per-case timeout
+- `runners.<id>.agent.type`: which agent integration to use, currently `opencode` or `codex`
+- `runners.<id>.agent.model`: model passed to that runner
+- `snapshots`: token regression baseline configuration
+
+The execution unit is one case x runner pair. `skillgym` expands the suite into those pairs, runs them according to `run.schedule`, and writes artifacts for each execution.
 
 `run.schedule` controls execution order:
 
@@ -143,9 +129,39 @@ export default {
 - `parallel`: start all selected case/runner pairs concurrently
 - `isolated-by-runner`: keep each runner on its own serial queue while different runners may overlap
 
-`serial` is the default. Concurrent modes do not copy or isolate the workspace; overlapping runs may still interact through the same filesystem state and live runner output. Codex and OpenCode runtime state are isolated per run under each artifact directory.
+`serial` is the default. `parallel` maximizes overlap across the full matrix. `isolated-by-runner` is a middle ground when you want each runner to stay ordered internally but still allow different runners to overlap.
 
-Suites can also opt into isolated workspaces with a named `workspace` export. In isolated mode, each case x runner execution gets its own temporary workspace, optionally copied from a template directory and bootstrapped with a command before the agent runs. Failed isolated workspaces are preserved under `outputDir/workspaces`.
+Concurrent schedules do not copy or isolate the workspace by themselves. Overlapping runs may still interact through the same filesystem state and live runner output unless you use isolated workspaces. Codex and OpenCode runtime state are isolated per run under each artifact directory.
+
+## Workspaces
+
+A workspace is the directory where an execution runs.
+
+`skillgym` supports two workspace modes:
+
+- `shared`: run directly in one real directory
+- `isolated`: create a fresh temporary workspace per case x runner execution
+
+Use `shared` when you want the agent to work against your real project checkout. Use `isolated` when you want clean filesystem state per execution or need to prepare each run from a template.
+
+You can configure workspaces in `skillgym.config.*` with `run.workspace`, or per suite with a named `workspace` export. Suite-level workspace config overrides config-level `run.workspace`.
+
+Isolated workspace example in a suite:
+
+```js
+export const workspace = {
+  mode: "isolated",
+  templateDir: "./fixtures/base-project",
+  bootstrap: {
+    command: "npm",
+    args: ["install"],
+  },
+};
+```
+
+In isolated mode, each execution gets its own workspace. `templateDir` copies a starter project into that workspace, and `bootstrap` runs before the agent starts. Successful isolated runs are cleaned up; failed ones are preserved under `outputDir/workspaces` for debugging.
+
+See [Workspaces](docs/workspaces.md) for the full workspace reference.
 
 ## Assertions
 
@@ -184,57 +200,23 @@ See the [assertion reference](docs/assertions.md).
 Snapshot checks can fail runs when token usage regresses beyond a configured tolerance.
 
 ```bash
-node --import tsx ./index.ts run ./examples/basic-suite.ts --update-snapshots
+npx skillgym run ./examples/basic-suite.ts --update-snapshots
 ```
 
 See the [snapshot guide](docs/snapshot.md).
-
-## Reporter selection
-
-```bash
-node --import tsx ./index.ts run ./examples/basic-suite.ts --reporter standard
-```
-
-```bash
-node --import tsx ./index.ts run ./examples/basic-suite.ts --schedule isolated-by-runner
-```
-
-```bash
-node --import tsx ./index.ts run ./examples/basic-suite.ts --reporter ./examples/custom-reporter.ts
-```
-
-Relative custom reporter paths passed on the CLI resolve from the shell `process.cwd()`.
-Relative reporter paths in config resolve from the config file directory.
 
 ## Example suites
 
 The [skill selection suite](examples/skill-selection-suite.ts) targets a real installed skill (`find-skills`) and checks that the runner loads it before invoking `npx skills find`.
 
 ```bash
-node --import tsx ./index.ts run ./examples/skill-selection-suite.ts
+npx skillgym run ./examples/skill-selection-suite.ts
 ```
 
 The [workspace isolation suite](examples/workspace-isolation-suite.ts) demonstrates isolated workspace setup with a template directory and bootstrap command:
 
 ```bash
-node --import tsx ./index.ts run ./examples/workspace-isolation-suite.ts
-```
-
-## Custom reporter example
-
-```ts
-import type { BenchmarkReporter } from "skillgym";
-
-const reporter: BenchmarkReporter = {
-  onSuiteStart(event) {
-    console.log(`Running ${event.context.suitePath}`);
-  },
-  onSuiteFinish(event) {
-    console.log(`Results: ${event.result.outputDir}`);
-  },
-};
-
-export default reporter;
+npx skillgym run ./examples/workspace-isolation-suite.ts
 ```
 
 ## Docs
