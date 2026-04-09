@@ -1,7 +1,7 @@
 {
   "name": "skillgym",
   "version": "0.1.0",
-  "description": "Test your agent skills with TypeScript in a real environment",
+  "description": "Prove your agent skills work before you ship them.",
   "author": "Szymon Chmal",
   "license": "MIT",
   "repository": {
