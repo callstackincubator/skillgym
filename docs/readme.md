@@ -1,6 +1,6 @@
 # skillgym Docs
 
-This directory contains the working documentation for `skillgym`.
+This directory contains end-user documentation for `skillgym`.
 
 ## What this project is
 
@@ -41,8 +41,6 @@ Assertion authoring and the built-in grouped `assert` API are documented in `ass
 
 ## Document map
 
-- `product.md`: goals, scope, and non-goals
-- `architecture.md`: system design and execution flow
 - `test-cases.md`: test suite and test case authoring
 - `assertions.md`: assertion reference and matcher semantics
 - `workspaces.md`: shared and isolated workspace behavior
@@ -50,6 +48,3 @@ Assertion authoring and the built-in grouped `assert` API are documented in `ass
 - `session-report.md`: normalized report schema
 - `snapshot.md`: token regression snapshots and baseline updates
 - `skill-detection.md`: how skill selection is observed
-- `adapters.md`: runner-specific integration notes
-- `implementation-plan.md`: phased plan and milestones
-- `potential-improvements.md`: deferred ideas and future enhancements

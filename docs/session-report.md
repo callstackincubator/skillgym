@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`SessionReport` is the normalized representation of a single completed retry.
+`SessionReport` is the normalized representation of one completed case x runner execution.
 
 It is the only object exposed to assertions.
 
@@ -10,7 +10,7 @@ It is the only object exposed to assertions.
 
 ```ts
 export interface SessionReport {
-  runner: "opencode" | "codex";
+  runner: RunnerInfo;
   sessionId?: string;
   prompt: string;
 
@@ -53,6 +53,8 @@ export interface SessionReport {
   };
 }
 ```
+
+`runner.id` is the configured runner id, and `runner.agent.type` identifies the backing integration such as `opencode` or `codex`.
 
 ## Skill detection
 
