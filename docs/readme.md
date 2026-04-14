@@ -15,8 +15,6 @@ Workspace behavior is documented in `workspaces.md`, including shared runs, isol
 Supported in V1:
 - OpenCode CLI
 - Codex CLI
-
-Deferred:
 - Claude Code CLI
 
 ## Core principles

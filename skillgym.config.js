@@ -3,7 +3,7 @@ const config = {
     cwd: ".",
     outputDir: "./.skillgym-results",
     reporter: "standard",
-    schedule: "parallel",
+    schedule: "serial",
   },
   defaults: {
     timeoutMs: 120_000,
@@ -15,10 +15,10 @@ const config = {
         model: "github-copilot/gpt-5.4-mini",
       },
     },
-    "code-main": {
+    "claude-main": {
       agent: {
-        type: "codex",
-        model: "gpt-5",
+        type: "claude-code",
+        model: "claude-sonnet-4-6",
       },
     },
   },

@@ -1,5 +1,5 @@
 export type { SessionReport, SessionEvent, SkillDetection } from "./domain/session-report.js";
-export type { AgentConfig, AgentType, RunnerConfig, RunnerId, RunnerInfo } from "./domain/runner.js";
+export type { AgentConfig, AgentType, ClaudeCodeAgentConfig, RunnerConfig, RunnerId, RunnerInfo } from "./domain/runner.js";
 export type { ScheduleMode } from "./domain/schedule.js";
 export type { TestCase, TestSuite, AssertionContext, SuiteWorkspaceConfig, WorkspaceBootstrapConfig } from "./domain/test-case.js";
 export type { RunnerFailureOrigin, RunnerFailureType, RunnerResult, CaseResult, RunnerSummary, SuiteRunResult } from "./domain/result.js";

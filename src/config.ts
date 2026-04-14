@@ -19,7 +19,6 @@ const RUN_KEYS = ["cwd", "outputDir", "reporter", "schedule", "workspace"] as co
 const DEFAULT_KEYS = ["timeoutMs"] as const;
 const RUNNER_KEYS = ["agent"] as const;
 const COMMON_AGENT_KEYS = ["type", "command", "commandArgs", "env", "model"] as const;
-const CODEX_AGENT_KEYS = [...COMMON_AGENT_KEYS] as const;
 const SNAPSHOT_KEYS = ["path", "metric", "tolerance"] as const;
 const SNAPSHOT_TOLERANCE_KEYS = ["absolute", "percent"] as const;
 const WORKSPACE_KEYS = ["mode", "cwd", "templateDir", "bootstrap"] as const;
@@ -222,19 +221,10 @@ function resolveConfigPaths(config: SkillGymConfig, configDir: string): SkillGym
 }
 
 function resolveRunnerConfigPaths(config: RunnerConfig, configDir: string): RunnerConfig {
-  if (config.agent.type === "codex") {
-    return {
-      agent: {
-        ...resolveCommonAgentPaths(config.agent, configDir),
-        type: "codex",
-      },
-    };
-  }
-
   return {
     agent: {
       ...resolveCommonAgentPaths(config.agent, configDir),
-      type: "opencode",
+      type: config.agent.type,
     },
   };
 }
@@ -431,17 +421,7 @@ function parseAgentConfig(value: unknown, configPath: string): RunnerConfig["age
   const record = parseObject(value, configPath);
   const type = parseRequiredAgentType(record.type, `${configPath}.type`);
 
-  ensureKnownKeys(record, type === "codex" ? CODEX_AGENT_KEYS : COMMON_AGENT_KEYS, configPath);
-
-  if (type === "codex") {
-    return {
-      type,
-      command: parseOptionalNonEmptyString(record.command, `${configPath}.command`),
-      commandArgs: parseOptionalStringArray(record.commandArgs, `${configPath}.commandArgs`),
-      env: parseOptionalEnv(record.env, `${configPath}.env`),
-      model: parseRequiredNonEmptyString(record.model, `${configPath}.model`),
-    };
-  }
+  ensureKnownKeys(record, COMMON_AGENT_KEYS, configPath);
 
   return {
     type,
@@ -452,9 +432,9 @@ function parseAgentConfig(value: unknown, configPath: string): RunnerConfig["age
   };
 }
 
-function parseRequiredAgentType(value: unknown, configPath: string): "codex" | "opencode" {
-  if (value !== "codex" && value !== "opencode") {
-    throw invalidConfig(configPath, 'expected "codex" or "opencode"');
+function parseRequiredAgentType(value: unknown, configPath: string): "codex" | "opencode" | "claude-code" {
+  if (value !== "codex" && value !== "opencode" && value !== "claude-code") {
+    throw invalidConfig(configPath, 'expected "codex", "opencode", or "claude-code"');
   }
 
   return value;
