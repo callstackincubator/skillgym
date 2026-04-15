@@ -1,6 +1,10 @@
-# skillgym
+![skillgym-banner](https://incubator.callstack.com/skillgym/banner.jpg)
 
-Benchmark coding-agent skills by running real agent sessions and asserting on normalized execution reports.
+### Benchmark coding-agent skills by running real agent sessions and asserting on normalized execution reports
+
+[![mit licence][license-badge]][license]
+[![npm downloads][npm-downloads-badge]][npm-downloads]
+[![PRs Welcome][prs-welcome-badge]][prs-welcome]
 
 ## Why it's useful
 
@@ -10,6 +14,7 @@ When you evaluate agent skills manually, it is hard to tell whether the agent ac
 
 - OpenCode CLI
 - Codex CLI
+- Claude Code
 
 ## Quick start
 
@@ -131,7 +136,7 @@ Most important config properties:
 - `run.schedule`: execution scheduling mode for case x runner pairs
 - `run.workspace`: default workspace mode for the suite
 - `defaults.timeoutMs`: default per-case timeout
-- `runners.<id>.agent.type`: which agent integration to use, currently `opencode` or `codex`
+- `runners.<id>.agent.type`: which agent integration to use, currently `opencode`, `codex`, or `claude-code`
 - `runners.<id>.agent.model`: model passed to that runner
 - `snapshots`: token regression baseline configuration
 
@@ -145,7 +150,7 @@ The execution unit is one case x runner pair. `skillgym` expands the suite into 
 
 `serial` is the default. `parallel` maximizes overlap across the full matrix. `isolated-by-runner` is a middle ground when you want each runner to stay ordered internally but still allow different runners to overlap.
 
-Concurrent schedules do not copy or isolate the workspace by themselves. Overlapping runs may still interact through the same filesystem state and live runner output unless you use isolated workspaces. Codex and OpenCode runtime state are isolated per run under each artifact directory.
+Concurrent schedules do not copy or isolate the workspace by themselves. Overlapping runs may still interact through the same filesystem state and live runner output unless you use isolated workspaces. OpenCode, Codex, and Claude Code runtime state are isolated per run under each artifact directory.
 
 ## Workspaces
 
@@ -235,9 +240,25 @@ npx skillgym run ./examples/workspace-isolation-suite.ts
 
 ## Docs
 
+The documentation site is at [incubator.callstack.com/skillgym](https://incubator.callstack.com/skillgym/). Repository docs:
+
 - [Docs Overview](docs/readme.md)
 - [Test Cases](docs/test-cases.md)
 - [Assertions](docs/assertions.md)
 - [Workspaces](docs/workspaces.md)
 - [Reporters](docs/reporters.md)
 - [Snapshots](docs/snapshot.md)
+
+## Made with ❤️ at Callstack
+
+`skillgym` is an open source project and will always remain free to use. If you think it's cool, please star it 🌟. [Callstack][callstack-readme-with-love] is a group of React and React Native geeks, contact us at [hello@callstack.com](mailto:hello@callstack.com) if you need any help with these or just want to say hi!
+
+Like the project? ⚛️ [Join the team](https://callstack.com/careers/?utm_campaign=Senior_RN&utm_source=github&utm_medium=readme) who does amazing stuff for clients and drives React Native Open Source! 🔥
+
+[callstack-readme-with-love]: https://callstack.com/?utm_source=github.com&utm_medium=referral&utm_campaign=skillgym&utm_term=readme-with-love
+[license-badge]: https://img.shields.io/npm/l/skillgym?style=for-the-badge
+[license]: https://github.com/callstackincubator/skillgym/blob/main/LICENSE
+[npm-downloads-badge]: https://img.shields.io/npm/dm/skillgym?style=for-the-badge
+[npm-downloads]: https://www.npmjs.com/package/skillgym
+[prs-welcome-badge]: https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=for-the-badge
+[prs-welcome]: https://github.com/callstackincubator/skillgym
