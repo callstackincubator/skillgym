@@ -1,0 +1,829 @@
+---
+import { Code } from 'astro:components';
+import { darkTheme } from '../lib/shiki.ts';
+
+const GITHUB = 'https://github.com/callstackincubator/skillgym';
+const DOCS = 'https://github.com/callstackincubator/skillgym#readme';
+const NPM = 'https://www.npmjs.com/package/skillgym';
+
+const marqueeItems = [
+  'Real CLI sessions','No mocked chats','Normalized SessionReport',
+  'TypeScript assertions','Multi-runner matrix','Preserved telemetry',
+  'Token usage snapshots','OpenCode','Codex','Claude Code',
+  'Evidence-based skills','Pluggable reporters','Isolated workspaces','Open source',
+];
+const doubled = [...marqueeItems, ...marqueeItems];
+
+const assertCode = `\
+import { assert } from "skillgym";
+
+// skill was loaded before any action
+assert.skills.has(report, "find-skills");
+
+// skills find ran before pnpm install
+assert.commands.before(
+  report,
+  /skills find/,
+  /pnpm install/
+);
+
+// the right SKILL.md was read
+assert.fileReads.includes(
+  report,
+  /find-skills\\/SKILL\\.md$/
+);
+
+// agent produced output
+assert.output.notEmpty(report);`;
+
+const workspaceCode = `\
+export const workspace = {
+  mode: "isolated",
+  templateDir: "./fixtures/base",
+  bootstrap: {
+    command: "npm",
+    args: ["install"],
+  },
+};`;
+
+const configCode = `\
+// skillgym.config.ts
+import type { SkillGymConfig } from "skillgym";
+
+const config: SkillGymConfig = {
+  runners: {
+    "my-agent": {
+      agent: {
+        type: "opencode",
+        model: "openai/gpt-4o",
+      },
+    },
+  },
+};
+
+export default config;`;
+
+const suiteCode = `\
+// skillgym/my-suite.ts
+import type { TestSuite } from "skillgym";
+import { assert } from "skillgym";
+
+const suite: TestSuite = [
+  {
+    id: "smoke",
+    prompt: "Say only: skillgym ready",
+    assert(report, ctx) {
+      assert.match(
+        ctx.finalOutput(),
+        /skillgym ready/
+      );
+    },
+  },
+];
+
+export default suite;`;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>skillgym — Benchmark coding agent skills</title>
+    <meta name="description" content="Run real agent sessions. Assert on skills, commands, and file reads. Catch token regressions with snapshots." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link href="https://fonts.bunny.net/css?family=switzer:400,500&display=swap" rel="stylesheet" />
+  </head>
+
+  <body>
+
+    <!-- ============================================================
+         NAVIGATION
+    ============================================================ -->
+    <nav class="nav">
+      <div class="nav-inner">
+        <a href="/" class="nav-logo">
+          <span class="logo-mark">skillgym</span>
+          <span class="logo-by">by Callstack</span>
+        </a>
+        <div class="nav-right">
+          <a href={GITHUB} class="nav-gh" target="_blank" rel="noopener noreferrer">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.09.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.647.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.268 2.75 1.026A9.578 9.578 0 0 1 12 6.836c.85.004 1.705.114 2.504.337 1.909-1.294 2.747-1.026 2.747-1.026.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.741 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/>
+            </svg>
+            GitHub
+          </a>
+          <a href={GITHUB} class="btn-primary" target="_blank" rel="noopener noreferrer">Get started</a>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ============================================================
+         HERO
+    ============================================================ -->
+    <section class="hero">
+      <div class="grain"></div>
+      <div class="hero-glow"></div>
+      <div class="container hero-inner">
+        <div class="hero-copy">
+          <p class="eyebrow">OPEN SOURCE · AGENT BENCHMARKING</p>
+          <h1 class="hero-h1">Did your agent<br />do the right thing?</h1>
+          <p class="hero-lead">Real CLI sessions. TypeScript assertions.<br />Evidence you can trust.</p>
+          <div class="hero-actions">
+            <a href={GITHUB} class="btn-primary btn-large" target="_blank" rel="noopener noreferrer">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.09.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.647.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.268 2.75 1.026A9.578 9.578 0 0 1 12 6.836c.85.004 1.705.114 2.504.337 1.909-1.294 2.747-1.026 2.747-1.026.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.741 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/>
+              </svg>
+              Star on GitHub
+            </a>
+            <a href={DOCS} class="btn-ghost btn-large" target="_blank" rel="noopener noreferrer">Read the docs →</a>
+          </div>
+        </div>
+
+        <div class="hero-visual">
+          <div class="terminal">
+            <div class="terminal-bar">
+              <span class="t-dot" style="background:#FF5F56"></span>
+              <span class="t-dot" style="background:#FFBD2E"></span>
+              <span class="t-dot" style="background:#27C93F"></span>
+              <span class="t-title">skillgym run</span>
+            </div>
+            <div class="terminal-body">
+              <div class="tl"><span class="t-prompt">$</span> <span class="t-cmd">skillgym run ./examples/basic-suite.ts</span></div>
+              <div class="tl tl-blank"></div>
+              <div class="tl"><span class="t-k">Suite</span>      <span class="t-v">examples/basic-suite.ts</span></div>
+              <div class="tl"><span class="t-k">Workspace</span>  <span class="t-v">~/Projects/acme-app</span></div>
+              <div class="tl"><span class="t-k">Cases</span>      <span class="t-v">3</span></div>
+              <div class="tl"><span class="t-k">Runners</span>    <span class="t-v">2</span></div>
+              <div class="tl"><span class="t-k">Runs</span>       <span class="t-v">6</span></div>
+              <div class="tl tl-blank"></div>
+              <div class="tl"><span class="t-pass">✓</span> <span class="t-case">always-passes</span>    <span class="t-meta">2/2</span>  <span class="t-meta">2 runners</span></div>
+              <div class="tl"><span class="t-fail">✗</span> <span class="t-case">assertion-fails</span>   <span class="t-meta">1/2</span>  <span class="t-meta">2 runners</span></div>
+              <div class="tl"><span class="t-fail">✗</span> <span class="t-case">assert-crashes</span>    <span class="t-meta">0/2</span>  <span class="t-meta">2 runners</span></div>
+              <div class="tl tl-blank"></div>
+              <div class="tl tl-dim">Runner: open-main (opencode, openai/gpt-4o)</div>
+              <div class="tl tl-head"><span>case</span><span>time</span><span>billable</span></div>
+              <div class="tl"><span class="t-pass">✓</span> <span class="t-case">always-passes</span>    <span class="t-meta">12.3s</span>  <span class="t-meta">8,204</span></div>
+              <div class="tl"><span class="t-pass">✓</span> <span class="t-case">assertion-fails</span>  <span class="t-meta">14.8s</span>  <span class="t-meta">11,240</span></div>
+              <div class="tl"><span class="t-fail">✗</span> <span class="t-case">assert-crashes</span>    <span class="t-meta"> 3.1s</span>  <span class="t-meta">892</span></div>
+              <div class="tl tl-blank"></div>
+              <div class="tl tl-summary"><span class="t-fail">2 failed</span> · <span class="t-pass">1 passed</span> · <span class="t-meta">1m 42s</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         MARQUEE
+    ============================================================ -->
+    <div class="marquee-wrap">
+      <div class="marquee-fade">
+        <div class="marquee-track">
+          {doubled.map(item => (
+            <span class="marquee-item">{item}</span>
+          ))}
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         HOW IT WORKS — 3 cards
+    ============================================================ -->
+    <section class="section-light">
+      <div class="container">
+        <div class="section-hdr">
+          <p class="eyebrow eyebrow-light">HOW IT WORKS</p>
+          <h2 class="h2-light">Run it. Assert it. Trust it.</h2>
+        </div>
+        <div class="three-cards">
+          <div class="card-light">
+            <p class="card-label">RUN</p>
+            <h3 class="card-title">Real CLIs, real environments.</h3>
+            <p class="card-body">No mocked sessions. No simulated output. skillgym invokes the actual agent CLI and captures everything it does.</p>
+          </div>
+          <div class="card-light card-light--mid">
+            <p class="card-label">ASSERT</p>
+            <h3 class="card-title">TypeScript checks on skills and commands.</h3>
+            <p class="card-body">Write assertions against skills loaded, commands run, and files read. Standard <code>node:assert/strict</code> under the hood.</p>
+          </div>
+          <div class="card-light">
+            <p class="card-label">INSPECT</p>
+            <h3 class="card-title">Artifacts you can diff across runs.</h3>
+            <p class="card-body">Every execution writes a normalized report. Token counts, event traces, and session output — preserved for every run.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         FEATURE — ONE RUN, STRUCTURED RESULTS
+    ============================================================ -->
+    <section class="section-light section-border-top">
+      <div class="container">
+        <div class="split">
+          <div class="split-copy">
+            <p class="eyebrow eyebrow-light">RUNNER</p>
+            <h2 class="h2-light">One run.<br />Structured results.</h2>
+            <p class="split-body">Point skillgym at any suite file. It expands every case against every configured runner, captures the session, and writes a normalized report you can assert against.</p>
+            <code class="inline-cmd">npm install --save-dev skillgym</code>
+            <code class="inline-cmd" style="margin-top:8px">npx skillgym run ./skillgym/my-suite.ts</code>
+          </div>
+          <div class="split-visual">
+            <div class="terminal terminal--sm">
+              <div class="terminal-bar">
+                <span class="t-dot" style="background:#FF5F56"></span>
+                <span class="t-dot" style="background:#FFBD2E"></span>
+                <span class="t-dot" style="background:#27C93F"></span>
+                <span class="t-title">standard reporter</span>
+              </div>
+              <div class="terminal-body terminal-body--sm">
+                <div class="tl tl-dim">Suite      examples/basic-suite.ts</div>
+                <div class="tl tl-dim">Output     .skillgym-results/run-2026-04-13</div>
+                <div class="tl tl-blank"></div>
+                <div class="tl tl-head-sm"><span>case</span><span>runs</span><span>status</span></div>
+                <div class="tl"><span class="t-pass">✓</span> <span class="t-case">always-passes</span>    <span class="t-meta">2/2</span>  <span class="t-pass">passed</span></div>
+                <div class="tl"><span class="t-fail">✗</span> <span class="t-case">assertion-fails</span>   <span class="t-meta">1/2</span>  <span class="t-fail">failed</span></div>
+                <div class="tl"><span class="t-fail">✗</span> <span class="t-case">assert-crashes</span>    <span class="t-meta">0/2</span>  <span class="t-fail">failed</span></div>
+                <div class="tl tl-blank"></div>
+                <div class="tl tl-dim">Runner: open-main (opencode, openai/gpt-4o)</div>
+                <div class="tl tl-head-sm"><span>case</span><span>time</span><span>in</span><span>out</span><span>billable</span></div>
+                <div class="tl tl-row"><span class="t-pass">✓</span> <span class="t-case">always-passes</span>   <span class="t-meta">12.3s</span> <span class="t-meta">1,240</span> <span class="t-meta">890</span> <span class="t-meta">8,204</span></div>
+                <div class="tl tl-row"><span class="t-pass">✓</span> <span class="t-case">assertion-fails</span> <span class="t-meta">14.8s</span> <span class="t-meta">2,040</span> <span class="t-meta">1,100</span> <span class="t-meta">11,240</span></div>
+                <div class="tl tl-row"><span class="t-fail">✗</span> <span class="t-case">assert-crashes</span>   <span class="t-meta"> 3.1s</span>   <span class="t-meta">410</span>   <span class="t-meta">120</span>    <span class="t-meta">892</span></div>
+                <div class="tl tl-blank"></div>
+                <div class="tl tl-dim">Runner: code-main (codex, openai/gpt-4.1)</div>
+                <div class="tl tl-row"><span class="t-pass">✓</span> <span class="t-case">always-passes</span>   <span class="t-meta">11.9s</span> <span class="t-meta">1,180</span>  <span class="t-meta">820</span> <span class="t-meta">7,960</span></div>
+                <div class="tl tl-row"><span class="t-fail">✗</span> <span class="t-case">assertion-fails</span> <span class="t-meta">16.2s</span> <span class="t-meta">2,200</span> <span class="t-meta">1,240</span> <span class="t-meta">12,000</span></div>
+                <div class="tl tl-row"><span class="t-fail">✗</span> <span class="t-case">assert-crashes</span>   <span class="t-meta"> 2.8s</span>   <span class="t-meta">380</span>    <span class="t-meta">95</span>    <span class="t-meta">801</span></div>
+                <div class="tl tl-blank"></div>
+                <div class="tl tl-summary"><span class="t-fail">2 failed</span> · <span class="t-pass">1 passed</span> · <span class="t-meta">Duration 1m 42s</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         FEATURE — MULTI-RUNNER
+    ============================================================ -->
+    <section class="section-light section-border-top">
+      <div class="container">
+        <div class="split">
+          <div class="split-copy">
+            <p class="eyebrow eyebrow-light">RUNNERS</p>
+            <h2 class="h2-light">Same prompts.<br />Surface where agents diverge.</h2>
+            <p class="split-body">One suite. Every agent. Differences exposed. Run the same cases against OpenCode, Codex, and Claude Code — results land side by side in the same structured report.</p>
+          </div>
+          <div class="split-visual">
+            <div class="agent-stack">
+              <div class="agent-card">
+                <div class="agent-info">
+                  <p class="agent-name">OpenCode</p>
+                  <p class="agent-desc">an open source AI coding agent</p>
+                </div>
+                <span class="agent-badge">opencode</span>
+              </div>
+              <div class="agent-card">
+                <div class="agent-info">
+                  <p class="agent-name">Codex</p>
+                  <p class="agent-desc">OpenAI's terminal coding agent</p>
+                </div>
+                <span class="agent-badge">codex</span>
+              </div>
+              <div class="agent-card">
+                <div class="agent-info">
+                  <p class="agent-name">Claude Code</p>
+                  <p class="agent-desc">Anthropic's coding agent CLI</p>
+                </div>
+                <span class="agent-badge">claude-code</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         FEATURE — ASSERTIONS
+    ============================================================ -->
+    <section class="section-light section-border-top">
+      <div class="container">
+        <div class="split split--rev">
+          <div class="split-visual">
+            <div class="code-block">
+              <div class="code-bar">
+                <div class="code-dots">
+                  <span class="c-dot"></span>
+                  <span class="c-dot"></span>
+                  <span class="c-dot"></span>
+                </div>
+                <span class="code-lang">assertions.ts</span>
+              </div>
+              <div class="code-inner">
+                <Code code={assertCode} lang="typescript" theme={darkTheme} />
+              </div>
+            </div>
+          </div>
+          <div class="split-copy">
+            <p class="eyebrow eyebrow-light">ASSERTIONS</p>
+            <h2 class="h2-light">Encode good.<br />Enforce it every run.</h2>
+            <p class="split-body">Assertions turn telemetry into a quality gate. Skills loaded. Commands run in the right order. Files read. Output produced. Each check runs against the normalized session report.</p>
+            <ul class="assert-list">
+              <li><code>assert.skills.*</code> — skill detection by confidence</li>
+              <li><code>assert.commands.*</code> — exact and pattern matchers</li>
+              <li><code>assert.fileReads.*</code> — file access tracking</li>
+              <li><code>assert.toolCalls.*</code> — tool call inspection</li>
+              <li><code>assert.output.*</code> — final output checks</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         BENTO — SNAPSHOTS + WORKSPACES
+    ============================================================ -->
+    <section class="section-light section-border-top">
+      <div class="container">
+        <div class="bento-grid">
+          <div class="bento-tile">
+            <p class="bento-label">SNAPSHOTS</p>
+            <h3 class="bento-title">Token baselines.<br />Automatic regressions.</h3>
+            <p class="bento-body">Set a baseline. Get alerted when token usage regresses beyond your configured tolerance. Absolute and percent thresholds per metric.</p>
+            <pre class="bento-code">npx skillgym run ./suite.ts --update-snapshots</pre>
+          </div>
+          <div class="bento-tile bento-tile--dark">
+            <p class="bento-label bento-label--dim">WORKSPACES</p>
+            <h3 class="bento-title bento-title--light">Isolated.<br />Or shared. Your call.</h3>
+            <p class="bento-body bento-body--dim">Own workspace per run when you need clean state. Share one when you don't. Template directories and bootstrap commands included.</p>
+            <div class="bento-code-wrap">
+              <Code code={workspaceCode} lang="typescript" theme={darkTheme} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         QUICK START (dark)
+    ============================================================ -->
+    <section class="section-dark">
+      <div class="container">
+        <div class="section-hdr">
+          <p class="eyebrow eyebrow-dark">QUICK START</p>
+          <h2 class="h2-dark">Up in three steps.</h2>
+        </div>
+        <div class="steps-grid">
+          <div class="step">
+            <p class="step-num">01</p>
+            <h3 class="step-title">Install</h3>
+            <pre class="step-code step-code--plain">npm install --save-dev skillgym</pre>
+          </div>
+          <div class="step step--mid">
+            <p class="step-num">02</p>
+            <h3 class="step-title">Configure</h3>
+            <div class="step-code-wrap">
+              <Code code={configCode} lang="typescript" theme={darkTheme} />
+            </div>
+          </div>
+          <div class="step">
+            <p class="step-num">03</p>
+            <h3 class="step-title">Run</h3>
+            <div class="step-code-wrap">
+              <Code code={suiteCode} lang="typescript" theme={darkTheme} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         CTA
+    ============================================================ -->
+    <section class="cta-section">
+      <div class="grain"></div>
+      <div class="cta-glow"></div>
+      <div class="container cta-inner">
+        <p class="eyebrow eyebrow-dark">OPEN SOURCE · MIT LICENSE</p>
+        <h2 class="cta-h2">Real runs.<br />Real evidence.</h2>
+        <p class="cta-sub">Your agent's behavior, in plain TypeScript assertions.</p>
+        <div class="cta-actions">
+          <a href={GITHUB} class="btn-primary btn-large" target="_blank" rel="noopener noreferrer">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.09.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.647.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.268 2.75 1.026A9.578 9.578 0 0 1 12 6.836c.85.004 1.705.114 2.504.337 1.909-1.294 2.747-1.026 2.747-1.026.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.741 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/>
+            </svg>
+            Star on GitHub
+          </a>
+          <a href={DOCS} class="cta-docs-link" target="_blank" rel="noopener noreferrer">Read the docs →</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         FOOTER
+    ============================================================ -->
+    <footer class="footer">
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <span class="footer-name">skillgym</span>
+          <span class="footer-by">by Callstack</span>
+        </div>
+        <nav class="footer-links" aria-label="Footer navigation">
+          <a href={DOCS}>Docs</a>
+          <a href={GITHUB} target="_blank" rel="noopener noreferrer">GitHub</a>
+          <a href={NPM} target="_blank" rel="noopener noreferrer">npm</a>
+        </nav>
+        <p class="footer-meta">MIT License</p>
+      </div>
+    </footer>
+
+  </body>
+</html>
+
+<style is:global>
+
+/* ================================================================
+   RESET & BASE
+================================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; font-size: 16px; }
+body {
+  font-family: 'Switzer', 'Inter', system-ui, -apple-system, sans-serif;
+  background: #000;
+  color: #fff;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ================================================================
+   VARIABLES
+================================================================ */
+:root {
+  --accent: #8232FF;
+  --font-head: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-body: 'Switzer', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Geist Mono', 'Cascadia Code', ui-monospace, monospace;
+  --r-sm: 2px;
+  --r-md: 4px;
+  --border-dark: rgba(255,255,255,0.08);
+  --border-light: rgba(0,0,0,0.08);
+  --term-bg: #18181B;
+  --term-green: #86EFAC;
+  --term-red: #F87171;
+}
+
+/* ================================================================
+   LAYOUT
+================================================================ */
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 48px;
+}
+@media (max-width: 768px) { .container { padding: 0 24px; } }
+
+/* ================================================================
+   TYPOGRAPHY
+================================================================ */
+h1, h2, h3, h4 {
+  font-family: var(--font-head);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+}
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  line-height: 20px;
+}
+.eyebrow-light { color: rgba(0,0,0,0.4); margin-bottom: 20px; }
+.eyebrow-dark  { color: rgba(255,255,255,0.4); margin-bottom: 20px; }
+.h2-light { font-size: clamp(32px, 4vw, 44px); color: #000; }
+.h2-dark  { font-size: clamp(32px, 4vw, 44px); color: #fff; }
+
+/* ================================================================
+   SHIKI / CODE COMPONENT OVERRIDES
+   All Code components render inside a wrapper div. These rules
+   normalize Shiki's output to match the design system.
+================================================================ */
+.code-inner pre.astro-code,
+.step-code-wrap pre.astro-code,
+.bento-code-wrap pre.astro-code {
+  background: transparent !important;
+  padding: 20px 22px !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  font-family: var(--font-mono) !important;
+  font-size: 13px !important;
+  line-height: 1.8 !important;
+  tab-size: 2 !important;
+  /* overflow is already set inline by Shiki — let the wrapper clip */
+  overflow-x: auto !important;
+}
+
+/* Smaller font inside step columns */
+.step-code-wrap pre.astro-code {
+  font-size: 12px !important;
+  line-height: 1.75 !important;
+  padding: 16px 18px !important;
+}
+
+/* Bento dark tile */
+.bento-code-wrap pre.astro-code {
+  font-size: 12px !important;
+  line-height: 1.75 !important;
+  padding: 14px 16px !important;
+}
+
+/* ================================================================
+   GRAIN OVERLAY
+================================================================ */
+.grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23g)'/%3E%3C/svg%3E");
+  opacity: 0.035;
+  mix-blend-mode: overlay;
+  z-index: 1;
+}
+
+/* ================================================================
+   BUTTONS
+================================================================ */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 18px;
+  background: #fff;
+  color: #000;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  border-radius: var(--r-sm);
+  transition: opacity 0.15s;
+  white-space: nowrap;
+}
+.btn-primary:hover { opacity: 0.87; }
+.btn-large { padding: 11px 22px; font-size: 15px; }
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 18px;
+  color: rgba(255,255,255,0.65);
+  font-family: var(--font-body);
+  font-size: 14px;
+  text-decoration: none;
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: var(--r-sm);
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.btn-ghost:hover { color: #fff; border-color: rgba(255,255,255,0.3); }
+
+/* ================================================================
+   NAVIGATION
+================================================================ */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(0,0,0,0.82);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border-dark);
+}
+.nav-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 48px;
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+@media (max-width: 768px) { .nav-inner { padding: 0 24px; } }
+.nav-logo { display: flex; align-items: baseline; gap: 8px; text-decoration: none; }
+.logo-mark { font-family: var(--font-head); font-size: 17px; font-weight: 500; letter-spacing: -0.04em; color: #fff; }
+.logo-by { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.04em; color: rgba(255,255,255,0.35); }
+.nav-right { display: flex; align-items: center; gap: 12px; }
+.nav-gh {
+  display: flex; align-items: center; gap: 5px;
+  font-family: var(--font-body); font-size: 13px;
+  color: rgba(255,255,255,0.5); text-decoration: none; transition: color 0.15s;
+}
+.nav-gh:hover { color: rgba(255,255,255,0.9); }
+
+/* ================================================================
+   HERO
+================================================================ */
+.hero { position: relative; background: #000; overflow: hidden; padding: 100px 0 80px; }
+.hero-glow {
+  position: absolute; right: -10%; top: 0; bottom: 0; width: 65%;
+  background: radial-gradient(ellipse 80% 70% at 65% 50%, rgba(130,50,255,0.13) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-inner {
+  position: relative; z-index: 2;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 72px; align-items: center;
+}
+@media (max-width: 960px) {
+  .hero-inner { grid-template-columns: 1fr; gap: 48px; }
+  .hero { padding: 72px 0 60px; }
+}
+.hero-copy { max-width: 520px; }
+.hero .eyebrow { margin-bottom: 28px; }
+.hero-h1 {
+  font-size: clamp(40px, 5.5vw, 64px); color: #fff; line-height: 1.05; margin-bottom: 24px;
+  text-shadow: 0 0 80px rgba(255,255,255,0.06);
+}
+.hero-lead { font-size: 18px; line-height: 1.65; color: rgba(255,255,255,0.55); margin-bottom: 36px; }
+.hero-actions { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+
+/* ================================================================
+   TERMINAL
+================================================================ */
+.terminal {
+  background: var(--term-bg);
+  border: 1px solid var(--border-dark);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  box-shadow: 0 0 60px rgba(130,50,255,0.07), 0 0 120px rgba(130,50,255,0.03), 0 24px 48px rgba(0,0,0,0.4);
+}
+.terminal-bar {
+  display: flex; align-items: center; gap: 5px; padding: 10px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.02);
+}
+.t-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.t-title { font-family: var(--font-mono); font-size: 11px; color: rgba(255,255,255,0.3); margin-left: 6px; }
+.terminal-body {
+  padding: 18px 20px; font-family: var(--font-mono); font-size: 12.5px;
+  line-height: 1.75; color: rgba(255,255,255,0.7); overflow-x: auto;
+}
+.terminal-body--sm { font-size: 11.5px; }
+.tl { display: flex; gap: 10px; }
+.tl-blank { height: 10px; }
+.tl-dim { color: rgba(255,255,255,0.32) !important; }
+.tl-head { display: flex; gap: 0; color: rgba(255,255,255,0.28); font-size: 11px; }
+.tl-head span:first-child { flex: 1; }
+.tl-head span:nth-child(2) { min-width: 60px; }
+.tl-head span:nth-child(3) { min-width: 70px; }
+.tl-head-sm { display: grid; grid-template-columns: 1fr 50px 50px 55px 70px; color: rgba(255,255,255,0.28); font-size: 10.5px; }
+.tl-row { display: grid; grid-template-columns: 14px 1fr 50px 50px 55px 70px; gap: 4px; }
+.tl-summary { color: rgba(255,255,255,0.5); gap: 6px; }
+.t-prompt { color: var(--term-green); }
+.t-cmd { color: #fff; }
+.t-k { color: rgba(255,255,255,0.38); min-width: 80px; flex-shrink: 0; }
+.t-v { color: rgba(255,255,255,0.75); }
+.t-pass { color: var(--term-green); flex-shrink: 0; }
+.t-fail { color: var(--term-red); flex-shrink: 0; }
+.t-case { color: rgba(255,255,255,0.85); flex: 1; }
+.t-meta { color: rgba(255,255,255,0.38); }
+
+/* ================================================================
+   MARQUEE
+================================================================ */
+.marquee-wrap { background: #000; border-top: 1px solid var(--border-dark); border-bottom: 1px solid var(--border-dark); padding: 13px 0; overflow: hidden; }
+.marquee-fade {
+  overflow: hidden;
+  mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+}
+.marquee-track { display: flex; width: max-content; animation: marquee-scroll 45s linear infinite; }
+.marquee-item { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; color: rgba(255,255,255,0.35); padding: 0 22px; border-right: 1px solid var(--border-dark); white-space: nowrap; }
+@keyframes marquee-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+/* ================================================================
+   LIGHT SECTIONS
+================================================================ */
+.section-light { background: #fff; padding: 96px 0; }
+.section-border-top { border-top: 1px solid var(--border-light); }
+.section-hdr { margin-bottom: 56px; }
+
+/* 3-column cards */
+.three-cards { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--border-light); border-radius: var(--r-md); overflow: hidden; }
+.card-light { padding: 40px 36px; background: #fff; }
+.card-light--mid { border-left: 1px solid var(--border-light); border-right: 1px solid var(--border-light); }
+.card-label { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; color: rgba(0,0,0,0.35); margin-bottom: 14px; }
+.card-title { font-family: var(--font-head); font-size: 20px; font-weight: 500; letter-spacing: -0.04em; color: #000; margin-bottom: 12px; line-height: 1.25; }
+.card-body { font-size: 14px; line-height: 1.65; color: rgba(0,0,0,0.55); }
+.card-body code { font-family: var(--font-mono); font-size: 12px; background: rgba(0,0,0,0.05); padding: 1px 5px; border-radius: 2px; color: rgba(0,0,0,0.75); }
+@media (max-width: 768px) {
+  .three-cards { grid-template-columns: 1fr; }
+  .card-light--mid { border-left: none; border-right: none; border-top: 1px solid var(--border-light); border-bottom: 1px solid var(--border-light); }
+}
+
+/* Split layout */
+.split { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; }
+.split--rev .split-visual { order: -1; }
+@media (max-width: 900px) {
+  .split { grid-template-columns: 1fr; gap: 40px; }
+  .split--rev .split-visual { order: 0; }
+}
+.split-copy .eyebrow { margin-bottom: 18px; }
+.split-copy h2 { margin-bottom: 18px; }
+.split-body { font-size: 15px; line-height: 1.7; color: rgba(0,0,0,0.55); max-width: 420px; }
+.inline-cmd { display: block; font-family: var(--font-mono); font-size: 13px; background: rgba(0,0,0,0.04); border: 1px solid var(--border-light); padding: 11px 16px; border-radius: var(--r-sm); color: #000; margin-top: 24px; }
+
+/* Agent stack */
+.agent-stack { display: flex; flex-direction: column; border: 1px solid var(--border-light); border-radius: var(--r-md); overflow: hidden; }
+.agent-card { background: #000; padding: 20px 24px; display: flex; align-items: center; gap: 16px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.agent-card:last-child { border-bottom: none; }
+.agent-info { flex: 1; min-width: 0; }
+.agent-name { font-family: var(--font-head); font-size: 16px; font-weight: 500; letter-spacing: -0.04em; color: #fff; margin-bottom: 2px; }
+.agent-desc { font-size: 12px; color: rgba(255,255,255,0.38); }
+.agent-badge { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.04em; color: rgba(255,255,255,0.25); border: 1px solid rgba(255,255,255,0.1); padding: 3px 8px; border-radius: var(--r-sm); flex-shrink: 0; }
+
+/* Code block (assertions section) */
+.code-block { background: #0D0D10; border: 1px solid rgba(255,255,255,0.07); border-radius: var(--r-md); overflow: hidden; }
+.code-bar { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.02); }
+.code-dots { display: flex; gap: 5px; }
+.c-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.12); }
+.code-lang { font-family: var(--font-mono); font-size: 10px; color: rgba(255,255,255,0.28); letter-spacing: 0.05em; }
+.code-inner { background: #0D0D10; overflow: hidden; }
+
+/* Assertion list */
+.assert-list { list-style: none; margin-top: 24px; display: flex; flex-direction: column; gap: 8px; }
+.assert-list li { font-size: 14px; color: rgba(0,0,0,0.55); display: flex; align-items: baseline; gap: 8px; }
+.assert-list li::before { content: '—'; color: rgba(0,0,0,0.25); flex-shrink: 0; }
+.assert-list code { font-family: var(--font-mono); font-size: 12px; color: rgba(0,0,0,0.75); background: rgba(0,0,0,0.05); padding: 1px 6px; border-radius: 2px; }
+
+/* ================================================================
+   BENTO GRID
+================================================================ */
+.bento-grid { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--border-light); border-radius: var(--r-md); overflow: hidden; }
+.bento-tile { padding: 48px 44px; background: #fff; }
+.bento-tile--dark { background: #000; border-left: 1px solid var(--border-dark); }
+.bento-label { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; color: rgba(0,0,0,0.35); margin-bottom: 16px; }
+.bento-label--dim { color: rgba(255,255,255,0.3); }
+.bento-title { font-family: var(--font-head); font-size: 26px; font-weight: 500; letter-spacing: -0.04em; line-height: 1.2; color: #000; margin-bottom: 14px; }
+.bento-title--light { color: #fff; }
+.bento-body { font-size: 14px; line-height: 1.65; color: rgba(0,0,0,0.55); margin-bottom: 24px; }
+.bento-body--dim { color: rgba(255,255,255,0.4); }
+.bento-code { font-family: var(--font-mono); font-size: 12px; background: rgba(0,0,0,0.04); border: 1px solid var(--border-light); color: rgba(0,0,0,0.75); padding: 12px 14px; border-radius: var(--r-sm); line-height: 1.6; overflow-x: auto; white-space: pre; }
+.bento-code-wrap { border: 1px solid rgba(255,255,255,0.08); border-radius: var(--r-sm); overflow: hidden; background: rgba(255,255,255,0.03); }
+@media (max-width: 768px) {
+  .bento-grid { grid-template-columns: 1fr; }
+  .bento-tile--dark { border-left: none; border-top: 1px solid var(--border-dark); }
+  .bento-tile { padding: 36px 28px; }
+}
+
+/* ================================================================
+   QUICK START (dark)
+   min-width:0 on grid cells is critical — without it, grid cells
+   won't shrink below their content width and code will overflow.
+================================================================ */
+.section-dark { background: #000; padding: 96px 0; border-top: 1px solid var(--border-dark); border-bottom: 1px solid var(--border-dark); }
+.section-dark .section-hdr { margin-bottom: 48px; }
+.steps-grid { display: flex; flex-direction: column; border: 1px solid var(--border-dark); border-radius: var(--r-md); overflow: hidden; }
+.step { padding: 36px 40px; background: rgba(255,255,255,0.02); border-bottom: 1px solid var(--border-dark); }
+.step:last-child { border-bottom: none; }
+.step--mid { border-left: none; border-right: none; }
+.step-num { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; color: rgba(255,255,255,0.2); margin-bottom: 14px; }
+.step-title { font-family: var(--font-head); font-size: 18px; font-weight: 500; letter-spacing: -0.04em; color: #fff; margin-bottom: 16px; }
+/* Plain pre for single-line install command */
+.step-code--plain { font-family: var(--font-mono); font-size: 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); color: rgba(255,255,255,0.65); padding: 13px 16px; border-radius: var(--r-sm); line-height: 1.6; overflow-x: auto; white-space: pre; max-width: max-content; }
+/* Shiki wrapper for multi-line code steps */
+.step-code-wrap { border: 1px solid rgba(255,255,255,0.06); border-radius: var(--r-sm); overflow: hidden; background: rgba(255,255,255,0.03); }
+.step-code-wrap pre.astro-code { max-width: 640px; }
+
+/* ================================================================
+   CTA
+================================================================ */
+.cta-section { position: relative; background: #000; padding: 120px 0; overflow: hidden; text-align: center; }
+.cta-glow { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 70%; height: 100%; background: radial-gradient(ellipse 70% 80% at 50% 50%, rgba(130,50,255,0.16) 0%, transparent 70%); pointer-events: none; }
+.cta-inner { position: relative; z-index: 2; }
+.cta-section .eyebrow { margin-bottom: 24px; }
+.cta-h2 { font-size: clamp(44px, 6vw, 72px); color: #fff; margin-bottom: 18px; text-shadow: 0 0 80px rgba(255,255,255,0.08); }
+.cta-sub { font-size: 18px; color: rgba(255,255,255,0.45); margin-bottom: 44px; }
+.cta-actions { display: flex; align-items: center; justify-content: center; gap: 20px; flex-wrap: wrap; }
+.cta-docs-link { font-size: 14px; color: rgba(255,255,255,0.45); text-decoration: none; transition: color 0.15s; }
+.cta-docs-link:hover { color: rgba(255,255,255,0.8); }
+
+/* ================================================================
+   FOOTER
+================================================================ */
+.footer { background: #000; border-top: 1px solid var(--border-dark); padding: 32px 0; }
+.footer-inner { max-width: 1280px; margin: 0 auto; padding: 0 48px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+@media (max-width: 768px) { .footer-inner { padding: 0 24px; flex-direction: column; align-items: flex-start; gap: 16px; } }
+.footer-brand { display: flex; align-items: baseline; gap: 8px; }
+.footer-name { font-family: var(--font-head); font-size: 15px; font-weight: 500; letter-spacing: -0.04em; color: #fff; }
+.footer-by { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.04em; color: rgba(255,255,255,0.28); }
+.footer-links { display: flex; gap: 24px; }
+.footer-links a { font-family: var(--font-body); font-size: 13px; color: rgba(255,255,255,0.38); text-decoration: none; transition: color 0.15s; }
+.footer-links a:hover { color: rgba(255,255,255,0.8); }
+.footer-meta { font-family: var(--font-mono); font-size: 11px; color: rgba(255,255,255,0.22); }
+
+</style>
