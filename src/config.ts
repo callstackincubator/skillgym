@@ -432,9 +432,9 @@ function parseAgentConfig(value: unknown, configPath: string): RunnerConfig["age
   };
 }
 
-function parseRequiredAgentType(value: unknown, configPath: string): "codex" | "opencode" | "claude-code" {
-  if (value !== "codex" && value !== "opencode" && value !== "claude-code") {
-    throw invalidConfig(configPath, 'expected "codex", "opencode", or "claude-code"');
+function parseRequiredAgentType(value: unknown, configPath: string): "codex" | "opencode" | "claude-code" | "cursor-agent" {
+  if (value !== "codex" && value !== "opencode" && value !== "claude-code" && value !== "cursor-agent") {
+    throw invalidConfig(configPath, 'expected "codex", "opencode", "claude-code", or "cursor-agent"');
   }
 
   return value;

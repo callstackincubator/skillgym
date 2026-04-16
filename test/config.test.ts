@@ -183,6 +183,28 @@ describe("config", () => {
     expect(parseConfig({ run: { schedule: "isolated-by-runner" }, runners: { open: { agent: { type: "opencode", model: "openai/gpt-5" } } } }).run?.schedule).toBe("isolated-by-runner");
   });
 
+  test("accepts cursor-agent runner configs", () => {
+    const parsed = parseConfig({
+      runners: {
+        cursor: {
+          agent: {
+            type: "cursor-agent",
+            command: "agent",
+            model: "composer-2-fast",
+          },
+        },
+      },
+    });
+
+    expect(parsed.runners.cursor?.agent).toEqual({
+      type: "cursor-agent",
+      command: "agent",
+      commandArgs: undefined,
+      env: undefined,
+      model: "composer-2-fast",
+    });
+  });
+
   test("throws when multiple config files exist in the same directory", async () => {
     const suiteDir = path.join(tempDir, "bench");
     await mkdir(suiteDir, { recursive: true });

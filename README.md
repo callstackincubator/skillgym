@@ -15,6 +15,7 @@ When you evaluate agent skills manually, it is hard to tell whether the agent ac
 - OpenCode CLI
 - Codex CLI
 - Claude Code
+- Cursor Agent (Cursor CLI `agent`)
 
 ## Quick start
 
@@ -53,6 +54,12 @@ const config: SkillGymConfig = {
       agent: {
         type: "codex",
         model: "gpt-5",
+      },
+    },
+    cursor-main: {
+      agent: {
+        type: "cursor-agent",
+        model: "composer-2-fast",
       },
     },
   },
@@ -136,7 +143,7 @@ Most important config properties:
 - `run.schedule`: execution scheduling mode for case x runner pairs
 - `run.workspace`: default workspace mode for the suite
 - `defaults.timeoutMs`: default per-case timeout
-- `runners.<id>.agent.type`: which agent integration to use, currently `opencode`, `codex`, or `claude-code`
+- `runners.<id>.agent.type`: which agent integration to use, currently `opencode`, `codex`, `claude-code`, or `cursor-agent`
 - `runners.<id>.agent.model`: model passed to that runner
 - `snapshots`: token regression baseline configuration
 

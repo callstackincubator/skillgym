@@ -52,7 +52,7 @@ const cliErrorRules: CliErrorRule[] = [
     detail: "skillgym could not find a `skillgym.config.*` file with at least one configured runner.",
     fixes: [
       "Create `skillgym.config.ts`, `skillgym.config.mjs`, or another supported config file next to your suite or in a parent directory.",
-      "Define at least one runner under `runners`, for example `{ runners: { open: { agent: { type: 'opencode' } } } }`.",
+      "Define at least one runner under `runners`, for example `{ runners: { open: { agent: { type: 'opencode', model: 'openai/gpt-5' } } } }`.",
       "Use `--config <path>` if your config lives somewhere else.",
     ],
   })),

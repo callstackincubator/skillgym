@@ -1,6 +1,6 @@
 export type RunnerId = string;
 
-export type AgentType = "codex" | "opencode" | "claude-code";
+export type AgentType = "codex" | "opencode" | "claude-code" | "cursor-agent";
 
 export interface CommonAgentConfig {
   command?: string;
@@ -18,6 +18,9 @@ export type AgentConfig =
     } & CommonAgentConfig)
   | ({
       type: "claude-code";
+    } & CommonAgentConfig)
+  | ({
+      type: "cursor-agent";
     } & CommonAgentConfig);
 
 export type CodexAgentConfig = Extract<AgentConfig, { type: "codex" }>;
@@ -25,6 +28,8 @@ export type CodexAgentConfig = Extract<AgentConfig, { type: "codex" }>;
 export type OpenCodeAgentConfig = Extract<AgentConfig, { type: "opencode" }>;
 
 export type ClaudeCodeAgentConfig = Extract<AgentConfig, { type: "claude-code" }>;
+
+export type CursorAgentConfig = Extract<AgentConfig, { type: "cursor-agent" }>;
 
 export interface RunnerConfig {
   agent: AgentConfig;

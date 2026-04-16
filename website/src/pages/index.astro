@@ -19,7 +19,7 @@ const NPM = 'https://www.npmjs.com/package/skillgym';
 const marqueeItems = [
   'Catch skill regressions','TypeScript assertions','Token usage snapshots',
   'Count tokens per run','Same skill, every agent','Proof from every run',
-  'Inspect commands and file reads','OpenCode','Codex','Claude Code',
+  'Inspect commands and file reads','OpenCode','Codex','Claude Code','Cursor Agent',
   'Real agent sessions','Isolated workspaces','Open source',
 ];
 const doubled = [...marqueeItems, ...marqueeItems];
@@ -308,7 +308,7 @@ export default suite;`;
           <div class="split-copy">
             <p class="eyebrow eyebrow-light">RUNNERS</p>
             <h2 class="h2-light">Same skill.<br />Different agents.</h2>
-            <p class="split-body">One skill edit can land differently on every runner. Compare OpenCode, Codex, and Claude Code on the same cases before you trust the change.</p>
+            <p class="split-body">One skill edit can land differently on every runner. Compare OpenCode, Codex, Claude Code, and Cursor Agent on the same cases before you trust the change.</p>
           </div>
           <div class="split-visual">
             <div class="agent-stack">
@@ -332,6 +332,13 @@ export default suite;`;
                   <p class="agent-desc">Anthropic's coding agent CLI</p>
                 </div>
                 <span class="agent-badge">claude-code</span>
+              </div>
+              <div class="agent-card">
+                <div class="agent-info">
+                  <p class="agent-name">Cursor Agent</p>
+                  <p class="agent-desc">Cursor CLI agent mode</p>
+                </div>
+                <span class="agent-badge">cursor-agent</span>
               </div>
             </div>
           </div>
