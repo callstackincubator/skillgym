@@ -4,9 +4,9 @@ import { SEO } from 'astro-seo';
 import Logo from '../components/Logo.astro';
 import { darkTheme } from '../lib/shiki.ts';
 
-const pageTitle = 'skillgym — Benchmark coding agent skills';
+const pageTitle = 'skillgym — Test and benchmark agent skills';
 const pageDescription =
-  'Run real agent sessions. Assert on skills, commands, and file reads. Catch token regressions with snapshots.';
+  'Catch skill regressions, compare agents, and keep proof from every run. Use TypeScript assertions and token snapshots to verify SKILL.md behavior.';
 
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 const basePath = import.meta.env.BASE_URL.replace(/\/?$/, '/');
@@ -17,34 +17,33 @@ const DOCS = 'https://github.com/callstackincubator/skillgym#readme';
 const NPM = 'https://www.npmjs.com/package/skillgym';
 
 const marqueeItems = [
-  'Real CLI sessions','No mocked chats','Normalized SessionReport',
-  'TypeScript assertions','Multi-runner matrix','Preserved telemetry',
-  'Token usage snapshots','OpenCode','Codex','Claude Code',
-  'Evidence-based skills','Pluggable reporters','Isolated workspaces','Open source',
+  'Catch skill regressions','TypeScript assertions','Token usage snapshots',
+  'Count tokens per run','Same skill, every agent','Proof from every run',
+  'Inspect commands and file reads','OpenCode','Codex','Claude Code',
+  'Real agent sessions','Isolated workspaces','Open source',
 ];
 const doubled = [...marqueeItems, ...marqueeItems];
 
 const assertCode = `\
 import { assert } from "skillgym";
 
-// skill was loaded before any action
-assert.skills.has(report, "find-skills");
+// assert the skill was loaded
+assert.skills.has(report, "agent-device");
 
-// skills find ran before pnpm install
+// assert the reference was loaded
+assert.fileReads.includes(report, /bootstrap-install\\.md$/);
+
+// assert commands ran in the right order
 assert.commands.before(
   report,
-  /skills find/,
-  /pnpm install/
+  /^agent-device\s+open\b/,
+  /^agent-device\s+snapshot\b/
 );
-
-// the right SKILL.md was read
-assert.fileReads.includes(
+assert.commands.before(
   report,
-  /find-skills\\/SKILL\\.md$/
-);
-
-// agent produced output
-assert.output.notEmpty(report);`;
+  /^agent-device\s+snapshot\b/,
+  /^agent-device\s+close\b/
+);`;
 
 const workspaceCode = `\
 export const workspace = {
@@ -75,17 +74,27 @@ export default config;`;
 
 const suiteCode = `\
 // skillgym/my-suite.ts
-import type { TestSuite } from "skillgym";
-import { assert } from "skillgym";
+import { assert, type TestCase } from "skillgym";
 
-const suite: TestSuite = [
+const suite: TestCase[] = [
   {
-    id: "smoke",
-    prompt: "Say only: skillgym ready",
-    assert(report, ctx) {
-      assert.match(
-        ctx.finalOutput(),
-        /skillgym ready/
+    id: "agent-device-settings-check",
+    prompt: [
+      "Use agent-device to open Settings,",
+      'verify "Privacy" is visible with snapshot,',
+      "then close the session.",
+    ].join(" "),
+    async assert(report) {
+      assert.skills.has(report, "agent-device");
+      assert.commands.before(
+        report,
+        /^agent-device\s+open\b/,
+        /^agent-device\s+snapshot\b/
+      );
+      assert.commands.before(
+        report,
+        /^agent-device\s+snapshot\b/,
+        /^agent-device\s+close\b/
       );
     },
   },
@@ -109,7 +118,7 @@ export default suite;`;
         basic: {
           title: pageTitle,
           type: 'website',
-          image: ogImageURL,
+          image: ogImageURL.toString(),
           url: canonicalURL,
         },
         optional: {
@@ -117,7 +126,7 @@ export default suite;`;
           siteName: 'skillgym',
         },
         image: {
-          alt: 'skillgym — benchmark coding agent skills',
+          alt: 'skillgym — test and benchmark coding agents',
           type: 'image/jpeg',
         },
       }}
@@ -125,8 +134,8 @@ export default suite;`;
         card: 'summary_large_image',
         title: pageTitle,
         description: pageDescription,
-        image: ogImageURL,
-        imageAlt: 'skillgym — benchmark coding agent skills',
+        image: ogImageURL.toString(),
+        imageAlt: 'skillgym — test and benchmark coding agents',
       }}
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -160,9 +169,9 @@ export default suite;`;
       <div class="hero-glow"></div>
       <div class="container hero-inner">
         <div class="hero-copy">
-          <p class="eyebrow">OPEN SOURCE · AGENT BENCHMARKING</p>
-          <h1 class="hero-h1">Did your agent<br />do the right thing?</h1>
-          <p class="hero-lead">Real CLI sessions. TypeScript assertions.<br />Evidence you can trust.</p>
+          <p class="eyebrow">OPEN SOURCE · SKILL REGRESSION TESTING</p>
+          <h1 class="hero-h1">Did your skill<br />still do the right thing?</h1>
+          <p class="hero-lead">Catch skill regressions.<br />Keep the proof.</p>
           <div class="hero-actions">
             <a href={GITHUB} class="btn-primary btn-large" target="_blank" rel="noopener noreferrer">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -183,25 +192,28 @@ export default suite;`;
               <span class="t-title">skillgym run</span>
             </div>
             <div class="terminal-body">
-              <div class="tl"><span class="t-prompt">$</span> <span class="t-cmd">skillgym run ./examples/basic-suite.ts</span></div>
-              <div class="tl tl-blank"></div>
-              <div class="tl"><span class="t-k">Suite</span>      <span class="t-v">examples/basic-suite.ts</span></div>
-              <div class="tl"><span class="t-k">Workspace</span>  <span class="t-v">~/Projects/acme-app</span></div>
-              <div class="tl"><span class="t-k">Cases</span>      <span class="t-v">3</span></div>
-              <div class="tl"><span class="t-k">Runners</span>    <span class="t-v">2</span></div>
-              <div class="tl"><span class="t-k">Runs</span>       <span class="t-v">6</span></div>
-              <div class="tl tl-blank"></div>
-              <div class="tl"><span class="t-pass">✓</span> <span class="t-case">always-passes</span>    <span class="t-meta">2/2</span>  <span class="t-meta">2 runners</span></div>
-              <div class="tl"><span class="t-fail">✗</span> <span class="t-case">assertion-fails</span>   <span class="t-meta">1/2</span>  <span class="t-meta">2 runners</span></div>
-              <div class="tl"><span class="t-fail">✗</span> <span class="t-case">assert-crashes</span>    <span class="t-meta">0/2</span>  <span class="t-meta">2 runners</span></div>
-              <div class="tl tl-blank"></div>
-              <div class="tl tl-dim">Runner: open-main (opencode, openai/gpt-4o)</div>
-              <div class="tl tl-head"><span>case</span><span>time</span><span>billable</span></div>
-              <div class="tl"><span class="t-pass">✓</span> <span class="t-case">always-passes</span>    <span class="t-meta">12.3s</span>  <span class="t-meta">8,204</span></div>
-              <div class="tl"><span class="t-pass">✓</span> <span class="t-case">assertion-fails</span>  <span class="t-meta">14.8s</span>  <span class="t-meta">11,240</span></div>
-              <div class="tl"><span class="t-fail">✗</span> <span class="t-case">assert-crashes</span>    <span class="t-meta"> 3.1s</span>  <span class="t-meta">892</span></div>
-              <div class="tl tl-blank"></div>
-              <div class="tl tl-summary"><span class="t-fail">2 failed</span> · <span class="t-pass">1 passed</span> · <span class="t-meta">1m 42s</span></div>
+              <div class="terminal-content">
+                <div class="tl"><span class="t-prompt">$</span> <span class="t-cmd">skillgym run ./examples/basic-suite.ts</span></div>
+                <div class="tl tl-blank"></div>
+                <div class="tl"><span class="t-k">Suite</span>      <span class="t-v">examples/basic-suite.ts</span></div>
+                <div class="tl"><span class="t-k">Workspace</span>  <span class="t-v">~/Projects/acme-app</span></div>
+                <div class="tl"><span class="t-k">Cases</span>      <span class="t-v">3</span></div>
+                <div class="tl"><span class="t-k">Runners</span>    <span class="t-v">2</span></div>
+                <div class="tl"><span class="t-k">Runs</span>       <span class="t-v">6</span></div>
+                <div class="tl tl-blank"></div>
+                <div class="tl tl-head-summary"><span></span><span>case</span><span>runs</span><span>status</span></div>
+                <div class="tl tl-row-summary"><span class="t-pass">✓</span><span class="t-case">always-passes</span><span class="t-meta">2/2</span><span class="t-pass">passed</span></div>
+                <div class="tl tl-row-summary"><span class="t-fail">✗</span><span class="t-case">assertion-fails</span><span class="t-meta">1/2</span><span class="t-fail">failed</span></div>
+                <div class="tl tl-row-summary"><span class="t-fail">✗</span><span class="t-case">assert-crashes</span><span class="t-meta">0/2</span><span class="t-fail">failed</span></div>
+                <div class="tl tl-blank"></div>
+                <div class="tl tl-dim">Runner: open-main (opencode, openai/gpt-4o)</div>
+                <div class="tl tl-head-runner"><span></span><span>case</span><span>time</span><span>in</span><span>out</span><span>billable</span></div>
+                <div class="tl tl-row-runner"><span class="t-pass">✓</span><span class="t-case">always-passes</span><span class="t-meta">12.3s</span><span class="t-meta">1,240</span><span class="t-meta">890</span><span class="t-meta">8,204</span></div>
+                <div class="tl tl-row-runner"><span class="t-pass">✓</span><span class="t-case">assertion-fails</span><span class="t-meta">14.8s</span><span class="t-meta">2,040</span><span class="t-meta">1,100</span><span class="t-meta">11,240</span></div>
+                <div class="tl tl-row-runner"><span class="t-fail">✗</span><span class="t-case">assert-crashes</span><span class="t-meta">3.1s</span><span class="t-meta">410</span><span class="t-meta">120</span><span class="t-meta">892</span></div>
+                <div class="tl tl-blank"></div>
+                <div class="tl tl-summary"><span class="t-fail">2 failed</span> · <span class="t-pass">1 passed</span> · <span class="t-meta">1m 42s</span></div>
+              </div>
             </div>
           </div>
         </div>
@@ -222,23 +234,23 @@ export default suite;`;
       <div class="container">
         <div class="section-hdr">
           <p class="eyebrow eyebrow-light">HOW IT WORKS</p>
-          <h2 class="h2-light">Run it. Assert it. Trust it.</h2>
+          <h2 class="h2-light">Change the skill. Check the run.</h2>
         </div>
         <div class="three-cards">
           <div class="card-light">
             <p class="card-label">RUN</p>
-            <h3 class="card-title">Real CLIs, real environments.</h3>
-            <p class="card-body">No mocked sessions. No simulated output. skillgym invokes the actual agent CLI and captures everything it does.</p>
+            <h3 class="card-title">Test the skill for real.</h3>
+            <p class="card-body">Run real agent sessions after every <code>SKILL.md</code> change. Check what the agent actually did, not what you hoped it did.</p>
           </div>
           <div class="card-light card-light--mid">
             <p class="card-label">ASSERT</p>
-            <h3 class="card-title">TypeScript checks on skills and commands.</h3>
-            <p class="card-body">Write assertions against skills loaded, commands run, and files read. Standard <code>node:assert/strict</code> under the hood.</p>
+            <h3 class="card-title">Assert the skill and the steps.</h3>
+            <p class="card-body">Use TypeScript assertions to check the right skill was loaded, the right files were read, the right commands ran, and the answer held up.</p>
           </div>
           <div class="card-light">
             <p class="card-label">INSPECT</p>
-            <h3 class="card-title">Artifacts you can diff across runs.</h3>
-            <p class="card-body">Every execution writes a normalized report. Token counts, event traces, and session output — preserved for every run.</p>
+            <h3 class="card-title">Every skill run leaves proof.</h3>
+            <p class="card-body">When a skill edit changes behavior, compare artifacts, inspect the trail, and see how token usage moved.</p>
           </div>
         </div>
       </div>
@@ -249,8 +261,8 @@ export default suite;`;
         <div class="split">
           <div class="split-copy">
             <p class="eyebrow eyebrow-light">RUNNER</p>
-            <h2 class="h2-light">One run.<br />Structured results.</h2>
-            <p class="split-body">Point skillgym at any suite file. It expands every case against every configured runner, captures the session, and writes a normalized report you can assert against.</p>
+            <h2 class="h2-light">Turn skill edits<br />into checks.</h2>
+            <p class="split-body">When you change a <code>SKILL.md</code>, rerun the same cases and see what moved. skillgym records each run so failed skill behavior is easy to inspect.</p>
             <code class="inline-cmd">npm install --save-dev skillgym</code>
             <code class="inline-cmd" style="margin-top:8px">npx skillgym run ./skillgym/my-suite.ts</code>
           </div>
@@ -263,26 +275,26 @@ export default suite;`;
                 <span class="t-title">standard reporter</span>
               </div>
               <div class="terminal-body terminal-body--sm">
-                <div class="tl tl-dim">Suite      examples/basic-suite.ts</div>
-                <div class="tl tl-dim">Output     .skillgym-results/run-2026-04-13</div>
-                <div class="tl tl-blank"></div>
-                <div class="tl tl-head-sm"><span>case</span><span>runs</span><span>status</span></div>
-                <div class="tl"><span class="t-pass">✓</span> <span class="t-case">always-passes</span>    <span class="t-meta">2/2</span>  <span class="t-pass">passed</span></div>
-                <div class="tl"><span class="t-fail">✗</span> <span class="t-case">assertion-fails</span>   <span class="t-meta">1/2</span>  <span class="t-fail">failed</span></div>
-                <div class="tl"><span class="t-fail">✗</span> <span class="t-case">assert-crashes</span>    <span class="t-meta">0/2</span>  <span class="t-fail">failed</span></div>
-                <div class="tl tl-blank"></div>
-                <div class="tl tl-dim">Runner: open-main (opencode, openai/gpt-4o)</div>
-                <div class="tl tl-head-sm"><span>case</span><span>time</span><span>in</span><span>out</span><span>billable</span></div>
-                <div class="tl tl-row"><span class="t-pass">✓</span> <span class="t-case">always-passes</span>   <span class="t-meta">12.3s</span> <span class="t-meta">1,240</span> <span class="t-meta">890</span> <span class="t-meta">8,204</span></div>
-                <div class="tl tl-row"><span class="t-pass">✓</span> <span class="t-case">assertion-fails</span> <span class="t-meta">14.8s</span> <span class="t-meta">2,040</span> <span class="t-meta">1,100</span> <span class="t-meta">11,240</span></div>
-                <div class="tl tl-row"><span class="t-fail">✗</span> <span class="t-case">assert-crashes</span>   <span class="t-meta"> 3.1s</span>   <span class="t-meta">410</span>   <span class="t-meta">120</span>    <span class="t-meta">892</span></div>
-                <div class="tl tl-blank"></div>
-                <div class="tl tl-dim">Runner: code-main (codex, openai/gpt-4.1)</div>
-                <div class="tl tl-row"><span class="t-pass">✓</span> <span class="t-case">always-passes</span>   <span class="t-meta">11.9s</span> <span class="t-meta">1,180</span>  <span class="t-meta">820</span> <span class="t-meta">7,960</span></div>
-                <div class="tl tl-row"><span class="t-fail">✗</span> <span class="t-case">assertion-fails</span> <span class="t-meta">16.2s</span> <span class="t-meta">2,200</span> <span class="t-meta">1,240</span> <span class="t-meta">12,000</span></div>
-                <div class="tl tl-row"><span class="t-fail">✗</span> <span class="t-case">assert-crashes</span>   <span class="t-meta"> 2.8s</span>   <span class="t-meta">380</span>    <span class="t-meta">95</span>    <span class="t-meta">801</span></div>
-                <div class="tl tl-blank"></div>
-                <div class="tl tl-summary"><span class="t-fail">2 failed</span> · <span class="t-pass">1 passed</span> · <span class="t-meta">Duration 1m 42s</span></div>
+                <div class="terminal-content">
+                  <div class="tl"><span class="t-k">Suite</span>      <span class="t-v">examples/basic-suite.ts</span></div>
+                  <div class="tl"><span class="t-k">Workspace</span>  <span class="t-v">~/Projects/acme-app</span></div>
+                  <div class="tl"><span class="t-k">Cases</span>      <span class="t-v">3</span></div>
+                  <div class="tl"><span class="t-k">Runners</span>    <span class="t-v">2</span></div>
+                  <div class="tl"><span class="t-k">Runs</span>       <span class="t-v">6</span></div>
+                  <div class="tl tl-blank"></div>
+                  <div class="tl tl-head-summary"><span></span><span>case</span><span>runs</span><span>status</span></div>
+                  <div class="tl tl-row-summary"><span class="t-pass">✓</span><span class="t-case">always-passes</span><span class="t-meta">2/2</span><span class="t-pass">passed</span></div>
+                  <div class="tl tl-row-summary"><span class="t-fail">✗</span><span class="t-case">assertion-fails</span><span class="t-meta">1/2</span><span class="t-fail">failed</span></div>
+                  <div class="tl tl-row-summary"><span class="t-fail">✗</span><span class="t-case">assert-crashes</span><span class="t-meta">0/2</span><span class="t-fail">failed</span></div>
+                  <div class="tl tl-blank"></div>
+                  <div class="tl tl-dim">Runner: open-main (opencode, openai/gpt-4o)</div>
+                  <div class="tl tl-head-runner"><span></span><span>case</span><span>time</span><span>in</span><span>out</span><span>billable</span></div>
+                  <div class="tl tl-row-runner"><span class="t-pass">✓</span><span class="t-case">always-passes</span><span class="t-meta">12.3s</span><span class="t-meta">1,240</span><span class="t-meta">890</span><span class="t-meta">8,204</span></div>
+                  <div class="tl tl-row-runner"><span class="t-pass">✓</span><span class="t-case">assertion-fails</span><span class="t-meta">14.8s</span><span class="t-meta">2,040</span><span class="t-meta">1,100</span><span class="t-meta">11,240</span></div>
+                  <div class="tl tl-row-runner"><span class="t-fail">✗</span><span class="t-case">assert-crashes</span><span class="t-meta">3.1s</span><span class="t-meta">410</span><span class="t-meta">120</span><span class="t-meta">892</span></div>
+                  <div class="tl tl-blank"></div>
+                  <div class="tl tl-summary"><span class="t-fail">2 failed</span> · <span class="t-pass">1 passed</span> · <span class="t-meta">Duration 1m 42s</span></div>
+                </div>
               </div>
             </div>
           </div>
@@ -295,8 +307,8 @@ export default suite;`;
         <div class="split">
           <div class="split-copy">
             <p class="eyebrow eyebrow-light">RUNNERS</p>
-            <h2 class="h2-light">Same prompts.<br />Surface where agents diverge.</h2>
-            <p class="split-body">One suite. Every agent. Differences exposed. Run the same cases against OpenCode, Codex, and Claude Code — results land side by side in the same structured report.</p>
+            <h2 class="h2-light">Same skill.<br />Different agents.</h2>
+            <p class="split-body">One skill edit can land differently on every runner. Compare OpenCode, Codex, and Claude Code on the same cases before you trust the change.</p>
           </div>
           <div class="split-visual">
             <div class="agent-stack">
@@ -347,14 +359,14 @@ export default suite;`;
           </div>
           <div class="split-copy">
             <p class="eyebrow eyebrow-light">ASSERTIONS</p>
-            <h2 class="h2-light">Encode good.<br />Enforce it every run.</h2>
-            <p class="split-body">Assertions turn telemetry into a quality gate. Skills loaded. Commands run in the right order. Files read. Output produced. Each check runs against the normalized session report.</p>
+            <h2 class="h2-light">Good skill behavior<br />is testable.</h2>
+            <p class="split-body">The right skill. The right files. The right steps. Use assertions to turn your expectations into pass or fail after every <code>SKILL.md</code> edit.</p>
             <ul class="assert-list">
-              <li><code>assert.skills.*</code> — skill detection by confidence</li>
-              <li><code>assert.commands.*</code> — exact and pattern matchers</li>
-              <li><code>assert.fileReads.*</code> — file access tracking</li>
-              <li><code>assert.toolCalls.*</code> — tool call inspection</li>
-              <li><code>assert.output.*</code> — final output checks</li>
+               <li><code>assert.skills.*</code> — check which skills were used</li>
+               <li><code>assert.commands.*</code> — check commands and ordering</li>
+               <li><code>assert.fileReads.*</code> — check what the agent opened</li>
+               <li><code>assert.toolCalls.*</code> — inspect tool usage in detail</li>
+               <li><code>assert.output.*</code> — check the final answer</li>
             </ul>
           </div>
         </div>
@@ -366,14 +378,14 @@ export default suite;`;
         <div class="bento-grid">
           <div class="bento-tile">
             <p class="bento-label">SNAPSHOTS</p>
-            <h3 class="bento-title">Token baselines.<br />Automatic regressions.</h3>
-            <p class="bento-body">Set a baseline. Get alerted when token usage regresses beyond your configured tolerance. Absolute and percent thresholds per metric.</p>
+            <h3 class="bento-title">Count tokens.<br />Catch costly skill regressions.</h3>
+            <p class="bento-body">Set a baseline and catch when a skill edit makes the agent much more expensive. Track token growth before it becomes normal.</p>
             <pre class="bento-code">npx skillgym run ./suite.ts --update-snapshots</pre>
           </div>
           <div class="bento-tile bento-tile--dark">
             <p class="bento-label bento-label--dim">WORKSPACES</p>
-            <h3 class="bento-title bento-title--light">Isolated.<br />Or shared. Your call.</h3>
-            <p class="bento-body bento-body--dim">Own workspace per run when you need clean state. Share one when you don't. Template directories and bootstrap commands included.</p>
+            <h3 class="bento-title bento-title--light">Fresh workspace.<br />Honest skill runs.</h3>
+            <p class="bento-body bento-body--dim">Use isolated workspaces when repo state matters, or share one when you want speed. Keep skill failures easier to reproduce and debug.</p>
             <div class="bento-code-wrap">
               <Code code={workspaceCode} lang="typescript" theme={darkTheme} />
             </div>
@@ -386,7 +398,7 @@ export default suite;`;
       <div class="container">
         <div class="section-hdr">
           <p class="eyebrow eyebrow-dark">QUICK START</p>
-          <h2 class="h2-dark">Up in three steps.</h2>
+          <h2 class="h2-dark">From prompt to benchmark<br />in three steps.</h2>
         </div>
         <div class="steps-grid">
           <div class="step">
@@ -417,8 +429,8 @@ export default suite;`;
       <div class="cta-glow"></div>
       <div class="container cta-inner">
         <p class="eyebrow eyebrow-dark">OPEN SOURCE · MIT LICENSE</p>
-        <h2 class="cta-h2">Real runs.<br />Real evidence.</h2>
-        <p class="cta-sub">Your agent's behavior, in plain TypeScript assertions.</p>
+        <h2 class="cta-h2">Stop guessing.<br />Check the skill.</h2>
+        <p class="cta-sub">Catch skill regressions, compare agents, and keep proof from every run.</p>
         <div class="cta-actions">
           <a href={GITHUB} class="btn-primary btn-large" target="_blank" rel="noopener noreferrer">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -514,6 +526,72 @@ h1, h2, h3, h4 {
   line-height: 1.8 !important;
   tab-size: 2 !important;
   overflow-x: auto !important;
+  width: max-content !important;
+  min-width: 100% !important;
+}
+
+.terminal-body,
+.code-inner,
+.step-code-wrap,
+.bento-code-wrap,
+.bento-code,
+.step-code--plain {
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.terminal-body,
+.code-inner,
+.step-code-wrap,
+.step-code--plain {
+  scrollbar-color: rgba(255,255,255,0.24) rgba(255,255,255,0.06);
+}
+
+.bento-code-wrap,
+.bento-code {
+  scrollbar-color: rgba(0,0,0,0.22) rgba(0,0,0,0.06);
+}
+
+.terminal-body::-webkit-scrollbar,
+.code-inner::-webkit-scrollbar,
+.step-code-wrap::-webkit-scrollbar,
+.bento-code-wrap::-webkit-scrollbar,
+.bento-code::-webkit-scrollbar,
+.step-code--plain::-webkit-scrollbar {
+  height: 10px;
+}
+
+.terminal-body::-webkit-scrollbar-track,
+.code-inner::-webkit-scrollbar-track,
+.step-code-wrap::-webkit-scrollbar-track,
+.step-code--plain::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.06);
+}
+
+.bento-code-wrap::-webkit-scrollbar-track,
+.bento-code::-webkit-scrollbar-track {
+  background: rgba(0,0,0,0.06);
+}
+
+.terminal-body::-webkit-scrollbar-thumb,
+.code-inner::-webkit-scrollbar-thumb,
+.step-code-wrap::-webkit-scrollbar-thumb,
+.step-code--plain::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.24);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.bento-code-wrap::-webkit-scrollbar-thumb,
+.bento-code::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.22);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 
 .step-code-wrap pre.astro-code {
@@ -629,6 +707,7 @@ h1, h2, h3, h4 {
   .hero { padding: 72px 0 60px; }
 }
 .hero-copy { max-width: 520px; }
+.hero-visual { min-width: 0; }
 .hero .eyebrow { margin-bottom: 28px; }
 .hero-h1 {
   font-size: clamp(40px, 5.5vw, 64px); color: #fff; line-height: 1.05; margin-bottom: 24px;
@@ -642,6 +721,8 @@ h1, h2, h3, h4 {
   border: 1px solid var(--border-dark);
   border-radius: var(--r-md);
   overflow: hidden;
+  width: 100%;
+  max-width: 100%;
   box-shadow: 0 0 60px rgba(130,50,255,0.07), 0 0 120px rgba(130,50,255,0.03), 0 24px 48px rgba(0,0,0,0.4);
 }
 .terminal-bar {
@@ -652,18 +733,35 @@ h1, h2, h3, h4 {
 .t-title { font-family: var(--font-mono); font-size: 11px; color: rgba(255,255,255,0.3); margin-left: 6px; }
 .terminal-body {
   padding: 18px 20px; font-family: var(--font-mono); font-size: 12.5px;
-  line-height: 1.75; color: rgba(255,255,255,0.7); overflow-x: auto;
+  line-height: 1.75; color: rgba(255,255,255,0.7);
 }
 .terminal-body--sm { font-size: 11.5px; }
+.terminal-content {
+  width: max-content;
+  min-width: max(100%, 380px);
+}
 .tl { display: flex; gap: 10px; }
 .tl-blank { height: 10px; }
 .tl-dim { color: rgba(255,255,255,0.32) !important; }
-.tl-head { display: flex; gap: 0; color: rgba(255,255,255,0.28); font-size: 11px; }
-.tl-head span:first-child { flex: 1; }
-.tl-head span:nth-child(2) { min-width: 60px; }
-.tl-head span:nth-child(3) { min-width: 70px; }
-.tl-head-sm { display: grid; grid-template-columns: 1fr 50px 50px 55px 70px; color: rgba(255,255,255,0.28); font-size: 10.5px; }
-.tl-row { display: grid; grid-template-columns: 14px 1fr 50px 50px 55px 70px; gap: 4px; }
+.tl-head-summary,
+.tl-row-summary {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) 48px 56px;
+  gap: 8px;
+  align-items: baseline;
+}
+.tl-head-runner,
+.tl-row-runner {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) 48px 48px 48px 64px;
+  gap: 8px;
+  align-items: baseline;
+}
+.tl-head-summary,
+.tl-head-runner {
+  color: rgba(255,255,255,0.28);
+  font-size: 11px;
+}
 .tl-summary { color: rgba(255,255,255,0.5); gap: 6px; }
 .t-prompt { color: var(--term-green); }
 .t-cmd { color: #fff; }
@@ -671,7 +769,7 @@ h1, h2, h3, h4 {
 .t-v { color: rgba(255,255,255,0.75); }
 .t-pass { color: var(--term-green); flex-shrink: 0; }
 .t-fail { color: var(--term-red); flex-shrink: 0; }
-.t-case { color: rgba(255,255,255,0.85); flex: 1; }
+.t-case { color: rgba(255,255,255,0.85); min-width: 0; }
 .t-meta { color: rgba(255,255,255,0.38); }
 
 .marquee-wrap { background: #000; border-top: 1px solid var(--border-dark); border-bottom: 1px solid var(--border-dark); padding: 13px 0; overflow: hidden; }
@@ -681,7 +779,7 @@ h1, h2, h3, h4 {
   -webkit-mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
 }
 .marquee-track { display: flex; width: max-content; animation: marquee-scroll 45s linear infinite; }
-.marquee-item { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; color: rgba(255,255,255,0.35); padding: 0 22px; border-right: 1px solid var(--border-dark); white-space: nowrap; }
+.marquee-item { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; color: rgba(255,255,255,0.62); padding: 0 22px; border-right: 1px solid var(--border-dark); white-space: nowrap; }
 @keyframes marquee-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 
 .section-light { background: #fff; padding: 96px 0; }
@@ -706,6 +804,8 @@ h1, h2, h3, h4 {
   .split { grid-template-columns: 1fr; gap: 40px; }
   .split--rev .split-visual { order: 0; }
 }
+.split-copy,
+.split-visual { min-width: 0; }
 .split-copy .eyebrow { margin-bottom: 18px; }
 .split-copy h2 { margin-bottom: 18px; }
 .split-body { font-size: 15px; line-height: 1.7; color: rgba(0,0,0,0.55); max-width: 420px; }
@@ -719,12 +819,15 @@ h1, h2, h3, h4 {
 .agent-desc { font-size: 12px; color: rgba(255,255,255,0.38); }
 .agent-badge { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.04em; color: rgba(255,255,255,0.25); border: 1px solid rgba(255,255,255,0.1); padding: 3px 8px; border-radius: var(--r-sm); flex-shrink: 0; }
 
-.code-block { background: #0D0D10; border: 1px solid rgba(255,255,255,0.07); border-radius: var(--r-md); overflow: hidden; }
-.code-bar { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.02); }
+.code-block { background: #0D0D10; border: 1px solid rgba(255,255,255,0.07); border-radius: var(--r-md); overflow: hidden; width: 100%; max-width: 100%; min-width: 0; }
+.code-bar { display: flex; align-items: center; gap: 5px; padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.02); min-width: 100%; }
 .code-dots { display: flex; gap: 5px; }
-.c-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.12); }
-.code-lang { font-family: var(--font-mono); font-size: 10px; color: rgba(255,255,255,0.28); letter-spacing: 0.05em; }
-.code-inner { background: #0D0D10; overflow: hidden; }
+.c-dot { width: 10px; height: 10px; border-radius: 50%; }
+.c-dot:nth-child(1) { background: #FF5F56; }
+.c-dot:nth-child(2) { background: #FFBD2E; }
+.c-dot:nth-child(3) { background: #27C93F; }
+.code-lang { font-family: var(--font-mono); font-size: 11px; color: rgba(255,255,255,0.3); margin-left: 6px; }
+.code-inner { background: #0D0D10; }
 
 .assert-list { list-style: none; margin-top: 24px; display: flex; flex-direction: column; gap: 8px; }
 .assert-list li { font-size: 14px; color: rgba(0,0,0,0.55); display: flex; align-items: baseline; gap: 8px; }
@@ -740,8 +843,8 @@ h1, h2, h3, h4 {
 .bento-title--light { color: #fff; }
 .bento-body { font-size: 14px; line-height: 1.65; color: rgba(0,0,0,0.55); margin-bottom: 24px; }
 .bento-body--dim { color: rgba(255,255,255,0.4); }
-.bento-code { font-family: var(--font-mono); font-size: 12px; background: rgba(0,0,0,0.04); border: 1px solid var(--border-light); color: rgba(0,0,0,0.75); padding: 12px 14px; border-radius: var(--r-sm); line-height: 1.6; overflow-x: auto; white-space: pre; }
-.bento-code-wrap { border: 1px solid rgba(255,255,255,0.08); border-radius: var(--r-sm); overflow: hidden; background: rgba(255,255,255,0.03); }
+.bento-code { font-family: var(--font-mono); font-size: 12px; background: rgba(0,0,0,0.04); border: 1px solid var(--border-light); color: rgba(0,0,0,0.75); padding: 12px 14px; border-radius: var(--r-sm); line-height: 1.6; white-space: pre; }
+.bento-code-wrap { border: 1px solid rgba(255,255,255,0.08); border-radius: var(--r-sm); background: rgba(255,255,255,0.03); }
 @media (max-width: 768px) {
   .bento-grid { grid-template-columns: 1fr; }
   .bento-tile--dark { border-left: none; border-top: 1px solid var(--border-dark); }
@@ -757,10 +860,35 @@ h1, h2, h3, h4 {
 .step-num { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; color: rgba(255,255,255,0.2); margin-bottom: 14px; }
 .step-title { font-family: var(--font-head); font-size: 18px; font-weight: 500; letter-spacing: -0.04em; color: #fff; margin-bottom: 16px; }
 
-.step-code--plain { font-family: var(--font-mono); font-size: 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); color: rgba(255,255,255,0.65); padding: 13px 16px; border-radius: var(--r-sm); line-height: 1.6; overflow-x: auto; white-space: pre; max-width: max-content; }
+.step-code--plain { font-family: var(--font-mono); font-size: 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); color: rgba(255,255,255,0.65); padding: 13px 16px; border-radius: var(--r-sm); line-height: 1.6; white-space: pre; }
 
-.step-code-wrap { border: 1px solid rgba(255,255,255,0.06); border-radius: var(--r-sm); overflow: hidden; background: rgba(255,255,255,0.03); }
-.step-code-wrap pre.astro-code { max-width: 640px; }
+.step-code-wrap { border: 1px solid rgba(255,255,255,0.06); border-radius: var(--r-sm); background: rgba(255,255,255,0.03); }
+.step-code-wrap pre.astro-code { max-width: none; }
+
+@media (max-width: 640px) {
+  .terminal-content {
+    min-width: max(100%, 340px);
+  }
+
+  .code-inner pre.astro-code,
+  .step-code-wrap pre.astro-code,
+  .bento-code-wrap pre.astro-code {
+    font-size: 12px !important;
+    line-height: 1.7 !important;
+    padding: 16px 18px !important;
+  }
+
+  .terminal-body {
+    padding: 16px;
+    font-size: 11.5px;
+  }
+
+  .bento-code,
+  .step-code--plain {
+    font-size: 11.5px;
+    padding: 11px 12px;
+  }
+}
 
 .cta-section { position: relative; background: #000; padding: 120px 0; overflow: hidden; text-align: center; }
 .cta-glow { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 70%; height: 100%; background: radial-gradient(ellipse 70% 80% at 50% 50%, rgba(130,50,255,0.16) 0%, transparent 70%); pointer-events: none; }
