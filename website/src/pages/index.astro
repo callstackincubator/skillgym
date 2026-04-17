@@ -170,7 +170,7 @@ export default suite;`;
       <div class="container hero-inner">
         <div class="hero-copy">
           <p class="eyebrow">OPEN SOURCE · SKILL REGRESSION TESTING</p>
-          <h1 class="hero-h1">Did your skill<br />still do the right thing?</h1>
+          <h1 class="hero-h1">Changed the skill.<br />Did it still do the right thing?</h1>
           <p class="hero-lead">Catch skill regressions.<br />Keep the proof.</p>
           <div class="hero-actions">
             <a href={GITHUB} class="btn-primary btn-large" target="_blank" rel="noopener noreferrer">
@@ -240,17 +240,17 @@ export default suite;`;
           <div class="card-light">
             <p class="card-label">RUN</p>
             <h3 class="card-title">Test the skill for real.</h3>
-            <p class="card-body">Run real agent sessions after every <code>SKILL.md</code> change. Check what the agent actually did, not what you hoped it did.</p>
+            <p class="card-body">Run real agent sessions after every <code>SKILL.md</code> change. Check what the agent did, not what you expected.</p>
           </div>
           <div class="card-light card-light--mid">
             <p class="card-label">ASSERT</p>
             <h3 class="card-title">Assert the skill and the steps.</h3>
-            <p class="card-body">Use TypeScript assertions to check the right skill was loaded, the right files were read, the right commands ran, and the answer held up.</p>
+            <p class="card-body">Use TypeScript assertions to check the right skill was loaded, the right files were read, the right commands ran, and the final answer was correct.</p>
           </div>
           <div class="card-light">
             <p class="card-label">INSPECT</p>
-            <h3 class="card-title">Every skill run leaves proof.</h3>
-            <p class="card-body">When a skill edit changes behavior, compare artifacts, inspect the trail, and see how token usage moved.</p>
+            <h3 class="card-title">Every skill run leaves evidence.</h3>
+            <p class="card-body">When a skill edit changes behavior, compare artifacts, inspect the run, and see how token usage changed.</p>
           </div>
         </div>
       </div>
@@ -262,7 +262,7 @@ export default suite;`;
           <div class="split-copy">
             <p class="eyebrow eyebrow-light">RUNNER</p>
             <h2 class="h2-light">Turn skill edits<br />into checks.</h2>
-            <p class="split-body">When you change a <code>SKILL.md</code>, rerun the same cases and see what moved. skillgym records each run so failed skill behavior is easy to inspect.</p>
+            <p class="split-body">When you change a <code>SKILL.md</code>, rerun the same cases and see what changed. skillgym records each run so failed behavior is easy to inspect.</p>
             <code class="inline-cmd">npm install --save-dev skillgym</code>
             <code class="inline-cmd" style="margin-top:8px">npx skillgym run ./skillgym/my-suite.ts</code>
           </div>
@@ -308,7 +308,7 @@ export default suite;`;
           <div class="split-copy">
             <p class="eyebrow eyebrow-light">RUNNERS</p>
             <h2 class="h2-light">Same skill.<br />Different agents.</h2>
-            <p class="split-body">One skill edit can land differently on every runner. Compare OpenCode, Codex, Claude Code, and Cursor Agent on the same cases before you trust the change.</p>
+            <p class="split-body">The same skill edit can behave differently on each runner. Compare OpenCode, Codex, Claude Code, and Cursor Agent on the same cases before you trust the change.</p>
           </div>
           <div class="split-visual">
             <div class="agent-stack">
@@ -367,7 +367,7 @@ export default suite;`;
           <div class="split-copy">
             <p class="eyebrow eyebrow-light">ASSERTIONS</p>
             <h2 class="h2-light">Good skill behavior<br />is testable.</h2>
-            <p class="split-body">The right skill. The right files. The right steps. Use assertions to turn your expectations into pass or fail after every <code>SKILL.md</code> edit.</p>
+            <p class="split-body">The right skill. The right files. The right steps. Use assertions to turn expectations into pass/fail checks after every <code>SKILL.md</code> edit.</p>
             <ul class="assert-list">
                <li><code>assert.skills.*</code> — check which skills were used</li>
                <li><code>assert.commands.*</code> — check commands and ordering</li>
@@ -386,13 +386,13 @@ export default suite;`;
           <div class="bento-tile">
             <p class="bento-label">SNAPSHOTS</p>
             <h3 class="bento-title">Count tokens.<br />Catch costly skill regressions.</h3>
-            <p class="bento-body">Set a baseline and catch when a skill edit makes the agent much more expensive. Track token growth before it becomes normal.</p>
+            <p class="bento-body">Set a baseline and catch when a skill edit makes the agent much more expensive. Track token growth before it becomes the baseline.</p>
             <pre class="bento-code">npx skillgym run ./suite.ts --update-snapshots</pre>
           </div>
           <div class="bento-tile bento-tile--dark">
             <p class="bento-label bento-label--dim">WORKSPACES</p>
             <h3 class="bento-title bento-title--light">Fresh workspace.<br />Honest skill runs.</h3>
-            <p class="bento-body bento-body--dim">Use isolated workspaces when repo state matters, or share one when you want speed. Keep skill failures easier to reproduce and debug.</p>
+            <p class="bento-body bento-body--dim">Use isolated workspaces when repo state matters, or share one when you want speed. Make skill failures easier to reproduce and debug.</p>
             <div class="bento-code-wrap">
               <Code code={workspaceCode} lang="typescript" theme={darkTheme} />
             </div>
@@ -405,7 +405,7 @@ export default suite;`;
       <div class="container">
         <div class="section-hdr">
           <p class="eyebrow eyebrow-dark">QUICK START</p>
-          <h2 class="h2-dark">From prompt to benchmark<br />in three steps.</h2>
+          <h2 class="h2-dark">Go from prompt to benchmark<br />in three steps.</h2>
         </div>
         <div class="steps-grid">
           <div class="step">
