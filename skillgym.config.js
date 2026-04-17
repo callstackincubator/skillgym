@@ -18,7 +18,19 @@ const config = {
     "claude-main": {
       agent: {
         type: "claude-code",
-        model: "claude-sonnet-4-6",
+        model: "haiku",
+      },
+    },
+    "codex-main": {
+      agent: {
+        type: "codex",
+        model: "gpt-5.4",
+      },
+    },
+    "cursor-main": {
+      agent: {
+        type: "cursor-agent",
+        model: "auto",
       },
     },
   },
