@@ -181,7 +181,7 @@ See `workspaces.md` for behavior, path resolution, cleanup, and bootstrap detail
 - a case execution passes when its `assert` function completes without throwing
 - a case execution fails when `assert` throws
 - a case execution also fails when the runner crashes, times out, or exceeds `run.maxSteps`
-- `run.maxSteps` is a best-effort streamed step limit, not a hard portable turn cap
+- `run.maxSteps` is a best-effort streamed model-round limit, not a hard portable turn cap
 - `max-steps` failures preserve raw stdout/stderr artifacts for debugging
 - `max-steps` failures do not produce a partial normalized session report
 - failure messages are preserved in the run artifacts

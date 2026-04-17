@@ -161,7 +161,7 @@ The execution unit is one case x runner pair. `skillgym` expands the suite into 
 
 Concurrent schedules do not copy or isolate the workspace by themselves. Overlapping runs may still interact through the same filesystem state and live runner output unless you use isolated workspaces. OpenCode, Codex, and Claude Code runtime state are isolated per run under each artifact directory.
 
-`run.maxSteps` is enforced on a best-effort basis by monitoring each runner's streamed JSONL output. A step is runner-defined, so the same prompt may consume different numbers of steps across agents. When the observed step count exceeds the configured limit, skillgym kills the agent process, fails the run with origin `max-steps`, and preserves raw stdout/stderr artifacts for debugging. No partial normalized report is produced for that failure.
+`run.maxSteps` is enforced on a best-effort basis by monitoring each runner's streamed JSONL output. A step is one observed model round, not one token and not necessarily one tool call, but the exact boundary is still runner-defined, so the same prompt may consume different numbers of steps across agents. When the observed step count exceeds the configured limit, skillgym kills the agent process, fails the run with origin `max-steps`, and preserves raw stdout/stderr artifacts for debugging. No partial normalized report is produced for that failure.
 
 ## Workspaces
 

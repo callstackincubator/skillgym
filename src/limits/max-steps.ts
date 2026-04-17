@@ -89,11 +89,28 @@ function createStepDetector(agentType: AgentType): StepDetector {
 
 class CodexStepDetector implements StepDetector {
   private steps = 0;
+  private readonly seenMessageIds = new Set<string>();
 
   observe(record: unknown): number {
-    if (readString(record, "type") === "turn.completed") {
-      this.steps += 1;
+    if (readString(record, "type") !== "item.completed") {
+      return this.steps;
     }
+
+    const item = readRecord(record, "item");
+    if (readString(item, "type") !== "agent_message") {
+      return this.steps;
+    }
+
+    const itemId = readString(item, "id");
+    if (itemId !== undefined) {
+      if (this.seenMessageIds.has(itemId)) {
+        return this.steps;
+      }
+
+      this.seenMessageIds.add(itemId);
+    }
+
+    this.steps += 1;
 
     return this.steps;
   }
@@ -134,9 +151,22 @@ class ClaudeCodeStepDetector implements StepDetector {
 
 class CursorAgentStepDetector implements StepDetector {
   private steps = 0;
+  private readonly seenModelCallIds = new Set<string>();
 
   observe(record: unknown): number {
-    if (readString(record, "type") === "assistant") {
+    const type = readString(record, "type");
+
+    if (type === "tool_call" && readString(record, "subtype") === "started") {
+      const modelCallId = readString(record, "model_call_id");
+      if (modelCallId !== undefined && !this.seenModelCallIds.has(modelCallId)) {
+        this.seenModelCallIds.add(modelCallId);
+        this.steps += 1;
+      }
+
+      return this.steps;
+    }
+
+    if (type === "assistant") {
       this.steps += 1;
     }
 
