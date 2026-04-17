@@ -73,3 +73,31 @@ test("execFileCapture reports SIGKILL timeouts as timed out", async () => {
   expect(result.signal).toBe("SIGKILL");
   expect(result.timedOut).toBe(true);
 });
+
+test("execFileCapture terminates when maxSteps is exceeded and preserves output", async () => {
+  const result = await execFileCapture(
+    process.execPath,
+    [
+      "-e",
+      [
+        "console.log(JSON.stringify({ type: 'step_finish' }));",
+        "setTimeout(() => console.log(JSON.stringify({ type: 'step_finish' })), 10);",
+        "setTimeout(() => {}, 1000);",
+      ].join(" "),
+    ],
+    {
+      cwd: process.cwd(),
+      timeoutMs: 10_000,
+      maxSteps: {
+        limit: 1,
+        agentType: "opencode",
+        runnerId: "open-main",
+      },
+    },
+  );
+
+  expect(result.timedOut).toBe(false);
+  expect(result.terminatedByMonitor?.name).toBe("MaxStepsExceededError");
+  expect(result.terminatedByMonitor?.message).toContain("Exceeded maxSteps: observed 2 steps with limit 1");
+  expect(result.stdout).toContain('{"type":"step_finish"}');
+});

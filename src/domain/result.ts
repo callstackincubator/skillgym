@@ -53,6 +53,7 @@ export type RunnerFailureType = "assertion" | "runner-crash" | "timeout";
 export type RunnerFailureOrigin =
   | "assertion"
   | "assert-hook"
+  | "max-steps"
   | "runner"
   | "workspace-bootstrap"
   | "workspace-setup"

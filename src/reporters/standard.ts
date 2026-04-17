@@ -352,6 +352,8 @@ function getCrashDetail(origin: RunnerFailureOrigin | undefined): string {
       return "Workspace setup failed.";
     case "assert-hook":
       return "Run finished, but the suite assert hook crashed.";
+    case "max-steps":
+      return "Run stopped: exceeded maxSteps (best-effort). Raw output was preserved in the run artifacts for debugging.";
     case "collection":
       return "Runner finished, but artifact collection failed.";
     case "normalization":

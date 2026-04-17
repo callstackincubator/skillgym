@@ -433,6 +433,84 @@ test("standard reporter points workspace bootstrap failures to bootstrap logs", 
   expect(output).toContain("Artifacts: .skillgym-results/run-1/case-a/open-main");
 });
 
+test("standard reporter renders max-steps failures with a clear message", async () => {
+  const writes: string[] = [];
+  const reporter = createStandardReporter({
+    stdout: {
+      isTTY: false,
+      columns: 120,
+      write(chunk: string) {
+        writes.push(chunk);
+        return true;
+      },
+    },
+    isInteractive: false,
+    isUnicode: true,
+  });
+
+  const runner = createRunnerInfo("open-main", { type: "opencode", model: "openai/gpt-5" });
+  const context = {
+    isInteractive: false,
+    cwd: "/workspace",
+    workspaceMode: "shared" as const,
+    suitePath: "examples/basic-suite.ts",
+    outputDir: ".skillgym-results/run-1",
+    selectedCaseCount: 1,
+    selectedRunnerCount: 1,
+    selectedExecutionCount: 1,
+    scheduleMode: "serial" as const,
+  };
+  const suiteResult: SuiteRunResult = {
+    suitePath: context.suitePath,
+    startedAt: "2026-04-02T12:00:00.000Z",
+    endedAt: "2026-04-02T12:01:42.000Z",
+    durationMs: 102_000,
+    outputDir: context.outputDir,
+    cases: [
+      createCaseResult({
+        caseId: "case-a",
+        runnerResults: [
+          {
+            ...createRunnerResult({
+              runner,
+              passed: false,
+              artifactDir: ".skillgym-results/run-1/case-a/open-main",
+              totalTokens: 12_000,
+            }),
+            error: {
+              name: "MaxStepsExceededError",
+              message: "Exceeded maxSteps: observed 2 steps with limit 1 for runner \"open-main\" (opencode). Agent terminated by skillgym. Raw output preserved.",
+            },
+            failureType: "runner-crash",
+            failureOrigin: "max-steps",
+            failureLogPath: ".skillgym-results/run-1/case-a/open-main/stderr.log",
+          },
+        ],
+      }),
+    ],
+    runners: [
+      createRunnerSummary({ runner, passedCases: 0, totalCases: 1, averageDurationMs: 19_300, averageTotalTokens: 13_500 }),
+    ],
+  };
+
+  await reporter.onSuiteStart?.({ context, cases: [], runners: [runner], startedAt: suiteResult.startedAt });
+  await reporter.onRunnerFinish?.({
+    context,
+    testCase: { id: "case-a", prompt: "", assert() {} },
+    runner,
+    result: suiteResult.cases[0]!.runnerResults[0]!,
+    caseIndex: 1,
+    totalCases: 1,
+  });
+  await reporter.onCaseFinish?.({ context, testCase: { id: "case-a", prompt: "", assert() {} }, result: suiteResult.cases[0]!, caseIndex: 1, totalCases: 1 });
+  await reporter.onSuiteFinish?.({ context, result: suiteResult });
+
+  const output = writes.join("");
+
+  expect(output).toContain("Run stopped: exceeded maxSteps (best-effort). Raw output was preserved in the run artifacts for debugging.");
+  expect(output).toContain("MaxStepsExceededError: Exceeded maxSteps: observed 2 steps with limit 1");
+});
+
 test("standard reporter suppresses shared-workspace warning for isolated mode", async () => {
   const writes: string[] = [];
   const reporter = createStandardReporter({

@@ -7,6 +7,7 @@ import type { RawRunArtifacts, RunHandle, RunInput, RunnerAdapter } from "../../
 import type { SnapshotRuntimeOptions } from "../../src/snapshots/store.js";
 import { executeRunner } from "../../src/runner/execute-runner.js";
 import { createRunnerInfo } from "../../src/runner/runner-info.js";
+import { MaxStepsExceededError } from "../../src/limits/max-steps.js";
 import { SnapshotStore } from "../../src/snapshots/store.js";
 import { createSessionReport } from "../helpers/session-report.js";
 import { CommandTimeoutError } from "../../src/utils/process.js";
@@ -205,6 +206,45 @@ test("executeRunner marks timeout failures separately from runner crashes", asyn
   expect(result.failureOrigin).toBe("runner");
   expect(result.failureLogPath).toBe(path.join(result.artifactDir, "stderr.log"));
   expect(result.error?.message).toBe("Command timed out after 5000ms: opencode run prompt");
+});
+
+test("executeRunner marks max-steps failures separately from other runner crashes", async () => {
+  const outputDir = await createTempDir();
+  const runner = createRunnerInfo("open-main", { type: "opencode", model: "openai/gpt-5" });
+  const adapter: RunnerAdapter = {
+    async run(): Promise<RunHandle> {
+      throw new MaxStepsExceededError({
+        observedSteps: 2,
+        maxSteps: 1,
+        runnerId: runner.id,
+        agentType: runner.agent.type,
+      });
+    },
+    async collect() {
+      throw new Error("should not collect after max-steps");
+    },
+    async normalize() {
+      throw new Error("should not normalize after max-steps");
+    },
+  };
+
+  const result = await executeRunner(
+    { id: "alpha", prompt: "prompt", assert() {} },
+    runner,
+    adapter,
+    {
+      cwd: outputDir,
+      artifactDir: path.join(outputDir, "alpha", runner.pathKey),
+      timeoutMs: 5_000,
+      maxSteps: 1,
+    },
+  );
+
+  expect(result.passed).toBe(false);
+  expect(result.failureType).toBe("runner-crash");
+  expect(result.failureOrigin).toBe("max-steps");
+  expect(result.failureLogPath).toBe(path.join(result.artifactDir, "stderr.log"));
+  expect(result.error?.message).toContain("Exceeded maxSteps: observed 2 steps with limit 1");
 });
 
 test("executeRunner creates a missing snapshot baseline and passes", async () => {

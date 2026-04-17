@@ -8,7 +8,7 @@ import type { TestCase } from "../domain/test-case.js";
 import { createAssertionContext } from "../assertions/context.js";
 import type { SnapshotRuntimeOptions, SnapshotStore } from "../snapshots/store.js";
 import { ensureDir, writeJson } from "../utils/fs.js";
-import { isCommandTimeoutError } from "../utils/process.js";
+import { isCommandTimeoutError, isMaxStepsExceededError } from "../utils/process.js";
 import { createExecutionFailureResult } from "./workspace.js";
 
 export async function executeRunner(
@@ -19,6 +19,7 @@ export async function executeRunner(
     cwd: string;
     artifactDir: string;
     timeoutMs: number;
+    maxSteps?: number;
     showRunnerOutput?: boolean;
     snapshots?: {
       runtime: SnapshotRuntimeOptions;
@@ -34,6 +35,7 @@ export async function executeRunner(
     prompt: testCase.prompt,
     cwd: options.cwd,
     timeoutMs: options.timeoutMs,
+    maxSteps: options.maxSteps,
     artifactsDir: artifactDir,
     showRunnerOutput: options.showRunnerOutput,
   };
@@ -117,8 +119,8 @@ export async function executeRunner(
       runner,
       artifactDir,
       durationMs: Date.now() - startedMs,
-      failureType: isCommandTimeoutError(error) ? "timeout" : undefined,
-      failureOrigin: "runner",
+      failureType: isMaxStepsExceededError(error) ? "runner-crash" : isCommandTimeoutError(error) ? "timeout" : undefined,
+      failureOrigin: isMaxStepsExceededError(error) ? "max-steps" : "runner",
       failureLogPath: path.join(artifactDir, "stderr.log"),
     });
   }

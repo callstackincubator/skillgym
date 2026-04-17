@@ -6,6 +6,7 @@ export interface RunInput {
   prompt: string;
   cwd: string;
   timeoutMs: number;
+  maxSteps?: number;
   artifactsDir: string;
   showRunnerOutput?: boolean;
 }

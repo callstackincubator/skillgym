@@ -15,7 +15,7 @@ const CONFIG_FILENAMES = [
 ] as const;
 
 const TOP_LEVEL_KEYS = ["run", "defaults", "runners", "snapshots"] as const;
-const RUN_KEYS = ["cwd", "outputDir", "reporter", "schedule", "workspace"] as const;
+const RUN_KEYS = ["cwd", "outputDir", "reporter", "schedule", "workspace", "maxSteps"] as const;
 const DEFAULT_KEYS = ["timeoutMs"] as const;
 const RUNNER_KEYS = ["agent"] as const;
 const COMMON_AGENT_KEYS = ["type", "command", "commandArgs", "env", "model"] as const;
@@ -52,6 +52,7 @@ export interface SkillGymConfig {
     reporter?: string;
     schedule?: ScheduleMode;
     workspace?: SuiteWorkspaceConfig;
+    maxSteps?: number;
   };
   defaults?: {
     timeoutMs?: number;
@@ -202,6 +203,7 @@ function resolveConfigPaths(config: SkillGymConfig, configDir: string): SkillGym
       reporter: config.run.reporter === undefined ? undefined : resolveReporterSpecifier(config.run.reporter, configDir),
       schedule: config.run.schedule,
       workspace: config.run.workspace === undefined ? undefined : resolveWorkspaceConfigPaths(config.run.workspace, configDir),
+      ...(config.run.maxSteps === undefined ? {} : { maxSteps: config.run.maxSteps }),
     },
     defaults: config.defaults === undefined ? undefined : {
       timeoutMs: config.defaults.timeoutMs,
@@ -274,12 +276,15 @@ function parseRunConfig(value: unknown, configPath: string): SkillGymConfig["run
   const record = parseObject(value, configPath);
   ensureKnownKeys(record, RUN_KEYS, configPath);
 
+  const maxSteps = parseOptionalInteger(record.maxSteps, `${configPath}.maxSteps`, 1);
+
   return {
     cwd: parseOptionalNonEmptyString(record.cwd, `${configPath}.cwd`),
     outputDir: parseOptionalNonEmptyString(record.outputDir, `${configPath}.outputDir`),
     reporter: parseOptionalNonEmptyString(record.reporter, `${configPath}.reporter`),
     schedule: parseOptionalScheduleMode(record.schedule, `${configPath}.schedule`),
     workspace: parseOptionalWorkspaceConfig(record.workspace, `${configPath}.workspace`),
+    ...(maxSteps === undefined ? {} : { maxSteps }),
   };
 }
 

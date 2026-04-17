@@ -183,6 +183,15 @@ describe("config", () => {
     expect(parseConfig({ run: { schedule: "isolated-by-runner" }, runners: { open: { agent: { type: "opencode", model: "openai/gpt-5" } } } }).run?.schedule).toBe("isolated-by-runner");
   });
 
+  test("parses run maxSteps", () => {
+    const parsed = parseConfig({
+      run: { maxSteps: 3 },
+      runners: { open: { agent: { type: "opencode", model: "openai/gpt-5" } } },
+    });
+
+    expect(parsed.run?.maxSteps).toBe(3);
+  });
+
   test("accepts cursor-agent runner configs", () => {
     const parsed = parseConfig({
       runners: {

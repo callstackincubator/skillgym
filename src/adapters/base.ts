@@ -19,6 +19,11 @@ export abstract class BaseAdapter {
       cwd: input.cwd,
       timeoutMs: input.timeoutMs,
       env: options.env === undefined ? process.env : { ...process.env, ...options.env },
+      maxSteps: input.maxSteps === undefined ? undefined : {
+        limit: input.maxSteps,
+        agentType: input.runner.agent.type,
+        runnerId: input.runner.id,
+      },
       mirror: input.showRunnerOutput
         ? {
             stdout: process.stdout,
@@ -34,6 +39,10 @@ export abstract class BaseAdapter {
 
     await writeText(stdoutPath, result.stdout);
     await writeText(stderrPath, result.stderr);
+
+    if (result.terminatedByMonitor !== undefined) {
+      throw result.terminatedByMonitor;
+    }
 
     if (result.timedOut) {
       throw new CommandTimeoutError(command, args, input.timeoutMs);

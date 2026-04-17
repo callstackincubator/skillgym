@@ -48,6 +48,7 @@ export async function executeSuite(
       };
       run?: {
         workspace?: SuiteWorkspaceConfig;
+        maxSteps?: number;
       };
       runners: Record<string, RunnerConfig>;
     };
@@ -190,6 +191,7 @@ export async function executeSuite(
           cwd: preparedWorkspace.cwd,
           artifactDir,
           timeoutMs: item.timeoutMs,
+          maxSteps: options.config.run?.maxSteps,
           snapshots: options.snapshots !== undefined && snapshotStore !== undefined
             ? { runtime: options.snapshots, store: snapshotStore }
             : undefined,

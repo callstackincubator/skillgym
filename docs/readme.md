@@ -16,6 +16,7 @@ Supported in V1:
 - OpenCode CLI
 - Codex CLI
 - Claude Code CLI
+- Cursor Agent CLI
 
 ## Core principles
 
@@ -23,6 +24,7 @@ Supported in V1:
 - JavaScript assertions only
 - One benchmark metric: success or failure
 - Session telemetry is preserved for debugging
+- Best-effort execution limits should still preserve raw artifacts on failure
 - TypeScript implementation
 - Node.js-compatible APIs only
 

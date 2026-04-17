@@ -1,7 +1,10 @@
 import { mkdtemp, open, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { StringDecoder } from "node:string_decoder";
 import spawn, { SubprocessError } from "nano-spawn";
+import type { AgentType } from "../domain/runner.js";
+import { MaxStepsExceededError, createMaxStepsMonitor } from "../limits/max-steps.js";
 
 export interface ExecResult {
   stdout: string;
@@ -9,6 +12,7 @@ export interface ExecResult {
   exitCode: number | null;
   signal: NodeJS.Signals | null;
   timedOut: boolean;
+  terminatedByMonitor?: MaxStepsExceededError;
 }
 
 export class CommandTimeoutError extends Error {
@@ -22,6 +26,10 @@ export function isCommandTimeoutError(error: unknown): error is CommandTimeoutEr
   return error instanceof CommandTimeoutError;
 }
 
+export function isMaxStepsExceededError(error: unknown): error is MaxStepsExceededError {
+  return error instanceof MaxStepsExceededError;
+}
+
 export async function execFileCapture(
   command: string,
   args: string[],
@@ -33,9 +41,18 @@ export async function execFileCapture(
       stdout?: { write(chunk: string): unknown };
       stderr?: { write(chunk: string): unknown };
     };
+    maxSteps?: {
+      limit: number;
+      agentType: AgentType;
+      runnerId: string;
+    };
   },
 ): Promise<ExecResult> {
-  if (options.mirror?.stdout !== undefined || options.mirror?.stderr !== undefined) {
+  if (
+    options.mirror?.stdout !== undefined
+    || options.mirror?.stderr !== undefined
+    || options.maxSteps !== undefined
+  ) {
     return execFileCaptureWithMirror(command, args, options);
   }
 
@@ -128,6 +145,11 @@ async function execFileCaptureWithMirror(
       stdout?: { write(chunk: string): unknown };
       stderr?: { write(chunk: string): unknown };
     };
+    maxSteps?: {
+      limit: number;
+      agentType: AgentType;
+      runnerId: string;
+    };
   },
 ): Promise<ExecResult> {
   const subprocess = spawn(command, args, {
@@ -143,18 +165,39 @@ async function execFileCaptureWithMirror(
 
   let stdout = "";
   let stderr = "";
-
-  child.stdout?.setEncoding("utf8");
-  child.stderr?.setEncoding("utf8");
+  let terminatedByMonitor: MaxStepsExceededError | undefined;
+  const stdoutDecoder = new StringDecoder("utf8");
+  const stderrDecoder = new StringDecoder("utf8");
+  const maxStepsMonitor = options.maxSteps === undefined
+    ? undefined
+    : createMaxStepsMonitor({
+        agentType: options.maxSteps.agentType,
+        runnerId: options.maxSteps.runnerId,
+        maxSteps: options.maxSteps.limit,
+      });
+  let stdoutLineBuffer = "";
 
   child.stdout?.on("data", (chunk: string | Buffer) => {
-    const text = typeof chunk === "string" ? chunk : chunk.toString("utf8");
+    const text = typeof chunk === "string" ? chunk : stdoutDecoder.write(chunk);
     stdout += text;
     options.mirror?.stdout?.write(text);
+
+    if (maxStepsMonitor === undefined || terminatedByMonitor !== undefined) {
+      return;
+    }
+
+    stdoutLineBuffer += text;
+    const result = consumeJsonLines(stdoutLineBuffer, (line) => maxStepsMonitor.observeLine(line));
+    stdoutLineBuffer = result.remainder;
+
+    if (result.value !== undefined) {
+      terminatedByMonitor = new MaxStepsExceededError(result.value);
+      child.kill("SIGKILL");
+    }
   });
 
   child.stderr?.on("data", (chunk: string | Buffer) => {
-    const text = typeof chunk === "string" ? chunk : chunk.toString("utf8");
+    const text = typeof chunk === "string" ? chunk : stderrDecoder.write(chunk);
     stderr += text;
     options.mirror?.stderr?.write(text);
   });
@@ -165,28 +208,118 @@ async function execFileCaptureWithMirror(
   try {
     await subprocess;
     await Promise.all([stdoutEnded, stderrEnded]);
-
-    return {
+    const finalized = finalizeBufferedOutput({
       stdout,
       stderr,
+      stdoutDecoder,
+      stderrDecoder,
+      stdoutLineBuffer,
+      maxStepsMonitor,
+      terminatedByMonitor,
+      mirror: options.mirror,
+    });
+
+    return {
+      stdout: finalized.stdout,
+      stderr: finalized.stderr,
       exitCode: 0,
       signal: null,
       timedOut: false,
+      terminatedByMonitor: finalized.terminatedByMonitor,
     };
   } catch (error) {
     await Promise.allSettled([stdoutEnded, stderrEnded]);
+    const finalized = finalizeBufferedOutput({
+      stdout,
+      stderr,
+      stdoutDecoder,
+      stderrDecoder,
+      stdoutLineBuffer,
+      maxStepsMonitor,
+      terminatedByMonitor,
+      mirror: options.mirror,
+    });
 
     if (error instanceof SubprocessError) {
       return {
-        stdout,
-        stderr,
+        stdout: finalized.stdout,
+        stderr: finalized.stderr,
         exitCode: error.exitCode ?? null,
         signal: (error.signalName as NodeJS.Signals | undefined) ?? null,
-        timedOut: isTimedOutSubprocessError(error),
+        timedOut: finalized.terminatedByMonitor === undefined && isTimedOutSubprocessError(error),
+        terminatedByMonitor: finalized.terminatedByMonitor,
       };
     }
 
     throw error;
+  }
+}
+
+function finalizeBufferedOutput(options: {
+  stdout: string;
+  stderr: string;
+  stdoutDecoder: StringDecoder;
+  stderrDecoder: StringDecoder;
+  stdoutLineBuffer: string;
+  maxStepsMonitor?: ReturnType<typeof createMaxStepsMonitor>;
+  terminatedByMonitor?: MaxStepsExceededError;
+  mirror?: {
+    stdout?: { write(chunk: string): unknown };
+    stderr?: { write(chunk: string): unknown };
+  };
+}): { stdout: string; stderr: string; terminatedByMonitor?: MaxStepsExceededError } {
+  let stdout = options.stdout;
+  let stderr = options.stderr;
+  let terminatedByMonitor = options.terminatedByMonitor;
+  let stdoutLineBuffer = options.stdoutLineBuffer;
+
+  const pendingStdout = options.stdoutDecoder.end();
+  if (pendingStdout.length > 0) {
+    stdout += pendingStdout;
+    stdoutLineBuffer += pendingStdout;
+    options.mirror?.stdout?.write(pendingStdout);
+  }
+
+  if (options.maxStepsMonitor !== undefined && terminatedByMonitor === undefined) {
+    const result = consumeJsonLines(stdoutLineBuffer, (line) => options.maxStepsMonitor?.observeLine(line));
+    stdoutLineBuffer = result.remainder;
+    if (result.value !== undefined) {
+      terminatedByMonitor = new MaxStepsExceededError(result.value);
+    } else if (stdoutLineBuffer.trim().length > 0) {
+      const finalState = options.maxStepsMonitor.observeLine(stdoutLineBuffer);
+      if (finalState !== undefined) {
+        terminatedByMonitor = new MaxStepsExceededError(finalState);
+      }
+    }
+  }
+
+  const pendingStderr = options.stderrDecoder.end();
+  if (pendingStderr.length > 0) {
+    stderr += pendingStderr;
+    options.mirror?.stderr?.write(pendingStderr);
+  }
+
+  return { stdout, stderr, terminatedByMonitor };
+}
+
+function consumeJsonLines<T>(
+  input: string,
+  onLine: (line: string) => T | undefined,
+): { remainder: string; value?: T } {
+  let remainder = input;
+
+  while (true) {
+    const newlineIndex = remainder.indexOf("\n");
+    if (newlineIndex === -1) {
+      return { remainder };
+    }
+
+    const line = remainder.slice(0, newlineIndex);
+    remainder = remainder.slice(newlineIndex + 1);
+    const value = onLine(line);
+    if (value !== undefined) {
+      return { remainder, value };
+    }
   }
 }
 
