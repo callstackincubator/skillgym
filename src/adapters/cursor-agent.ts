@@ -60,6 +60,7 @@ export class CursorAgentAdapter extends BaseAdapter implements RunnerAdapter {
     const observedReads: string[] = [];
     const explicitSkillNames = new Set<string>();
     const seenToolCalls = new Set<string>();
+    const callBaseDirs = new Map<string, string>();
 
     let sessionCwd = input.cwd;
     let resultText: string | undefined;
@@ -101,6 +102,9 @@ export class CursorAgentAdapter extends BaseAdapter implements RunnerAdapter {
         const callId = readString(record, "call_id");
         const isCompleted = readString(record, "subtype") === "completed";
         const hasEmittedCall = callId !== undefined && seenToolCalls.has(callId);
+        const baseDir = callId === undefined
+          ? resolveToolBaseDir(toolCall.args, sessionCwd)
+          : resolveCursorCallBaseDir(callId, toolCall.args, sessionCwd, callBaseDirs);
 
         if (!hasEmittedCall) {
           events.push({
@@ -119,7 +123,7 @@ export class CursorAgentAdapter extends BaseAdapter implements RunnerAdapter {
         if (command !== undefined) {
           events.push({ type: "command", command, at });
           for (const filePath of extractFilePathsFromCommand(command)) {
-            const resolvedPath = resolveReportedPath(filePath, resolveToolBaseDir(toolCall.args, sessionCwd));
+            const resolvedPath = resolveReportedPath(filePath, baseDir);
             if (resolvedPath === undefined) {
               continue;
             }
@@ -131,7 +135,7 @@ export class CursorAgentAdapter extends BaseAdapter implements RunnerAdapter {
 
         const readPath = extractReadPath(toolCall.tool, toolCall.args);
         if (readPath !== undefined) {
-          const resolvedPath = resolveReportedPath(readPath, resolveToolBaseDir(toolCall.args, sessionCwd));
+          const resolvedPath = resolveReportedPath(readPath, baseDir);
           if (resolvedPath !== undefined) {
             observedReads.push(resolvedPath);
             events.push({ type: "fileRead", path: resolvedPath, at });
@@ -349,6 +353,29 @@ function resolveToolBaseDir(args: unknown, fallbackDir: string): string {
   return readString(args, "workingDirectory")
     ?? readString(args, "cwd")
     ?? fallbackDir;
+}
+
+function resolveCursorCallBaseDir(
+  callId: string,
+  args: unknown,
+  fallbackDir: string,
+  callBaseDirs: Map<string, string>,
+): string {
+  const explicitBaseDir = readToolBaseDir(args);
+  if (explicitBaseDir !== undefined) {
+    callBaseDirs.set(callId, explicitBaseDir);
+    return explicitBaseDir;
+  }
+
+  return callBaseDirs.get(callId) ?? fallbackDir;
+}
+
+function readToolBaseDir(args: unknown): string | undefined {
+  if (!isRecord(args)) {
+    return undefined;
+  }
+
+  return readString(args, "workingDirectory") ?? readString(args, "cwd");
 }
 
 function stringifyUnknown(value: unknown): string {

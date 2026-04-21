@@ -173,6 +173,116 @@ test("CursorAgentAdapter normalize extracts commands, file reads, tool results, 
   ]));
 });
 
+test("CursorAgentAdapter normalize resolves shell reads against stored call workdir", async () => {
+  const adapter = new CursorAgentAdapter();
+  const input = createRunInput();
+
+  const report = await adapter.normalize(input, {
+    ...createArtifacts(),
+    rawSession: [
+      {
+        type: "system",
+        subtype: "init",
+        cwd: "/tmp/workspace",
+        session_id: "chat_123",
+      },
+      {
+        type: "tool_call",
+        subtype: "started",
+        call_id: "tool_1",
+        tool_call: {
+          shellToolCall: {
+            args: {
+              workingDirectory: "/tmp/isolated-workspace",
+              description: "Read skill file",
+            },
+          },
+        },
+      },
+      {
+        type: "tool_call",
+        subtype: "completed",
+        call_id: "tool_1",
+        tool_call: {
+          shellToolCall: {
+            args: {
+              command: "sed -n '1,200p' skills/find-skills/SKILL.md",
+              description: "Read skill file",
+            },
+            result: {
+              success: {
+                command: "sed -n '1,200p' skills/find-skills/SKILL.md",
+                stdout: "# skill",
+                stderr: "",
+                exitCode: 0,
+              },
+            },
+          },
+        },
+      },
+    ],
+  });
+
+  expect(report.files.observedReads).toEqual([
+    "/tmp/isolated-workspace/skills/find-skills/SKILL.md",
+  ]);
+  expect(report.events).toEqual(expect.arrayContaining([
+    expect.objectContaining({ type: "fileRead", path: "/tmp/isolated-workspace/skills/find-skills/SKILL.md" }),
+  ]));
+});
+
+test("CursorAgentAdapter normalize resolves read tool calls against stored call cwd", async () => {
+  const adapter = new CursorAgentAdapter();
+  const input = createRunInput();
+
+  const report = await adapter.normalize(input, {
+    ...createArtifacts(),
+    rawSession: [
+      {
+        type: "system",
+        subtype: "init",
+        cwd: "/tmp/workspace",
+        session_id: "chat_123",
+      },
+      {
+        type: "tool_call",
+        subtype: "started",
+        call_id: "tool_1",
+        tool_call: {
+          readToolCall: {
+            args: {
+              cwd: "/tmp/turn-workspace",
+            },
+          },
+        },
+      },
+      {
+        type: "tool_call",
+        subtype: "completed",
+        call_id: "tool_1",
+        tool_call: {
+          readToolCall: {
+            args: {
+              filePath: "skills/find-skills/SKILL.md",
+            },
+            result: "# skill",
+          },
+        },
+      },
+    ],
+  });
+
+  expect(report.files.observedReads).toEqual([
+    "/tmp/turn-workspace/skills/find-skills/SKILL.md",
+  ]);
+  expect(report.detectedSkills).toEqual(expect.arrayContaining([
+    expect.objectContaining({ skill: "find-skills" }),
+  ]));
+  expect(report.events).toEqual(expect.arrayContaining([
+    expect.objectContaining({ type: "fileRead", path: "/tmp/turn-workspace/skills/find-skills/SKILL.md" }),
+  ]));
+});
+
 function createRunInput(): RunInput {
   return {
     runner: {

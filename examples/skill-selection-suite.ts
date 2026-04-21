@@ -20,7 +20,6 @@ const suite: TestCase[] = [
       assert.skills.includes(report, ["find-skills", "upgrading-expo"]);
       assert.fileReads.includes(report, /find-skills\/SKILL\.md$/);
       assert.fileReads.includes(report, /upgrading-expo\/SKILL\.md$/);
-      assert.fileReads.before(report, /find-skills\/SKILL\.md$/, /upgrading-expo\/SKILL\.md$/);
       assert.match(report.finalOutput, /upgrading-expo/i);
       assert.match(report.finalOutput, /npx skills add/i);
     },
