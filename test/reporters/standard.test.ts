@@ -94,6 +94,7 @@ test("standard reporter prints runner-grouped results and failure artifacts", as
   expect(output).toContain("✗ case-a");
   expect(output).toContain("Cases       1 failed | 1 passed (2)");
   expect(output).toContain("Runs        1 failed | 3 passed (4)");
+  expect(output).toContain("Statuses    0 expected failures | 0 unexpected passes");
   expect(output).toContain("Duration    1m 42s");
   expect(output).toContain("9,830 / 1,104 / 0 / 7,233 / 16,604");
   expect(output).toContain("9,830 / 1,104 / 0 / 7,233 / 12,000");
@@ -188,7 +189,7 @@ test("standard reporter interactive mode renders queued, running, and finished r
     context,
     testCase: { id: "skill-selection", prompt: "", assert() {} },
     runner: openRunner,
-    result: createRunnerResult({ runner: openRunner, passed: true, artifactDir: "x", totalTokens: 10_000 }),
+    result: createRunnerResult({ runner: openRunner, passed: true, status: "expected-failed", artifactDir: "x", totalTokens: 10_000 }),
     caseIndex: 1,
     totalCases: 2,
   });
@@ -197,16 +198,83 @@ test("standard reporter interactive mode renders queued, running, and finished r
     context,
     testCase: { id: "snapshot-reuse", prompt: "", assert() {} },
     runner: codeRunner,
-    result: createRunnerResult({ runner: codeRunner, passed: false, artifactDir: "y", totalTokens: 10_000 }),
+    result: createRunnerResult({ runner: codeRunner, passed: false, status: "unexpected-passed", artifactDir: "y", totalTokens: 10_000 }),
     caseIndex: 2,
     totalCases: 2,
   });
 
   const finishedOutput = writes.join("");
 
-  expect(finishedOutput).toContain("\u001b[32m✓ skill-selection  /  open-main\u001b[39m\u001b[2m (opencode, openai/gpt-5)\u001b[22m");
-  expect(finishedOutput).toContain("\u001b[31m✗ snapshot-reuse   /  code-main\u001b[39m\u001b[2m (codex, gpt-5)\u001b[22m");
+  expect(finishedOutput).toContain("\u001b[32m✓ skill-selection  /  open-main expected failure\u001b[39m\u001b[2m (opencode, openai/gpt-5)\u001b[22m");
+  expect(finishedOutput).toContain("\u001b[31m✗ snapshot-reuse   /  code-main unexpected pass\u001b[39m\u001b[2m (codex, gpt-5)\u001b[22m");
   expect(finishedOutput).toContain("\u001b[2K");
+});
+
+test("standard reporter labels expected failures and unexpected passes", async () => {
+  const writes: string[] = [];
+  const reporter = createStandardReporter({
+    stdout: {
+      isTTY: false,
+      columns: 120,
+      write(chunk: string) {
+        writes.push(chunk);
+        return true;
+      },
+    },
+    isInteractive: false,
+    isUnicode: true,
+  });
+  const runner = createRunnerInfo("open-main", { type: "opencode", model: "openai/gpt-5" });
+  const context = {
+    isInteractive: false,
+    cwd: "/workspace",
+    workspaceMode: "shared" as const,
+    suitePath: "examples/basic-suite.ts",
+    outputDir: ".skillgym-results/run-1",
+    selectedCaseCount: 2,
+    selectedRunnerCount: 1,
+    selectedExecutionCount: 2,
+    scheduleMode: "serial" as const,
+  };
+  const suiteResult: SuiteRunResult = {
+    suitePath: context.suitePath,
+    startedAt: "2026-04-02T12:00:00.000Z",
+    endedAt: "2026-04-02T12:01:42.000Z",
+    durationMs: 102_000,
+    outputDir: context.outputDir,
+    cases: [
+      createCaseResult({
+        caseId: "known-gap",
+        runnerResults: [createRunnerResult({ runner, passed: true, status: "expected-failed", artifactDir: "x", totalTokens: 12_000 })],
+      }),
+      createCaseResult({
+        caseId: "stale-gap",
+        runnerResults: [createRunnerResult({ runner, passed: false, status: "unexpected-passed", artifactDir: "y", totalTokens: 12_000 })],
+      }),
+    ],
+    runners: [createRunnerSummary({ runner, passedCases: 1, totalCases: 2, averageDurationMs: 24_800, averageTotalTokens: 12_000 })],
+  };
+
+  await reporter.onSuiteStart?.({ context, cases: [], runners: [runner], startedAt: suiteResult.startedAt });
+  await reporter.onRunnerFinish?.({
+    context,
+    testCase: { id: "stale-gap", prompt: "", assert() {} },
+    runner,
+    result: suiteResult.cases[1]!.runnerResults[0]!,
+    caseIndex: 2,
+    totalCases: 2,
+  });
+  await reporter.onCaseFinish?.({ context, testCase: { id: "known-gap", prompt: "", assert() {} }, result: suiteResult.cases[0]!, caseIndex: 1, totalCases: 2 });
+  await reporter.onCaseFinish?.({ context, testCase: { id: "stale-gap", prompt: "", assert() {} }, result: suiteResult.cases[1]!, caseIndex: 2, totalCases: 2 });
+  await reporter.onSuiteFinish?.({ context, result: suiteResult });
+
+  const output = writes.join("");
+  expect(output).toContain("expected failure");
+  expect(output).toContain("unexpected pass");
+  expect(output).toContain("Statuses    1 expected failures | 1 unexpected passes");
+  expect(output).toContain("Failures");
+  expect(output).toContain("✗ stale-gap > open-main");
+  expect(output).not.toContain("known-gap > open-main");
 });
 
 test("standard reporter prints warning line for non-serial schedules only", async () => {
@@ -561,15 +629,17 @@ function createCaseResult(options: {
 function createRunnerResult(options: {
   runner: RunnerInfo;
   passed: boolean;
+  status?: RunnerResult["status"];
   artifactDir: string;
   totalTokens: number;
 }): RunnerResult {
   return {
     runner: options.runner,
     passed: options.passed,
+    status: options.status ?? (options.passed ? "passed" : "failed"),
     durationMs: 24_800,
     artifactDir: options.artifactDir,
-    error: options.passed
+    error: options.passed || options.status === "unexpected-passed"
         ? undefined
         : {
           name: "AssertionError",
@@ -581,8 +651,8 @@ function createRunnerResult(options: {
             "    at executeRunner (/workspace/src/runner/execute-runner.ts:91:7)",
           ].join("\n"),
         },
-    failureType: options.passed ? undefined : "assertion",
-    failureOrigin: options.passed ? undefined : "assertion",
+    failureType: options.passed || options.status === "unexpected-passed" ? undefined : "assertion",
+    failureOrigin: options.passed || options.status === "unexpected-passed" ? undefined : "assertion",
     report: createSessionReport({
       runner: options.runner,
       usage: {

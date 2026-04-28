@@ -6,7 +6,7 @@ import type { BenchmarkReporter, RunnerInfo, RunnerResult, SuiteRunResult, TestC
 import type { RawRunArtifacts, RunHandle, RunInput, RunnerAdapter } from "../../src/domain/adapter.js";
 import type { SnapshotRuntimeOptions } from "../../src/snapshots/store.js";
 import { executeRunner } from "../../src/runner/execute-runner.js";
-import { executeSuite } from "../../src/runner/execute-suite.js";
+import { classifyExpectedFailure, executeSuite } from "../../src/runner/execute-suite.js";
 import { createRunnerInfo } from "../../src/runner/runner-info.js";
 import { createSessionReport } from "../helpers/session-report.js";
 
@@ -273,6 +273,66 @@ test("executeSuite reports runner execution errors as failed runs", async () => 
   expect(calls).toEqual(["suite:start", "runner:start"]);
 });
 
+test("classifyExpectedFailure maps raw outcomes to expectation-aware statuses", async () => {
+  const outputDir = await createTempDir();
+  const runner = createRunnerInfo("open", { type: "opencode", model: "openai/gpt-5" });
+  const normalCase: TestCase = { id: "normal", prompt: "a", assert() {} };
+  const expectedCase: TestCase = { id: "expected", prompt: "a", expectedFail: true, assert() {} };
+
+  expect(classifyExpectedFailure(normalCase, createRunnerResult({
+    caseId: "normal",
+    runner,
+    passed: true,
+    durationMs: 10,
+    artifactDir: path.join(outputDir, "normal", runner.pathKey),
+    totalTokens: 100,
+    outputTokens: 20,
+    observedReads: 1,
+  }))).toMatchObject({ passed: true, status: "passed" });
+  expect(classifyExpectedFailure(normalCase, createRunnerResult({
+    caseId: "normal",
+    runner,
+    passed: false,
+    durationMs: 10,
+    artifactDir: path.join(outputDir, "normal", runner.pathKey),
+    totalTokens: 100,
+    outputTokens: 20,
+    observedReads: 1,
+  }))).toMatchObject({ passed: false, status: "failed" });
+  expect(classifyExpectedFailure(expectedCase, createRunnerResult({
+    caseId: "expected",
+    runner,
+    passed: false,
+    durationMs: 10,
+    artifactDir: path.join(outputDir, "expected", runner.pathKey),
+    totalTokens: 100,
+    outputTokens: 20,
+    observedReads: 1,
+  }))).toMatchObject({ passed: true, status: "expected-failed" });
+  expect(classifyExpectedFailure(expectedCase, createRunnerResult({
+    caseId: "expected",
+    runner,
+    passed: true,
+    durationMs: 10,
+    artifactDir: path.join(outputDir, "expected", runner.pathKey),
+    totalTokens: 100,
+    outputTokens: 20,
+    observedReads: 1,
+  }))).toMatchObject({ passed: false, status: "unexpected-passed" });
+  expect(classifyExpectedFailure(expectedCase, createRunnerResult({
+    caseId: "expected",
+    runner,
+    passed: false,
+    durationMs: 10,
+    artifactDir: path.join(outputDir, "expected", runner.pathKey),
+    totalTokens: 100,
+    outputTokens: 20,
+    observedReads: 1,
+    failureType: "runner-crash",
+    failureOrigin: "runner",
+  }))).toMatchObject({ passed: false, status: "failed" });
+});
+
 test("executeSuite aggregates runner summaries from case-centric results", async () => {
   const outputDir = await createTempDir();
   let suiteResult: SuiteRunResult | undefined;
@@ -359,6 +419,43 @@ test("executeSuite aggregates runner summaries from case-centric results", async
       averageTotalTokens: 400,
     },
   ]);
+});
+
+test("executeSuite aggregates expected failures as suite-health passes", async () => {
+  const outputDir = await createTempDir();
+
+  const result = await executeSuite("./suite.ts", [
+    { id: "known-gap", prompt: "a", expectedFail: true, assert() {} },
+    { id: "stable", prompt: "b", assert() {} },
+  ], {
+    cwd: outputDir,
+    outputDir,
+    isInteractive: false,
+    config: {
+      runners: {
+        open: { agent: { type: "opencode", model: "openai/gpt-5" } },
+      },
+    },
+    executeRunnerFn: async (testCase, runner, _adapter, options) => createRunnerResult({
+      caseId: testCase.id,
+      runner,
+      passed: testCase.id !== "known-gap",
+      durationMs: 10,
+      artifactDir: options.artifactDir,
+      totalTokens: 100,
+      outputTokens: 20,
+      observedReads: 1,
+    }),
+  });
+
+  expect(result.cases).toMatchObject([
+    { caseId: "known-gap", passed: true, runnerResults: [{ passed: true, status: "expected-failed" }] },
+    { caseId: "stable", passed: true, runnerResults: [{ passed: true, status: "passed" }] },
+  ]);
+  expect(result.runners[0]).toMatchObject({ totalCases: 2, passedCases: 2, successRate: 1 });
+
+  const saved = JSON.parse(await readFile(path.join(result.outputDir, "results.json"), "utf8")) as SuiteRunResult;
+  expect(saved.cases[0]?.runnerResults[0]?.status).toBe("expected-failed");
 });
 
 test("executeSuite preserves unrelated snapshots and writes new entries for executed runs", async () => {
@@ -485,6 +582,8 @@ function createRunnerResult(options: {
   outputTokens: number;
   reasoningTokens?: number;
   observedReads: number;
+  failureType?: RunnerResult["failureType"];
+  failureOrigin?: RunnerResult["failureOrigin"];
 }): RunnerResult {
   const inputTokens = options.totalTokens === undefined
     ? undefined
@@ -493,6 +592,7 @@ function createRunnerResult(options: {
   return {
     runner: options.runner,
     passed: options.passed,
+    status: options.passed ? "passed" : "failed",
     durationMs: options.durationMs,
     artifactDir: options.artifactDir,
     error: options.passed
@@ -501,6 +601,8 @@ function createRunnerResult(options: {
           name: "AssertionError",
           message: "expected skill to be loaded before command execution",
         },
+    failureType: options.passed ? undefined : options.failureType ?? "assertion",
+    failureOrigin: options.passed ? undefined : options.failureOrigin ?? "assertion",
     report: createSessionReport({
       runner: options.runner,
       usage: {

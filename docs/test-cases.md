@@ -50,6 +50,7 @@ export interface TestCase {
   id: string;
   prompt: string;
   timeoutMs?: number;
+  expectedFail?: boolean;
   assert(report: SessionReport, ctx: AssertionContext): void | Promise<void>;
 }
 ```
@@ -59,6 +60,7 @@ Field meanings:
 - `id`: stable identifier used in results and artifact paths
 - `prompt`: the exact prompt sent to the runner
 - `timeoutMs`: optional per-case timeout override
+- `expectedFail`: mark assertion failures as expected benchmark signal, not suite-health failures
 - `assert(report, ctx)`: pass or fail logic for that execution
 
 `TestCase` does not include runner selection. Each case runs against the selected configured runners.
@@ -69,6 +71,8 @@ The `assert` function decides pass or fail:
 
 - if `assert(report, ctx)` completes normally, that execution passes
 - if it throws, that execution fails
+- if `expectedFail: true` is set, an assertion failure is reported as `status: "expected-failed"` and `passed: true`
+- if `expectedFail: true` is set and assertions pass, the run is reported as `status: "unexpected-passed"` and `passed: false`
 
 You can use both:
 
@@ -92,6 +96,27 @@ const suite: TestCase[] = [
 ```
 
 See `assertions.md` for the full assertion reference.
+
+## Expected failures
+
+Use `expectedFail: true` for benchmark cases that intentionally capture a known model or agent gap. Expected failures only apply to assertion failures. Runner crashes, timeouts, workspace setup failures, collection failures, normalization failures, snapshot failures, and `run.maxSteps` failures still fail suite health because they indicate infrastructure or benchmark integrity problems.
+
+```ts
+import { assert, type TestCase } from "skillgym";
+
+const suite: TestCase[] = [
+  {
+    id: "known-missing-skill-selection",
+    prompt: "Use the correct installed skill before editing files.",
+    expectedFail: true,
+    assert(report) {
+      assert.skills.has(report, "required-skill");
+    },
+  },
+];
+```
+
+Expected assertion failures exit successfully and appear in `results.json` with `passed: true` and `status: "expected-failed"`. Unexpected passes exit non-zero with `passed: false` and `status: "unexpected-passed"`, which signals that the benchmark expectation may be stale or the agent improved.
 
 ## AssertionContext helpers
 
@@ -180,6 +205,7 @@ See `workspaces.md` for behavior, path resolution, cleanup, and bootstrap detail
 
 - a case execution passes when its `assert` function completes without throwing
 - a case execution fails when `assert` throws
+- `passed` is expectation-aware suite health; use `status` to distinguish `passed`, `failed`, `expected-failed`, and `unexpected-passed`
 - a case execution also fails when the runner crashes, times out, or exceeds `run.maxSteps`
 - `run.maxSteps` is a best-effort streamed model-round limit, not a hard portable turn cap
 - `max-steps` failures preserve raw stdout/stderr artifacts for debugging

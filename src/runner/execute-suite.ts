@@ -212,13 +212,15 @@ export async function executeSuite(
         });
         await writeJson(path.join(artifactDir, "error.json"), result.error);
         await writeJson(path.join(artifactDir, "report.json"), result.report);
-      } finally {
-        if (preparedWorkspace !== undefined) {
-          await finalizeWorkspace(preparedWorkspace, {
-            artifactDir,
-            passed: result!.passed,
-          });
-        }
+      }
+
+      result = classifyExpectedFailure(item.testCase, result);
+
+      if (preparedWorkspace !== undefined) {
+        await finalizeWorkspace(preparedWorkspace, {
+          artifactDir,
+          passed: result.passed,
+        });
       }
 
       plannedCaseResults[item.caseIndex]!.runnerResults[item.runnerIndex] = result;
@@ -267,6 +269,36 @@ export async function executeSuite(
     await options.reporter?.onError?.({ context, error });
     throw error;
   }
+}
+
+export function classifyExpectedFailure(testCase: TestCase, result: RunnerResult): RunnerResult {
+  if (testCase.expectedFail !== true) {
+    return {
+      ...result,
+      status: result.passed ? "passed" : "failed",
+    };
+  }
+
+  if (result.passed) {
+    return {
+      ...result,
+      passed: false,
+      status: "unexpected-passed",
+    };
+  }
+
+  if (result.failureType === "assertion" && result.failureOrigin === "assertion") {
+    return {
+      ...result,
+      passed: true,
+      status: "expected-failed",
+    };
+  }
+
+  return {
+    ...result,
+    status: "failed",
+  };
 }
 
 function classifyWorkspaceFailureOrigin(error: unknown): import("../domain/result.js").RunnerFailureOrigin {

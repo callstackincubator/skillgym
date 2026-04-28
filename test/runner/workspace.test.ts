@@ -67,6 +67,7 @@ test("executeSuite provisions isolated workspaces from suite template and remove
       return {
         runner,
         passed: true,
+        status: "passed",
         durationMs: 10,
         artifactDir: options.artifactDir,
         report: createSessionReport({ runner, prompt: "hello" }),
@@ -174,6 +175,7 @@ test("executeSuite resolves suite-relative bootstrap script args before running 
       return {
         runner,
         passed: true,
+        status: "passed",
         durationMs: 10,
         artifactDir: options.artifactDir,
         report: createSessionReport({ runner, prompt: "hello" }),
