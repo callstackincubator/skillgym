@@ -18,6 +18,7 @@ export async function runCommand(options: {
   cwd?: string;
   outputDir?: string;
   schedule?: string;
+  maxParallel?: string;
   caseId?: string;
   runner?: string;
   reporter?: string;
@@ -35,6 +36,7 @@ export async function runCommand(options: {
       cwd: options.cwd,
       outputDir: options.outputDir,
       schedule: options.schedule,
+      maxParallel: options.maxParallel,
     },
     loadedConfig.config,
   );
@@ -69,6 +71,7 @@ export async function runCommand(options: {
     cwd: path.resolve(runOptions.cwd),
     outputDir: runOptions.outputDir,
     schedule: runOptions.schedule,
+    maxParallel: runOptions.maxParallel,
     caseId: options.caseId,
     runner: options.runner,
     config: loadedConfig.config,

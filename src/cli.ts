@@ -22,6 +22,7 @@ async function main(): Promise<void> {
       const reporterOption = parsed.options.reporter;
       const scheduleOption = parsed.options.schedule;
       const configOption = parsed.options.config;
+      const maxParallelOption = parsed.options["max-parallel"];
       const updateSnapshotsOption = parsed.options["update-snapshots"];
       const snapshotsOption = parsed.options.snapshots;
 
@@ -33,6 +34,7 @@ async function main(): Promise<void> {
         runner: typeof runnerOption === "string" ? runnerOption : undefined,
         reporter: typeof reporterOption === "string" ? reporterOption : undefined,
         schedule: typeof scheduleOption === "string" ? scheduleOption : undefined,
+        maxParallel: typeof maxParallelOption === "string" ? maxParallelOption : undefined,
         reporterCwd: process.cwd(),
         configPath: typeof configOption === "string" ? configOption : undefined,
         updateSnapshots: updateSnapshotsOption === true,

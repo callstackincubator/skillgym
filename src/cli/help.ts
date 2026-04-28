@@ -16,6 +16,7 @@ ${theme.bold("Run Options:")}
   --cwd ${theme.accent("<path>")}           Override the workspace directory for the run
   --output-dir ${theme.accent("<path>")}    Override where run artifacts are written
   --schedule ${theme.accent("<mode>")}      Choose ${theme.light("serial")}, ${theme.light("parallel")}, or ${theme.light("isolated-by-runner")}
+  --max-parallel ${theme.accent("<n>")}     Cap concurrent executions for non-serial schedules
   --case ${theme.accent("<id>")}            Filter the configured suite to one case id
   --runner ${theme.accent("<runner-id>")}   Filter the configured runner set by runner id
   --reporter ${theme.accent("<value>")}     Use ${theme.light("standard")} or override run.reporter from config
@@ -28,6 +29,7 @@ ${theme.bold("Examples:")}
   ${theme.dim("$")} ${theme.light("skillgym run ./examples/basic-suite.ts --case always-passes")}
   ${theme.dim("$")} ${theme.light("skillgym run ./examples/basic-suite.ts --reporter standard")}
   ${theme.dim("$")} ${theme.light("skillgym run ./examples/basic-suite.ts --schedule isolated-by-runner")}
+  ${theme.dim("$")} ${theme.light("skillgym run ./examples/basic-suite.ts --schedule parallel --max-parallel 4")}
   ${theme.dim("$")} ${theme.light("skillgym run ./examples/basic-suite.ts --update-snapshots")}
 `);
 }

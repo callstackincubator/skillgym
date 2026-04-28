@@ -120,4 +120,4 @@ Path rules:
 
 - bootstrap commands are not sandboxed outside the workspace
 - copying large templates may increase runtime and disk usage
-- `isolated-by-runner` controls scheduling only, not workspace reuse
+- `isolated-by-runner` and `run.maxParallel` control scheduling only, not workspace reuse

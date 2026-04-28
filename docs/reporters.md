@@ -9,7 +9,7 @@ Execution, aggregation, and `results.json` writing stay in the runner. Reporters
 ```bash
 skillgym run <suite.ts> --reporter standard
 skillgym run <suite.ts> --reporter ./examples/custom-reporter.ts
-skillgym run <suite.ts> --schedule isolated-by-runner
+skillgym run <suite.ts> --schedule isolated-by-runner --max-parallel 4
 ```
 
 - Omitting `--reporter` uses the built-in `standard` reporter.
@@ -88,7 +88,7 @@ Final result ordering stays stable even in concurrent schedules:
 - `SuiteRunResult.cases` stays in selected case order
 - `CaseResult.runnerResults` stays in selected runner order
 
-`ReporterContext.scheduleMode` exposes the selected schedule so custom reporters can adapt their output.
+`ReporterContext.scheduleMode` exposes the selected schedule and `ReporterContext.maxParallel` exposes the effective execution concurrency so custom reporters can adapt their output.
 
 Top-level execution failures call `onError` before the error is rethrown.
 
@@ -98,7 +98,7 @@ The built-in `standard` reporter is optimized for polished CLI output.
 
 - Interactive TTY mode can show multiple live running entries at once.
 - Non-interactive mode avoids redraws and prints stable lines only.
-- Non-serial schedules print a warning because runs may overlap in the same workspace.
+- Non-serial schedules with concurrency above 1 print a warning because runs may overlap in the same workspace.
 - Every run prints suite metadata, compact per-run token columns (`in`, `out`, `reason`, `cache`, `billable`) when available, a final summary, and failure artifact paths.
 - Full stack traces are not shown by default.
 
