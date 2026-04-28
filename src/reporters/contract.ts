@@ -15,6 +15,8 @@ export interface ReporterContext {
   scheduleMode: ScheduleMode;
   caseFilter?: string;
   runnerFilter?: string;
+  tagFilter?: string[];
+  declaredTags: string[];
 }
 
 export interface SuiteStartEvent {

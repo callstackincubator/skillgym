@@ -25,6 +25,7 @@ export async function runCommand(options: {
   configPath?: string;
   updateSnapshots?: boolean;
   snapshotsPath?: string;
+  tags?: string[];
 }): Promise<void> {
   const loadedConfig = await loadConfig({
     suitePath: options.suitePath,
@@ -35,6 +36,7 @@ export async function runCommand(options: {
       cwd: options.cwd,
       outputDir: options.outputDir,
       schedule: options.schedule,
+      tags: options.tags,
     },
     loadedConfig.config,
   );
@@ -71,6 +73,7 @@ export async function runCommand(options: {
     schedule: runOptions.schedule,
     caseId: options.caseId,
     runner: options.runner,
+    tags: runOptions.tags,
     config: loadedConfig.config,
     suiteWorkspace: suite.workspace,
     snapshots,

@@ -15,7 +15,7 @@ const CONFIG_FILENAMES = [
 ] as const;
 
 const TOP_LEVEL_KEYS = ["run", "defaults", "runners", "snapshots"] as const;
-const RUN_KEYS = ["cwd", "outputDir", "reporter", "schedule", "workspace", "maxSteps"] as const;
+const RUN_KEYS = ["cwd", "outputDir", "reporter", "schedule", "workspace", "maxSteps", "tags"] as const;
 const DEFAULT_KEYS = ["timeoutMs"] as const;
 const RUNNER_KEYS = ["agent"] as const;
 const COMMON_AGENT_KEYS = ["type", "command", "commandArgs", "env", "model"] as const;
@@ -53,6 +53,7 @@ export interface SkillGymConfig {
     schedule?: ScheduleMode;
     workspace?: SuiteWorkspaceConfig;
     maxSteps?: number;
+    tags?: string[];
   };
   defaults?: {
     timeoutMs?: number;
@@ -105,12 +106,14 @@ export function resolveRunOptions(
     cwd?: string;
     outputDir?: string;
     schedule?: string;
+    tags?: string[];
   },
   config: SkillGymConfig,
 ): {
   cwd: string;
   outputDir?: string;
   schedule: ScheduleMode;
+  tags: string[];
 } {
   return {
     cwd: cliOptions.cwd !== undefined ? path.resolve(cliOptions.cwd) : config.run?.cwd ?? process.cwd(),
@@ -118,6 +121,7 @@ export function resolveRunOptions(
     schedule: cliOptions.schedule !== undefined
       ? parseScheduleMode(cliOptions.schedule, "CLI option --schedule")
       : config.run?.schedule ?? "serial",
+    tags: cliOptions.tags ?? config.run?.tags ?? [],
   };
 }
 
@@ -204,6 +208,7 @@ function resolveConfigPaths(config: SkillGymConfig, configDir: string): SkillGym
       schedule: config.run.schedule,
       workspace: config.run.workspace === undefined ? undefined : resolveWorkspaceConfigPaths(config.run.workspace, configDir),
       ...(config.run.maxSteps === undefined ? {} : { maxSteps: config.run.maxSteps }),
+      ...(config.run.tags === undefined ? {} : { tags: config.run.tags }),
     },
     defaults: config.defaults === undefined ? undefined : {
       timeoutMs: config.defaults.timeoutMs,
@@ -285,6 +290,7 @@ function parseRunConfig(value: unknown, configPath: string): SkillGymConfig["run
     schedule: parseOptionalScheduleMode(record.schedule, `${configPath}.schedule`),
     workspace: parseOptionalWorkspaceConfig(record.workspace, `${configPath}.workspace`),
     ...(maxSteps === undefined ? {} : { maxSteps }),
+    tags: parseOptionalStringArray(record.tags, `${configPath}.tags`),
   };
 }
 

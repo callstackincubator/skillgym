@@ -35,6 +35,8 @@ test("standard reporter prints runner-grouped results and failure artifacts", as
     selectedRunnerCount: 2,
     selectedExecutionCount: 4,
     scheduleMode: "serial" as const,
+    tagFilter: ["smoke", "gestures"],
+    declaredTags: [],
   };
   const suiteResult: SuiteRunResult = {
     suitePath: context.suitePath,
@@ -42,6 +44,8 @@ test("standard reporter prints runner-grouped results and failure artifacts", as
     endedAt: "2026-04-02T12:01:42.000Z",
     durationMs: 102_000,
     outputDir: context.outputDir,
+    declaredTags: [],
+    selectedTags: ["smoke", "gestures"],
     cases: [
       createCaseResult({
         caseId: "case-a",
@@ -86,6 +90,7 @@ test("standard reporter prints runner-grouped results and failure artifacts", as
 
   expect(output).toContain("Suite     examples/basic-suite.ts");
   expect(output).toContain("Runners   2");
+  expect(output).toContain("Tags      smoke, gestures");
   expect(output).toContain("Runs      4");
   expect(output).toContain("Runner: open-main");
   expect(output).toContain("Runner: code-main");
@@ -134,6 +139,7 @@ test("standard reporter interactive mode renders queued, running, and finished r
     selectedRunnerCount: 2,
     selectedExecutionCount: 4,
     scheduleMode: "parallel" as const,
+    declaredTags: [],
   };
 
   const openRunner = createRunnerInfo("open-main", { type: "opencode", model: "openai/gpt-5" });
@@ -249,6 +255,7 @@ test("standard reporter prints warning line for non-serial schedules only", asyn
       selectedRunnerCount: 1,
       selectedExecutionCount: 1,
       scheduleMode: "parallel",
+      declaredTags: [],
     },
     cases: [],
     runners: [runner],
@@ -265,6 +272,7 @@ test("standard reporter prints warning line for non-serial schedules only", asyn
       selectedRunnerCount: 1,
       selectedExecutionCount: 1,
       scheduleMode: "serial",
+      declaredTags: [],
     },
     cases: [],
     runners: [runner],
@@ -301,6 +309,7 @@ test("standard reporter prints friendly runner crash message with log path", asy
     selectedRunnerCount: 1,
     selectedExecutionCount: 1,
     scheduleMode: "serial" as const,
+    declaredTags: [],
   };
   const suiteResult: SuiteRunResult = {
     suitePath: context.suitePath,
@@ -308,6 +317,8 @@ test("standard reporter prints friendly runner crash message with log path", asy
     endedAt: "2026-04-02T12:01:42.000Z",
     durationMs: 102_000,
     outputDir: context.outputDir,
+    declaredTags: [],
+    selectedTags: [],
     cases: [
       createCaseResult({
         caseId: "case-a",
@@ -378,6 +389,7 @@ test("standard reporter points workspace bootstrap failures to bootstrap logs", 
     selectedRunnerCount: 1,
     selectedExecutionCount: 1,
     scheduleMode: "serial" as const,
+    declaredTags: [],
   };
   const suiteResult: SuiteRunResult = {
     suitePath: context.suitePath,
@@ -385,6 +397,8 @@ test("standard reporter points workspace bootstrap failures to bootstrap logs", 
     endedAt: "2026-04-02T12:01:42.000Z",
     durationMs: 102_000,
     outputDir: context.outputDir,
+    declaredTags: [],
+    selectedTags: [],
     cases: [
       createCaseResult({
         caseId: "case-a",
@@ -459,6 +473,7 @@ test("standard reporter renders max-steps failures with a clear message", async 
     selectedRunnerCount: 1,
     selectedExecutionCount: 1,
     scheduleMode: "serial" as const,
+    declaredTags: [],
   };
   const suiteResult: SuiteRunResult = {
     suitePath: context.suitePath,
@@ -466,6 +481,8 @@ test("standard reporter renders max-steps failures with a clear message", async 
     endedAt: "2026-04-02T12:01:42.000Z",
     durationMs: 102_000,
     outputDir: context.outputDir,
+    declaredTags: [],
+    selectedTags: [],
     cases: [
       createCaseResult({
         caseId: "case-a",
@@ -537,6 +554,7 @@ test("standard reporter suppresses shared-workspace warning for isolated mode", 
       selectedRunnerCount: 1,
       selectedExecutionCount: 1,
       scheduleMode: "parallel",
+      declaredTags: [],
     },
     cases: [],
     runners: [createRunnerInfo("open-main", { type: "opencode", model: "openai/gpt-5" })],
@@ -553,6 +571,7 @@ function createCaseResult(options: {
 }): CaseResult {
   return {
     caseId: options.caseId,
+    tags: [],
     passed: options.runnerResults.every((result) => result.passed),
     runnerResults: options.runnerResults,
   };

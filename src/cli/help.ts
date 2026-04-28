@@ -17,6 +17,7 @@ ${theme.bold("Run Options:")}
   --output-dir ${theme.accent("<path>")}    Override where run artifacts are written
   --schedule ${theme.accent("<mode>")}      Choose ${theme.light("serial")}, ${theme.light("parallel")}, or ${theme.light("isolated-by-runner")}
   --case ${theme.accent("<id>")}            Filter the configured suite to one case id
+  --tag ${theme.accent("<tag>")}            Filter cases by tag; repeat or comma-separate for OR matching
   --runner ${theme.accent("<runner-id>")}   Filter the configured runner set by runner id
   --reporter ${theme.accent("<value>")}     Use ${theme.light("standard")} or override run.reporter from config
   --snapshots ${theme.accent("<path>")}     Override the configured snapshot file path
@@ -26,6 +27,7 @@ ${theme.bold("Examples:")}
   ${theme.dim("$")} ${theme.light("skillgym run ./examples/basic-suite.ts")}
   ${theme.dim("$")} ${theme.light("skillgym run ./examples/basic-suite.ts --runner open-main")}
   ${theme.dim("$")} ${theme.light("skillgym run ./examples/basic-suite.ts --case always-passes")}
+  ${theme.dim("$")} ${theme.light("skillgym run ./examples/basic-suite.ts --tag smoke")}
   ${theme.dim("$")} ${theme.light("skillgym run ./examples/basic-suite.ts --reporter standard")}
   ${theme.dim("$")} ${theme.light("skillgym run ./examples/basic-suite.ts --schedule isolated-by-runner")}
   ${theme.dim("$")} ${theme.light("skillgym run ./examples/basic-suite.ts --update-snapshots")}

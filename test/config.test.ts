@@ -27,7 +27,7 @@ describe("config", () => {
       path.join(tempDir, "bench", "skillgym.config.mjs"),
         [
           "export default {",
-          "  run: { cwd: './workspace', outputDir: './results', reporter: './reporters/custom.ts', schedule: 'serial', workspace: { mode: 'isolated', templateDir: './fixtures/base', bootstrap: { command: './scripts/bootstrap.sh', args: ['--flag'], timeoutMs: 5000 } } },",
+          "  run: { cwd: './workspace', outputDir: './results', reporter: './reporters/custom.ts', schedule: 'serial', tags: ['smoke'], workspace: { mode: 'isolated', templateDir: './fixtures/base', bootstrap: { command: './scripts/bootstrap.sh', args: ['--flag'], timeoutMs: 5000 } } },",
           "  defaults: { timeoutMs: 45000 },",
           "  runners: {",
           "    codexMain: { agent: { type: 'codex', command: './bin/codex', commandArgs: ['./scripts/wrapper.ts'], model: 'gpt-5' } }",
@@ -47,6 +47,7 @@ describe("config", () => {
         outputDir: path.join(tempDir, "bench", "results"),
         reporter: path.join(tempDir, "bench", "reporters", "custom.ts"),
         schedule: "serial",
+        tags: ["smoke"],
         workspace: {
           mode: "isolated",
           templateDir: path.join(tempDir, "bench", "fixtures", "base"),
@@ -175,6 +176,10 @@ describe("config", () => {
       run: { schedule: "fanout" },
       runners: { openMain: { agent: { type: "opencode", model: "openai/gpt-5" } } },
     })).toThrow("Invalid config at run.schedule: expected one of: serial, parallel, isolated-by-runner");
+    expect(() => parseConfig({
+      run: { tags: [""] },
+      runners: { openMain: { agent: { type: "opencode", model: "openai/gpt-5" } } },
+    })).toThrow("Invalid config at run.tags[0]: expected non-empty string");
   });
 
   test("parses valid schedule values", () => {
@@ -247,7 +252,20 @@ describe("config", () => {
       cwd: path.join(tempDir, "cli-workspace"),
       outputDir: path.join(tempDir, "config-results"),
       schedule: "parallel",
+      tags: [],
     });
+  });
+
+  test("run options support config tags and let CLI tags override config", () => {
+    expect(resolveRunOptions(
+      {},
+      { run: { tags: ["smoke"] }, runners: { open: { agent: { type: "opencode", model: "openai/gpt-5" } } } },
+    )).toMatchObject({ tags: ["smoke"] });
+
+    expect(resolveRunOptions(
+      { tags: ["gestures"] },
+      { run: { tags: ["smoke"] }, runners: { open: { agent: { type: "opencode", model: "openai/gpt-5" } } } },
+    )).toMatchObject({ tags: ["gestures"] });
   });
 
   test("run options let CLI schedule override config and default to serial", () => {

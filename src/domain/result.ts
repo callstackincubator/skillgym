@@ -15,6 +15,7 @@ export interface RunnerResult {
 
 export interface CaseResult {
   caseId: string;
+  tags: string[];
   passed: boolean;
   runnerResults: RunnerResult[];
 }
@@ -38,6 +39,8 @@ export interface SuiteRunResult {
   endedAt: string;
   durationMs: number;
   outputDir: string;
+  declaredTags: string[];
+  selectedTags: string[];
   cases: CaseResult[];
   runners: RunnerSummary[];
 }
