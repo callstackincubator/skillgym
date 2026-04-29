@@ -35,6 +35,7 @@ test("standard reporter prints runner-grouped results and failure artifacts", as
     selectedRunnerCount: 2,
     selectedExecutionCount: 4,
     scheduleMode: "serial" as const,
+    maxParallel: 1,
     tagFilter: ["smoke", "gestures"],
     declaredTags: [],
   };
@@ -88,10 +89,13 @@ test("standard reporter prints runner-grouped results and failure artifacts", as
 
   const output = writes.join("");
 
+  expect(output).toContain("skillgym");
+  expect(output).toContain("Prove your agent skills work before you ship them.");
   expect(output).toContain("Suite     examples/basic-suite.ts");
   expect(output).toContain("Runners   2");
   expect(output).toContain("Tags      smoke, gestures");
   expect(output).toContain("Runs      4");
+  expect(output).toContain("Parallel  1");
   expect(output).toContain("Runner: open-main");
   expect(output).toContain("Runner: code-main");
   expect(output).toContain("case                       time           tokens in / out / reason / cache / billable");
@@ -139,6 +143,7 @@ test("standard reporter interactive mode renders queued, running, and finished r
     selectedRunnerCount: 2,
     selectedExecutionCount: 4,
     scheduleMode: "parallel" as const,
+    maxParallel: 4,
     declaredTags: [],
   };
 
@@ -215,7 +220,7 @@ test("standard reporter interactive mode renders queued, running, and finished r
   expect(finishedOutput).toContain("\u001b[2K");
 });
 
-test("standard reporter prints warning line for non-serial schedules only", async () => {
+test("standard reporter prints warning line for overlapping shared-workspace schedules", async () => {
   const parallelWrites: string[] = [];
   const serialWrites: string[] = [];
   const parallelReporter = createStandardReporter({
@@ -255,6 +260,7 @@ test("standard reporter prints warning line for non-serial schedules only", asyn
       selectedRunnerCount: 1,
       selectedExecutionCount: 1,
       scheduleMode: "parallel",
+      maxParallel: 2,
       declaredTags: [],
     },
     cases: [],
@@ -272,6 +278,7 @@ test("standard reporter prints warning line for non-serial schedules only", asyn
       selectedRunnerCount: 1,
       selectedExecutionCount: 1,
       scheduleMode: "serial",
+      maxParallel: 1,
       declaredTags: [],
     },
     cases: [],
@@ -309,6 +316,7 @@ test("standard reporter prints friendly runner crash message with log path", asy
     selectedRunnerCount: 1,
     selectedExecutionCount: 1,
     scheduleMode: "serial" as const,
+    maxParallel: 1,
     declaredTags: [],
   };
   const suiteResult: SuiteRunResult = {
@@ -389,6 +397,7 @@ test("standard reporter points workspace bootstrap failures to bootstrap logs", 
     selectedRunnerCount: 1,
     selectedExecutionCount: 1,
     scheduleMode: "serial" as const,
+    maxParallel: 1,
     declaredTags: [],
   };
   const suiteResult: SuiteRunResult = {
@@ -473,6 +482,7 @@ test("standard reporter renders max-steps failures with a clear message", async 
     selectedRunnerCount: 1,
     selectedExecutionCount: 1,
     scheduleMode: "serial" as const,
+    maxParallel: 1,
     declaredTags: [],
   };
   const suiteResult: SuiteRunResult = {
@@ -554,6 +564,7 @@ test("standard reporter suppresses shared-workspace warning for isolated mode", 
       selectedRunnerCount: 1,
       selectedExecutionCount: 1,
       scheduleMode: "parallel",
+      maxParallel: 2,
       declaredTags: [],
     },
     cases: [],

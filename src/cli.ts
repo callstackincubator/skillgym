@@ -9,7 +9,6 @@ async function main(): Promise<void> {
 
   switch (parsed.command) {
     case "run": {
-      printBanner({ kind: "compact" });
       const suitePath = parsed.positionals[0];
       if (suitePath === undefined) {
         throw new Error("Missing suite path. Usage: skillgym run <suite.ts>");
@@ -22,6 +21,7 @@ async function main(): Promise<void> {
       const reporterOption = parsed.options.reporter;
       const scheduleOption = parsed.options.schedule;
       const configOption = parsed.options.config;
+      const maxParallelOption = parsed.options["max-parallel"];
       const updateSnapshotsOption = parsed.options["update-snapshots"];
       const snapshotsOption = parsed.options.snapshots;
       const tagOption = parsed.options.tag;
@@ -34,6 +34,7 @@ async function main(): Promise<void> {
         runner: getStringOption(runnerOption),
         reporter: getStringOption(reporterOption),
         schedule: getStringOption(scheduleOption),
+        maxParallel: getStringOption(maxParallelOption),
         tags: parseTagOption(tagOption),
         reporterCwd: process.cwd(),
         configPath: getStringOption(configOption),

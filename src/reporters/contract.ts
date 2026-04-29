@@ -13,6 +13,7 @@ export interface ReporterContext {
   selectedRunnerCount: number;
   selectedExecutionCount: number;
   scheduleMode: ScheduleMode;
+  maxParallel: number;
   caseFilter?: string;
   runnerFilter?: string;
   tagFilter?: string[];

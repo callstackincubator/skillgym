@@ -39,6 +39,7 @@ const config: SkillGymConfig = {
     outputDir: "./.skillgym-results",
     reporter: "standard",
     schedule: "serial",
+    maxParallel: 4,
     maxSteps: 4,
   },
   defaults: {
@@ -142,6 +143,7 @@ Most important config properties:
 - `run.outputDir`: where artifacts, reports, and preserved workspaces are written
 - `run.reporter`: built-in `standard` reporter or a custom reporter module path
 - `run.schedule`: execution scheduling mode for case x runner pairs
+- `run.maxParallel`: maximum concurrent executions for non-serial schedules, defaulting to available CPU parallelism
 - `run.maxSteps`: best-effort limit on streamed agent steps before skillgym terminates the run
 - `run.workspace`: default workspace mode for the suite
 - `defaults.timeoutMs`: default per-case timeout
@@ -154,10 +156,12 @@ The execution unit is one case x runner pair. `skillgym` expands the suite into 
 `run.schedule` controls execution order:
 
 - `serial`: run every case/runner pair in declaration order
-- `parallel`: start all selected case/runner pairs concurrently
-- `isolated-by-runner`: keep each runner on its own serial queue while different runners may overlap
+- `parallel`: run selected case/runner pairs concurrently, capped by `run.maxParallel`
+- `isolated-by-runner`: keep each runner on its own serial queue while different runners may overlap, capped by `run.maxParallel`
 
-`serial` is the default. `parallel` maximizes overlap across the full matrix. `isolated-by-runner` is a middle ground when you want each runner to stay ordered internally but still allow different runners to overlap.
+`serial` is the default. `parallel` maximizes overlap across the full matrix up to the configured cap. `isolated-by-runner` is a middle ground when you want each runner to stay ordered internally but still allow different runners to overlap.
+
+For concurrent schedules, `run.maxParallel` defaults to `os.availableParallelism()`. This limits how many SkillGym executions are active at once; it does not pin or limit CPU cores used by an individual agent process.
 
 Concurrent schedules do not copy or isolate the workspace by themselves. Overlapping runs may still interact through the same filesystem state and live runner output unless you use isolated workspaces. OpenCode, Codex, and Claude Code runtime state are isolated per run under each artifact directory.
 
@@ -208,11 +212,12 @@ Built-in grouped assertions cover:
 Example:
 
 ```ts
-import { assert } from "skillgym";
+import { assert, commandMatcher } from "skillgym";
 
 assert.skills.has(report, "find-skills");
 assert.skills.notHas(report, "upgrading-expo");
 assert.commands.includes(report, "npx skills find");
+assert.commands.includes(report, commandMatcher("pnpm").arg("test").flag("--watch"));
 assert.commands.notIncludes(report, "npm install");
 assert.fileReads.includes(report, /find-skills\/SKILL\.md$/);
 assert.fileReads.notIncludes(report, /upgrading-expo\/SKILL\.md$/);

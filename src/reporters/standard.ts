@@ -1,6 +1,7 @@
 import path from "node:path";
 import process from "node:process";
 import cliSpinners from "cli-spinners";
+import { printBanner } from "../cli/branding.js";
 import pc from "picocolors";
 import type {
   CaseResult,
@@ -21,6 +22,7 @@ import {
   padCell,
   visibleWidth,
 } from "./format.js";
+import { extractUserStackFrame, formatStackFrameLocation } from "./stack-frame.js";
 
 interface FailureEntry {
   caseId: string;
@@ -81,6 +83,7 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
 
   return {
     onSuiteStart(event) {
+      printBanner({ kind: "compact", stdout });
       writeLine(`${colors.dim("Suite     ")}${accent(event.context.suitePath)}`, stdout);
       writeLine(`${colors.dim("Workspace ")}${colors.bold(event.context.workspaceMode === "shared" ? event.context.cwd : `${event.context.workspaceMode} per run`)}`, stdout);
       writeLine(`${colors.dim("Output    ")}${colors.bold(event.context.outputDir)}`, stdout);
@@ -90,8 +93,9 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
       }
       writeLine(`${colors.dim("Runners   ")}${String(event.context.selectedRunnerCount)}`, stdout);
       writeLine(`${colors.dim("Runs      ")}${String(event.context.selectedExecutionCount)}`, stdout);
+      writeLine(`${colors.dim("Parallel  ")}${String(event.context.maxParallel)}`, stdout);
 
-      if (event.context.scheduleMode !== "serial" && event.context.workspaceMode === "shared") {
+      if (event.context.scheduleMode !== "serial" && event.context.maxParallel > 1 && event.context.workspaceMode === "shared") {
         writeLine(
           colors.yellow(`${symbols.warning} Concurrent schedule: ${event.context.scheduleMode} runs may overlap in the same workspace.`),
           stdout,
@@ -292,54 +296,8 @@ function formatFailureBlock(
 }
 
 function formatErrorLocation(error: SerializedError): string | undefined {
-  if (error.stack === undefined) {
-    return undefined;
-  }
-
-  const frames = error.stack.split("\n").slice(1);
-  for (const frame of frames) {
-    const parsed = parseStackFrame(frame);
-    if (parsed === undefined) {
-      continue;
-    }
-
-    if (isInternalStackFrame(parsed.filePath)) {
-      continue;
-    }
-
-    return `${parsed.filePath}:${parsed.line}:${parsed.column}`;
-  }
-
-  return undefined;
-}
-
-function parseStackFrame(frame: string): { filePath: string; line: string; column: string } | undefined {
-  const trimmed = frame.trim().replace(/^at\s+/, "");
-  const match = /\(?(.+):(\d+):(\d+)\)?$/.exec(trimmed);
-  if (match === null) {
-    return undefined;
-  }
-
-  let [, filePath, line, column] = match;
-  if (filePath === undefined || line === undefined || column === undefined) {
-    return undefined;
-  }
-
-  const openParenIndex = filePath.lastIndexOf("(");
-  if (openParenIndex !== -1) {
-    filePath = filePath.slice(openParenIndex + 1);
-  }
-
-  return { filePath, line, column };
-}
-
-function isInternalStackFrame(filePath: string): boolean {
-  return filePath.startsWith("node:")
-    || filePath.includes("/node:internal/")
-    || filePath.includes("/src/assertions/")
-    || filePath.includes("/src/runner/")
-    || filePath.includes("/src/reporters/")
-    || filePath.includes("/node_modules/");
+  const location = extractUserStackFrame(error);
+  return location === undefined ? undefined : formatStackFrameLocation(location);
 }
 
 function formatCrashMessage(failure: FailureEntry): string {
