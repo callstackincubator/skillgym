@@ -212,11 +212,12 @@ Built-in grouped assertions cover:
 Example:
 
 ```ts
-import { assert } from "skillgym";
+import { assert, commandMatcher } from "skillgym";
 
 assert.skills.has(report, "find-skills");
 assert.skills.notHas(report, "upgrading-expo");
 assert.commands.includes(report, "npx skills find");
+assert.commands.includes(report, commandMatcher("pnpm").arg("test").flag("--watch"));
 assert.commands.notIncludes(report, "npm install");
 assert.fileReads.includes(report, /find-skills\/SKILL\.md$/);
 assert.fileReads.notIncludes(report, /upgrading-expo\/SKILL\.md$/);
