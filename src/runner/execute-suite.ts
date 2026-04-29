@@ -1,5 +1,6 @@
 import path from "node:path";
 import process from "node:process";
+import os from "node:os";
 import { getCaseExecutionOptions } from "../config.js";
 import type { CaseResult, RunnerResult, RunnerSummary, SuiteRunResult } from "../domain/result.js";
 import type { ResolvedRunner, RunnerConfig, RunnerInfo } from "../domain/runner.js";
@@ -40,6 +41,7 @@ export async function executeSuite(
     cwd: string;
     outputDir?: string;
     schedule?: ScheduleMode;
+    maxParallel?: number;
     caseId?: string;
     runner?: string;
     config: {
@@ -64,6 +66,7 @@ export async function executeSuite(
   const resolvedSuitePath = path.resolve(suitePath);
   const outputDir = path.resolve(options.outputDir ?? ".skillgym-results", timestampDirName());
   const scheduleMode = options.schedule ?? "serial";
+  const maxParallel = resolveMaxParallel(scheduleMode, options.maxParallel);
   await ensureDir(outputDir);
   const selectedRunners = selectRunners(options.config.runners, options.runner);
   const resolvedWorkspace = resolveEffectiveWorkspace({
@@ -89,6 +92,7 @@ export async function executeSuite(
         selectedCases,
         selectedRunners,
         scheduleMode,
+        maxParallel,
         workspaceMode: resolvedWorkspace.mode,
         caseFilter: options.caseId,
         runnerFilter: options.runner,
@@ -109,6 +113,7 @@ export async function executeSuite(
         selectedCases,
         selectedRunners,
         scheduleMode,
+        maxParallel,
         workspaceMode: resolvedWorkspace.mode,
         caseFilter: options.caseId,
         runnerFilter: options.runner,
@@ -126,6 +131,7 @@ export async function executeSuite(
     selectedCases,
     selectedRunners,
     scheduleMode,
+    maxParallel,
     workspaceMode: resolvedWorkspace.mode,
     caseFilter: options.caseId,
     runnerFilter: options.runner,
@@ -145,7 +151,7 @@ export async function executeSuite(
       startedAt,
     });
 
-    await scheduleExecutions(plannedExecutions, scheduleMode, async ({ item }) => {
+    await scheduleExecutions(plannedExecutions, scheduleMode, maxParallel, async ({ item }) => {
       const state = caseStates[item.caseIndex];
 
       if (state === undefined) {
@@ -395,6 +401,7 @@ function createReporterContext(options: {
   selectedCases: TestCase[];
   selectedRunners: ResolvedRunner[];
   scheduleMode: ScheduleMode;
+  maxParallel: number;
   caseFilter?: string;
   runnerFilter?: string;
   isInteractive?: boolean;
@@ -409,9 +416,18 @@ function createReporterContext(options: {
     selectedRunnerCount: options.selectedRunners.length,
     selectedExecutionCount: options.selectedCases.length * options.selectedRunners.length,
     scheduleMode: options.scheduleMode,
+    maxParallel: options.maxParallel,
     caseFilter: options.caseFilter,
     runnerFilter: options.runnerFilter,
   };
+}
+
+function resolveMaxParallel(scheduleMode: ScheduleMode, configuredMaxParallel: number | undefined): number {
+  if (scheduleMode === "serial") {
+    return 1;
+  }
+
+  return Math.max(1, configuredMaxParallel ?? os.availableParallelism());
 }
 
 function sanitizePathSegment(value: string): string {

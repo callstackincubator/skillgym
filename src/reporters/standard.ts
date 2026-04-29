@@ -90,8 +90,9 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
       writeLine(`${colors.dim("Cases     ")}${String(event.context.selectedCaseCount)}`, stdout);
       writeLine(`${colors.dim("Runners   ")}${String(event.context.selectedRunnerCount)}`, stdout);
       writeLine(`${colors.dim("Runs      ")}${String(event.context.selectedExecutionCount)}`, stdout);
+      writeLine(`${colors.dim("Parallel  ")}${String(event.context.maxParallel)}`, stdout);
 
-      if (event.context.scheduleMode !== "serial" && event.context.workspaceMode === "shared") {
+      if (event.context.scheduleMode !== "serial" && event.context.maxParallel > 1 && event.context.workspaceMode === "shared") {
         writeLine(
           colors.yellow(`${symbols.warning} Concurrent schedule: ${event.context.scheduleMode} runs may overlap in the same workspace.`),
           stdout,
