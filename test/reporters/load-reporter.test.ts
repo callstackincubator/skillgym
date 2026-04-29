@@ -28,6 +28,20 @@ describe("loadReporter", () => {
     expect(typeof reporter.onCaseFinish).toBe("function");
   });
 
+  test("resolves built-in reporter when json is provided", async () => {
+    const reporter = await loadReporter("json", tempDir);
+
+    expect(typeof reporter.onSuiteFinish).toBe("function");
+    expect(reporter.onSuiteStart).toBeUndefined();
+  });
+
+  test("resolves built-in reporter when github-actions is provided", async () => {
+    const reporter = await loadReporter("github-actions", tempDir);
+
+    expect(typeof reporter.onSuiteFinish).toBe("function");
+    expect(reporter.onRunnerFinish).toBeUndefined();
+  });
+
   test("loads custom reporter from relative default export path", async () => {
     const filePath = path.join(tempDir, "default-reporter.ts");
     await writeFile(filePath, 'export default { onSuiteStart() {} };\n', "utf8");

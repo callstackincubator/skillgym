@@ -24,6 +24,7 @@ Supported in V1:
 - JavaScript assertions only
 - One benchmark metric: success or failure
 - Session telemetry is preserved for debugging
+- Concurrent execution is capped by available host CPU parallelism unless explicitly overridden
 - Best-effort execution limits should still preserve raw artifacts on failure
 - TypeScript implementation
 - Node.js-compatible APIs only

@@ -27,7 +27,7 @@ describe("config", () => {
       path.join(tempDir, "bench", "skillgym.config.mjs"),
         [
           "export default {",
-          "  run: { cwd: './workspace', outputDir: './results', reporter: './reporters/custom.ts', schedule: 'serial', workspace: { mode: 'isolated', templateDir: './fixtures/base', bootstrap: { command: './scripts/bootstrap.sh', args: ['--flag'], timeoutMs: 5000 } } },",
+          "  run: { cwd: './workspace', outputDir: './results', reporter: './reporters/custom.ts', schedule: 'serial', maxParallel: 3, workspace: { mode: 'isolated', templateDir: './fixtures/base', bootstrap: { command: './scripts/bootstrap.sh', args: ['--flag'], timeoutMs: 5000 } } },",
           "  defaults: { timeoutMs: 45000 },",
           "  runners: {",
           "    codexMain: { agent: { type: 'codex', command: './bin/codex', commandArgs: ['./scripts/wrapper.ts'], model: 'gpt-5' } }",
@@ -47,6 +47,7 @@ describe("config", () => {
         outputDir: path.join(tempDir, "bench", "results"),
         reporter: path.join(tempDir, "bench", "reporters", "custom.ts"),
         schedule: "serial",
+        maxParallel: 3,
         workspace: {
           mode: "isolated",
           templateDir: path.join(tempDir, "bench", "fixtures", "base"),
@@ -192,6 +193,15 @@ describe("config", () => {
     expect(parsed.run?.maxSteps).toBe(3);
   });
 
+  test("parses run maxParallel", () => {
+    const parsed = parseConfig({
+      run: { maxParallel: 3 },
+      runners: { open: { agent: { type: "opencode", model: "openai/gpt-5" } } },
+    });
+
+    expect(parsed.run?.maxParallel).toBe(3);
+  });
+
   test("accepts cursor-agent runner configs", () => {
     const parsed = parseConfig({
       runners: {
@@ -236,6 +246,7 @@ describe("config", () => {
           cwd: path.join(tempDir, "config-workspace"),
           outputDir: path.join(tempDir, "config-results"),
           schedule: "parallel",
+          maxParallel: 2,
         },
         runners: {
           open: { agent: { type: "opencode", model: "openai/gpt-5" } },
@@ -247,7 +258,20 @@ describe("config", () => {
       cwd: path.join(tempDir, "cli-workspace"),
       outputDir: path.join(tempDir, "config-results"),
       schedule: "parallel",
+      maxParallel: 2,
     });
+  });
+
+  test("run options let CLI maxParallel override config", () => {
+    expect(resolveRunOptions(
+      { maxParallel: "4" },
+      { run: { maxParallel: 2 }, runners: { open: { agent: { type: "opencode", model: "openai/gpt-5" } } } },
+    )).toMatchObject({ maxParallel: 4 });
+
+    expect(() => resolveRunOptions(
+      { maxParallel: "0" },
+      { runners: { open: { agent: { type: "opencode", model: "openai/gpt-5" } } } },
+    )).toThrow("Invalid config at CLI option --max-parallel: expected integer >= 1");
   });
 
   test("run options let CLI schedule override config and default to serial", () => {
@@ -287,6 +311,26 @@ describe("config", () => {
     });
     expect(resolveReporterOptions({}, loaded)).toEqual({
       reporter: path.join(configDir, "reporters", "config-reporter.ts"),
+      cwd: configDir,
+    });
+  });
+
+  test("built-in reporter config values stay unresolved", async () => {
+    const configDir = path.join(tempDir, "bench");
+    const suitePath = path.join(configDir, "suite.ts");
+    const configPath = path.join(configDir, "skillgym.config.mjs");
+    await mkdir(configDir, { recursive: true });
+    await writeFile(suitePath, "export default []\n", "utf8");
+    await writeFile(
+      configPath,
+      "export default { run: { reporter: 'github-actions' }, runners: { open: { agent: { type: 'opencode', model: 'openai/gpt-5' } } } };\n",
+      "utf8",
+    );
+
+    const loaded = await loadConfig({ suitePath, configPath });
+
+    expect(resolveReporterOptions({}, loaded)).toEqual({
+      reporter: "github-actions",
       cwd: configDir,
     });
   });

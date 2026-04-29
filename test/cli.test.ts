@@ -38,18 +38,15 @@ test("cli help prints full MOTD banner and help sections", async () => {
   expect(result.stdout).toContain("Commands:");
   expect(result.stdout).toContain("Run Options:");
   expect(result.stdout).toContain("--schedule <mode>");
+  expect(result.stdout).toContain("--max-parallel <n>");
   expect(result.stdout).toContain("Examples:");
 });
 
-test("cli run prints compact banner before reporting missing suite path", async () => {
+test("cli run reports missing suite path without printing MOTD banner", async () => {
   const result = await execCli(["run"]);
 
   expect(result.exitCode).toBe(1);
-  expect(result.stdout).toContain("skillgym");
-  expect(result.stdout).toContain("Prove your agent skills work before you ship them.");
-  expect(result.stdout).not.toContain("by Callstack");
-  expect(result.stdout).not.toContain("Run a benchmark suite");
-  expect(result.stdout).not.toContain("skillgym help");
+  expect(result.stdout).toBe("");
   expect(result.stderr).toContain("Error: missing suite path");
   expect(result.stderr).toContain("`skillgym run` needs a suite file to execute.");
   expect(result.stderr).toContain("skillgym run ./examples/basic-suite.ts");

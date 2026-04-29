@@ -17,7 +17,7 @@ export type {
   SuiteStartEvent,
 } from "./reporters/index.js";
 export { assert, CommandMatcherBuilder, commandMatcher } from "./assertions/index.js";
-export { createStandardReporter, loadReporter } from "./reporters/index.js";
+export { BUILT_IN_REPORTER_NAMES, createGitHubActionsReporter, createJsonReporter, createStandardReporter, loadReporter } from "./reporters/index.js";
 export type {
   AssertionOptions,
   CommandMatcher,
