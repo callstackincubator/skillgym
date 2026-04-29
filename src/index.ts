@@ -16,11 +16,14 @@ export type {
   SuiteFinishEvent,
   SuiteStartEvent,
 } from "./reporters/index.js";
-export { assert } from "./assertions/index.js";
+export { assert, CommandMatcherBuilder, commandMatcher } from "./assertions/index.js";
 export { createStandardReporter, loadReporter } from "./reporters/index.js";
 export type {
   AssertionOptions,
+  CommandMatcher,
+  CommandMatcherBuilderLike,
   CommandAssertions,
+  CommandValueMatcher,
   FileReadAssertions,
   Matcher,
   OutputAssertions,
@@ -28,6 +31,7 @@ export type {
   SkillAssertions,
   SkillGymAssert,
   SkillConfidence,
+  StructuredCommandMatcher,
   ToolCallAssertions,
   ToolCallMatcher,
 } from "./assertions/index.js";
