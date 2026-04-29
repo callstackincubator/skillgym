@@ -31,6 +31,8 @@ function spawn(command: string, args: string[], options: Options): Subprocess {
     void subprocess.finally(() => {
       process.off("SIGINT", sigintHandler);
       process.off("SIGTERM", sigtermHandler);
+    }).catch(() => {
+      // The subprocess promise may reject on non-zero exit; cleanup still needs to run without leaking an unhandled rejection.
     });
   });
 

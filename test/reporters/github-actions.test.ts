@@ -70,8 +70,7 @@ test("github-actions reporter writes a job summary when GITHUB_STEP_SUMMARY is s
   expect(summary).toContain("- Runs: 0 passed, 1 failed");
   expect(summary).toContain("### Runner: `open-main` (opencode, openai/gpt-5)");
   expect(summary).toContain("| Case | Duration | Input | Output | Reasoning | Cache | Billable |");
-  expect(summary).toContain("| ❌ `case-a` |");
-  expect(summary).toContain("| 12,000 |");
+  expect(summary).toContain("| ❌ `case-a` | 24s | 9,830 | 1,104 | 0 | 0 | 12,000 |");
   expect(summary).toContain("- `case-a > open-main`; assertion; AssertionError: expected skill to be loaded before command execution; artifacts: `.skillgym-results/run-1/case-a/open-main`; log: `.skillgym-results/run-1/case-a/open-main/stderr.log`");
 });
 

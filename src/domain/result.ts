@@ -57,6 +57,7 @@ export type RunnerFailureOrigin =
   | "assertion"
   | "assert-hook"
   | "max-steps"
+  | "model-rejected"
   | "runner"
   | "workspace-bootstrap"
   | "workspace-setup"

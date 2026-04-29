@@ -576,6 +576,72 @@ test("standard reporter suppresses shared-workspace warning for isolated mode", 
   expect(writes.join("")).toContain("Workspace isolated per run");
 });
 
+test("standard reporter formats model-rejected failures as runner crashes with specific detail", async () => {
+  const writes: string[] = [];
+  const reporter = createStandardReporter({
+    stdout: {
+      isTTY: false,
+      columns: 120,
+      write(chunk: string) {
+        writes.push(chunk);
+        return true;
+      },
+    },
+    isInteractive: false,
+    isUnicode: true,
+  });
+
+  const runner = createRunnerInfo("code-main", { type: "codex", model: "gpt-5" });
+  const context = {
+    isInteractive: false,
+    cwd: "/workspace",
+    workspaceMode: "shared" as const,
+    suitePath: "examples/basic-suite.ts",
+    outputDir: ".skillgym-results/run-1",
+    selectedCaseCount: 1,
+    selectedRunnerCount: 1,
+    selectedExecutionCount: 1,
+    scheduleMode: "serial" as const,
+    maxParallel: 1,
+    declaredTags: [],
+  };
+  const result: SuiteRunResult = {
+    suitePath: context.suitePath,
+    startedAt: "2026-04-02T12:00:00.000Z",
+    endedAt: "2026-04-02T12:00:01.000Z",
+    durationMs: 1_000,
+    outputDir: context.outputDir,
+    declaredTags: [],
+    selectedTags: [],
+    cases: [{
+      caseId: "case-a",
+      tags: [],
+      passed: false,
+      runnerResults: [{
+        ...createRunnerResult({ runner, passed: false, artifactDir: ".skillgym-results/run-1/case-a/code-main", totalTokens: 12_000 }),
+        error: { name: "Error", message: "Runner rejected configured model \"gpt-5\" during initial execution." },
+        failureType: "runner-crash",
+        failureOrigin: "model-rejected",
+      }],
+    }],
+    runners: [createRunnerSummary({ runner, passedCases: 0, totalCases: 1, averageDurationMs: 24_800, averageTotalTokens: 12_000 })],
+  };
+
+  await reporter.onRunnerFinish?.({
+    context,
+    testCase: { id: "case-a", prompt: "", assert() {} },
+    runner,
+    result: result.cases[0]!.runnerResults[0]!,
+    caseIndex: 1,
+    totalCases: 1,
+  });
+  await reporter.onSuiteFinish?.({ context, result });
+
+  const output = writes.join("");
+  expect(output).toContain("Runner rejected the configured model.");
+  expect(output).toContain('Error: Runner rejected configured model "gpt-5" during initial execution.');
+});
+
 function createCaseResult(options: {
   caseId: string;
   runnerResults: RunnerResult[];

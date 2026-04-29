@@ -19,6 +19,8 @@ test("json reporter prints only the final suite result", async () => {
     endedAt: "2026-04-02T12:01:00.000Z",
     durationMs: 60_000,
     outputDir: ".skillgym-results/run-1",
+    declaredTags: [],
+    selectedTags: [],
     cases: [],
     runners: [],
   };
@@ -34,6 +36,8 @@ test("json reporter prints only the final suite result", async () => {
       selectedRunnerCount: 0,
       selectedExecutionCount: 0,
       scheduleMode: "serial",
+      maxParallel: 1,
+      declaredTags: [],
     },
     cases: [],
     runners: [],
@@ -50,6 +54,8 @@ test("json reporter prints only the final suite result", async () => {
       selectedRunnerCount: 0,
       selectedExecutionCount: 0,
       scheduleMode: "serial",
+      maxParallel: 1,
+      declaredTags: [],
     },
     result,
   });
