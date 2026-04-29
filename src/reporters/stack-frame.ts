@@ -34,16 +34,23 @@ export function formatStackFrameLocation(location: StackFrameLocation): string {
 
 function parseStackFrame(frame: string): StackFrameLocation | undefined {
   const trimmed = frame.trim().replace(/^at\s+/, "");
-  const match = /\(?(.+):(\d+):(\d+)\)?$/.exec(trimmed);
-  if (match === null) {
-    return undefined;
-  }
 
-  let [, filePath, line, column] = match;
-  if (filePath === undefined || line === undefined || column === undefined) {
-    return undefined;
-  }
+  // Strip optional trailing ")" from frames like "funcName (file:line:col)"
+  const stripped = trimmed.endsWith(")") ? trimmed.slice(0, -1) : trimmed;
 
+  const lastColon = stripped.lastIndexOf(":");
+  if (lastColon === -1) return undefined;
+  const column = stripped.slice(lastColon + 1);
+  if (!/^\d+$/.test(column)) return undefined;
+
+  const secondLastColon = stripped.lastIndexOf(":", lastColon - 1);
+  if (secondLastColon === -1) return undefined;
+  const line = stripped.slice(secondLastColon + 1, lastColon);
+  if (!/^\d+$/.test(line)) return undefined;
+
+  let filePath = stripped.slice(0, secondLastColon);
+
+  // Handle "funcName (file:line:col)" format — extract path after the last "("
   const openParenIndex = filePath.lastIndexOf("(");
   if (openParenIndex !== -1) {
     filePath = filePath.slice(openParenIndex + 1);
