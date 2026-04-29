@@ -47,7 +47,9 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .
           git commit -m "chore: release v${{ steps.pkg.outputs.version }}"
+          git tag "v${{ steps.pkg.outputs.version }}"
           git push
+          git push origin "v${{ steps.pkg.outputs.version }}"
 
       - name: Publish to npm and create GitHub release
         run: pnpm changeset publish
