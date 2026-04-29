@@ -21,9 +21,12 @@ test("json-summary reporter omits session internals and prints summary on suite 
     endedAt: "2026-04-02T12:01:00.000Z",
     durationMs: 60_000,
     outputDir: ".skillgym-results/run-1",
+    declaredTags: ["smoke", "gestures"],
+    selectedTags: ["smoke"],
     cases: [
       {
         caseId: "case-a",
+        tags: ["smoke"],
         passed: false,
         runnerResults: [
           {
@@ -99,6 +102,8 @@ test("json-summary reporter omits session internals and prints summary on suite 
     selectedExecutionCount: 1,
     scheduleMode: "serial" as const,
     maxParallel: 1,
+    tagFilter: ["smoke"],
+    declaredTags: ["smoke", "gestures"],
   };
 
   await reporter.onSuiteStart?.({ context, cases: [], runners: [runner], startedAt: result.startedAt });
@@ -112,6 +117,8 @@ test("json-summary reporter omits session internals and prints summary on suite 
   expect(output.startedAt).toBe("2026-04-02T12:00:00.000Z");
   expect(output.durationMs).toBe(60_000);
   expect(output.outputDir).toBe(".skillgym-results/run-1");
+  expect(output.declaredTags).toEqual(["smoke", "gestures"]);
+  expect(output.selectedTags).toEqual(["smoke"]);
 
   // runner summaries preserved
   expect(output.runners).toHaveLength(1);
@@ -120,6 +127,7 @@ test("json-summary reporter omits session internals and prints summary on suite 
   // case result preserved
   const caseResult = output.cases[0];
   expect(caseResult.caseId).toBe("case-a");
+  expect(caseResult.tags).toEqual(["smoke"]);
   expect(caseResult.passed).toBe(false);
 
   // runner result: core fields preserved
@@ -180,6 +188,7 @@ test("json-summary reporter is silent until suite finishes", async () => {
     selectedExecutionCount: 1,
     scheduleMode: "serial" as const,
     maxParallel: 1,
+    declaredTags: [],
   };
 
   await reporter.onSuiteStart?.({ context, cases: [], runners: [runner], startedAt: "2026-04-02T12:00:00.000Z" });

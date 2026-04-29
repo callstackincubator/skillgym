@@ -581,6 +581,127 @@ test("executeSuite aggregates runner summaries from case-centric results", async
   ]);
 });
 
+test("executeSuite filters cases by tags with OR semantics and preserves result metadata", async () => {
+  const outputDir = await createTempDir();
+  const executed: string[] = [];
+  const contexts: Array<{ tagFilter?: string[]; declaredTags: string[] }> = [];
+  const cases: TestCase[] = [
+    { id: "alpha", prompt: "a", tags: ["smoke", "fast", "smoke"], assert() {} },
+    { id: "beta", prompt: "b", tags: ["regression"], assert() {} },
+    { id: "gamma", prompt: "c", assert() {} },
+  ];
+
+  const result = await executeSuite("./suite.ts", cases, {
+    cwd: outputDir,
+    outputDir,
+    tags: ["fast", "regression"],
+    reporter: {
+      onSuiteStart(event) {
+        contexts.push({ tagFilter: event.context.tagFilter, declaredTags: event.context.declaredTags });
+      },
+    },
+    isInteractive: false,
+    config: {
+      runners: {
+        open: { agent: { type: "opencode", model: "openai/gpt-5" } },
+      },
+    },
+    executeRunnerFn: async (testCase, runner, _adapter, options) => {
+      executed.push(testCase.id);
+      return createRunnerResult({
+        caseId: testCase.id,
+        runner,
+        passed: true,
+        durationMs: 10,
+        artifactDir: options.artifactDir,
+        totalTokens: 100,
+        outputTokens: 20,
+        observedReads: 1,
+      });
+    },
+  });
+
+  expect(executed).toEqual(["alpha", "beta"]);
+  expect(contexts).toEqual([{ tagFilter: ["fast", "regression"], declaredTags: ["smoke", "fast", "regression"] }]);
+  expect(result.declaredTags).toEqual(["smoke", "fast", "regression"]);
+  expect(result.selectedTags).toEqual(["fast", "regression"]);
+  expect(result.cases.map((caseResult) => ({ caseId: caseResult.caseId, tags: caseResult.tags }))).toEqual([
+    { caseId: "alpha", tags: ["smoke", "fast"] },
+    { caseId: "beta", tags: ["regression"] },
+  ]);
+
+  const saved = JSON.parse(await readFile(path.join(result.outputDir, "results.json"), "utf8")) as SuiteRunResult;
+  expect(saved.declaredTags).toEqual(["smoke", "fast", "regression"]);
+  expect(saved.selectedTags).toEqual(["fast", "regression"]);
+  expect(saved.cases[0]?.tags).toEqual(["smoke", "fast"]);
+});
+
+test("executeSuite composes tag filters with case and runner filters", async () => {
+  const outputDir = await createTempDir();
+  const executed: string[] = [];
+  const cases: TestCase[] = [
+    { id: "alpha", prompt: "a", tags: ["smoke"], assert() {} },
+    { id: "beta", prompt: "b", tags: ["smoke"], assert() {} },
+  ];
+
+  await executeSuite("./suite.ts", cases, {
+    cwd: outputDir,
+    outputDir,
+    caseId: "beta",
+    runner: "code",
+    tags: ["smoke"],
+    isInteractive: false,
+    config: {
+      runners: {
+        open: { agent: { type: "opencode", model: "openai/gpt-5" } },
+        code: { agent: { type: "codex", model: "gpt-5" } },
+      },
+    },
+    executeRunnerFn: async (testCase, runner, _adapter, options) => {
+      executed.push(`${testCase.id}:${runner.id}`);
+      return createRunnerResult({
+        caseId: testCase.id,
+        runner,
+        passed: true,
+        durationMs: 10,
+        artifactDir: options.artifactDir,
+        totalTokens: 100,
+        outputTokens: 20,
+        observedReads: 1,
+      });
+    },
+  });
+
+  expect(executed).toEqual(["beta:code"]);
+});
+
+test("executeSuite reports active tag filters when no cases match", async () => {
+  const outputDir = await createTempDir();
+  let errorContext: { tagFilter?: string[]; declaredTags: string[] } | undefined;
+
+  await expect(executeSuite("./suite.ts", [{ id: "alpha", prompt: "a", tags: ["smoke"], assert() {} }], {
+    cwd: outputDir,
+    outputDir,
+    tags: ["missing"],
+    reporter: {
+      onError(event) {
+        errorContext = {
+          tagFilter: event.context?.tagFilter,
+          declaredTags: event.context?.declaredTags ?? [],
+        };
+      },
+    },
+    isInteractive: false,
+    config: {
+      runners: {
+        open: { agent: { type: "opencode", model: "openai/gpt-5" } },
+      },
+    },
+  })).rejects.toThrow("No test cases matched the requested filters.");
+
+  expect(errorContext).toEqual({ tagFilter: ["missing"], declaredTags: ["smoke"] });
+});
+
 test("executeSuite preserves unrelated snapshots and writes new entries for executed runs", async () => {
   const outputDir = await createTempDir();
   const snapshotsPath = path.join(outputDir, "skillgym.snapshots.json");

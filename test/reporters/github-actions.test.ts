@@ -103,6 +103,7 @@ function createContext() {
     selectedExecutionCount: 1,
     scheduleMode: "serial" as const,
     maxParallel: 1,
+    declaredTags: [],
   };
 }
 
@@ -115,7 +116,9 @@ function createSuiteResult(options: { runner: RunnerInfo; caseId: string; errorM
     endedAt: "2026-04-02T12:01:00.000Z",
     durationMs: 60_000,
     outputDir: ".skillgym-results/run-1",
-    cases: [{ caseId: options.caseId, passed: false, runnerResults: [runnerResult] }],
+    declaredTags: [],
+    selectedTags: [],
+    cases: [{ caseId: options.caseId, tags: [], passed: false, runnerResults: [runnerResult] }],
     runners: [createRunnerSummary(options.runner)],
   };
 }

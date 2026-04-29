@@ -24,20 +24,22 @@ async function main(): Promise<void> {
       const maxParallelOption = parsed.options["max-parallel"];
       const updateSnapshotsOption = parsed.options["update-snapshots"];
       const snapshotsOption = parsed.options.snapshots;
+      const tagOption = parsed.options.tag;
 
       await runCommand({
         suitePath,
-        cwd: typeof cwdOption === "string" ? cwdOption : undefined,
-        outputDir: typeof outputDirOption === "string" ? outputDirOption : undefined,
-        caseId: typeof caseOption === "string" ? caseOption : undefined,
-        runner: typeof runnerOption === "string" ? runnerOption : undefined,
-        reporter: typeof reporterOption === "string" ? reporterOption : undefined,
-        schedule: typeof scheduleOption === "string" ? scheduleOption : undefined,
-        maxParallel: typeof maxParallelOption === "string" ? maxParallelOption : undefined,
+        cwd: getStringOption(cwdOption),
+        outputDir: getStringOption(outputDirOption),
+        caseId: getStringOption(caseOption),
+        runner: getStringOption(runnerOption),
+        reporter: getStringOption(reporterOption),
+        schedule: getStringOption(scheduleOption),
+        maxParallel: getStringOption(maxParallelOption),
+        tags: parseTagOption(tagOption),
         reporterCwd: process.cwd(),
-        configPath: typeof configOption === "string" ? configOption : undefined,
+        configPath: getStringOption(configOption),
         updateSnapshots: updateSnapshotsOption === true,
-        snapshotsPath: typeof snapshotsOption === "string" ? snapshotsOption : undefined,
+        snapshotsPath: getStringOption(snapshotsOption),
       });
       return;
     }
@@ -60,3 +62,30 @@ main().catch((error: unknown) => {
   console.error(formatCliError(error));
   process.exitCode = 1;
 });
+
+function parseTagOption(value: string | boolean | string[] | undefined): string[] | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (typeof value === "boolean") {
+    throw new Error("CLI option --tag requires a non-empty value.");
+  }
+
+  const values = Array.isArray(value) ? value : [value];
+  const tags = values.flatMap((item) => item.split(",").map((tag) => tag.trim()));
+
+  if (tags.some((tag) => tag.length === 0)) {
+    throw new Error("CLI option --tag requires non-empty comma-separated values.");
+  }
+
+  return [...new Set(tags)];
+}
+
+function getStringOption(value: string | boolean | string[] | undefined): string | undefined {
+  if (Array.isArray(value)) {
+    return value.at(-1);
+  }
+
+  return typeof value === "string" ? value : undefined;
+}

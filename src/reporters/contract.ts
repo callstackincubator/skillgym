@@ -16,6 +16,8 @@ export interface ReporterContext {
   maxParallel: number;
   caseFilter?: string;
   runnerFilter?: string;
+  tagFilter?: string[];
+  declaredTags: string[];
 }
 
 export interface SuiteStartEvent {
