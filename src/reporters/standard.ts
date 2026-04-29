@@ -1,6 +1,7 @@
 import path from "node:path";
 import process from "node:process";
 import cliSpinners from "cli-spinners";
+import { printBanner } from "../cli/branding.js";
 import pc from "picocolors";
 import type {
   CaseResult,
@@ -82,6 +83,7 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
 
   return {
     onSuiteStart(event) {
+      printBanner({ kind: "compact", stdout });
       writeLine(`${colors.dim("Suite     ")}${accent(event.context.suitePath)}`, stdout);
       writeLine(`${colors.dim("Workspace ")}${colors.bold(event.context.workspaceMode === "shared" ? event.context.cwd : `${event.context.workspaceMode} per run`)}`, stdout);
       writeLine(`${colors.dim("Output    ")}${colors.bold(event.context.outputDir)}`, stdout);

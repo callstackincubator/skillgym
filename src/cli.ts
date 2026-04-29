@@ -9,7 +9,6 @@ async function main(): Promise<void> {
 
   switch (parsed.command) {
     case "run": {
-      printBanner({ kind: "compact" });
       const suitePath = parsed.positionals[0];
       if (suitePath === undefined) {
         throw new Error("Missing suite path. Usage: skillgym run <suite.ts>");
