@@ -41,7 +41,13 @@ interface StandardReporterOptions {
   isUnicode?: boolean;
 }
 
-type InteractiveRunStatus = "queued" | "running" | "passed" | "failed" | "expected-failed" | "unexpected-passed";
+type InteractiveRunStatus =
+  | "queued"
+  | "running"
+  | "passed"
+  | "failed"
+  | "expected-failed"
+  | "unexpected-passed";
 
 interface InteractiveRunEntry {
   key: string;
@@ -76,7 +82,8 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
   const interactive = options.isInteractive ?? Boolean(stdout.isTTY);
   const unicode = options.isUnicode ?? process.platform !== "win32";
   const colors = pc.createColors(Boolean(stdout.isTTY));
-  const accent = (value: string): string => colors.isColorSupported ? `${ACCENT_OPEN}${value}${ACCENT_CLOSE}` : value;
+  const accent = (value: string): string =>
+    colors.isColorSupported ? `${ACCENT_OPEN}${value}${ACCENT_CLOSE}` : value;
   const symbols: ReporterSymbols = getSymbols(unicode);
   const spinner = unicode ? cliSpinners.dots : cliSpinners.line;
   const failures: FailureEntry[] = [];
@@ -86,19 +93,31 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
     onSuiteStart(event) {
       printBanner({ kind: "compact", stdout });
       writeLine(`${colors.dim("Suite     ")}${accent(event.context.suitePath)}`, stdout);
-      writeLine(`${colors.dim("Workspace ")}${colors.bold(event.context.workspaceMode === "shared" ? event.context.cwd : `${event.context.workspaceMode} per run`)}`, stdout);
+      writeLine(
+        `${colors.dim("Workspace ")}${colors.bold(event.context.workspaceMode === "shared" ? event.context.cwd : `${event.context.workspaceMode} per run`)}`,
+        stdout,
+      );
       writeLine(`${colors.dim("Output    ")}${colors.bold(event.context.outputDir)}`, stdout);
       writeLine(`${colors.dim("Cases     ")}${String(event.context.selectedCaseCount)}`, stdout);
       if (event.context.tagFilter !== undefined) {
         writeLine(`${colors.dim("Tags      ")}${event.context.tagFilter.join(", ")}`, stdout);
       }
       writeLine(`${colors.dim("Runners   ")}${String(event.context.selectedRunnerCount)}`, stdout);
-      writeLine(`${colors.dim("Runs      ")}${String(event.context.selectedExecutionCount)}`, stdout);
+      writeLine(
+        `${colors.dim("Runs      ")}${String(event.context.selectedExecutionCount)}`,
+        stdout,
+      );
       writeLine(`${colors.dim("Parallel  ")}${String(event.context.maxParallel)}`, stdout);
 
-      if (event.context.scheduleMode !== "serial" && event.context.maxParallel > 1 && event.context.workspaceMode === "shared") {
+      if (
+        event.context.scheduleMode !== "serial" &&
+        event.context.maxParallel > 1 &&
+        event.context.workspaceMode === "shared"
+      ) {
         writeLine(
-          colors.yellow(`${symbols.warning} Concurrent schedule: ${event.context.scheduleMode} runs may overlap in the same workspace.`),
+          colors.yellow(
+            `${symbols.warning} Concurrent schedule: ${event.context.scheduleMode} runs may overlap in the same workspace.`,
+          ),
           stdout,
         );
       }
@@ -129,7 +148,11 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
     },
     onRunnerFinish(event) {
       if (interactive && interactiveState !== undefined) {
-        setInteractiveRunStatus(interactiveState, createRunKey(event.testCase.id, event.runner.id), event.result.status);
+        setInteractiveRunStatus(
+          interactiveState,
+          createRunKey(event.testCase.id, event.runner.id),
+          event.result.status,
+        );
         if (!hasRunningEntries(interactiveState)) {
           stopSpinner(interactiveState);
         }
@@ -168,7 +191,10 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
         writeLine(formatRunnerHeading(summary.runner), stdout);
         writeLine(formatRunnerLegend(colors), stdout);
         for (const caseResult of getRunnerCases(event.result, summary.runner.id)) {
-          writeLine(formatRunnerCaseRow(caseResult.caseId, caseResult.runnerResult, symbols, accent), stdout);
+          writeLine(
+            formatRunnerCaseRow(caseResult.caseId, caseResult.runnerResult, symbols, accent),
+            stdout,
+          );
         }
         writeLine("", stdout);
       }
@@ -187,16 +213,36 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
       writeLine(colors.bold("Summary"), stdout);
       writeLine("", stdout);
       writeLine(
-        formatSummaryCountLine("Cases", countPassedCases(event.result.cases), event.result.cases.length, colors),
+        formatSummaryCountLine(
+          "Cases",
+          countPassedCases(event.result.cases),
+          event.result.cases.length,
+          colors,
+        ),
         stdout,
       );
       writeLine(
-        formatSummaryCountLine("Runs", countPassedRuns(event.result.cases), countTotalRuns(event.result.cases), colors),
+        formatSummaryCountLine(
+          "Runs",
+          countPassedRuns(event.result.cases),
+          countTotalRuns(event.result.cases),
+          colors,
+        ),
         stdout,
       );
       writeLine(formatSummaryStatusLine(event.result.cases, colors), stdout);
-      writeLine(formatSummaryDetailLine("Duration", formatDuration(event.result.durationMs), colors), stdout);
-      writeLine(formatSummaryDetailLine("Tokens", formatTokenSummary(averageSuiteTokens(event.result), accent), colors), stdout);
+      writeLine(
+        formatSummaryDetailLine("Duration", formatDuration(event.result.durationMs), colors),
+        stdout,
+      );
+      writeLine(
+        formatSummaryDetailLine(
+          "Tokens",
+          formatTokenSummary(averageSuiteTokens(event.result), accent),
+          colors,
+        ),
+        stdout,
+      );
       writeLine(formatSummaryDetailLine("Output", event.result.outputDir, colors), stdout);
     },
     onError() {
@@ -262,11 +308,13 @@ function formatStatusLabel(status: RunnerResult["status"]): string | undefined {
 }
 
 function formatRunnerLegend(colors: ReturnType<typeof pc.createColors>): string {
-  return colors.dim([
-    padCell("case", RUNNER_CASE_WIDTH),
-    padCell("time", RUNNER_TIME_WIDTH),
-    "tokens in / out / reason / cache / billable",
-  ].join("   "));
+  return colors.dim(
+    [
+      padCell("case", RUNNER_CASE_WIDTH),
+      padCell("time", RUNNER_TIME_WIDTH),
+      "tokens in / out / reason / cache / billable",
+    ].join("   "),
+  );
 }
 
 function formatFailureMessage(failure: FailureEntry): string {
@@ -286,7 +334,9 @@ function formatFailureMessage(failure: FailureEntry): string {
   }
 
   if (failure.failureType === "timeout") {
-    return failure.error === undefined ? "Run timed out." : `${failure.error.name}: ${failure.error.message}`;
+    return failure.error === undefined
+      ? "Run timed out."
+      : `${failure.error.name}: ${failure.error.message}`;
   }
 
   if (failure.failureType === "runner-crash") {
@@ -325,7 +375,9 @@ function formatErrorLocation(error: SerializedError): string | undefined {
 
 function formatCrashMessage(failure: FailureEntry): string {
   const detail = getCrashDetail(failure.failureOrigin);
-  return failure.error === undefined ? detail : `${detail}\n${failure.error.name}: ${failure.error.message}`;
+  return failure.error === undefined
+    ? detail
+    : `${detail}\n${failure.error.name}: ${failure.error.message}`;
 }
 
 function getCrashDetail(origin: RunnerFailureOrigin | undefined): string {
@@ -378,12 +430,17 @@ function formatSummaryDetailLine(
   return `${colors.dim(padCell(label, SUMMARY_LABEL_WIDTH))} ${value}`;
 }
 
-function formatSummaryStatusLine(cases: CaseResult[], colors: ReturnType<typeof pc.createColors>): string {
+function formatSummaryStatusLine(
+  cases: CaseResult[],
+  colors: ReturnType<typeof pc.createColors>,
+): string {
   const expectedFailures = countRunsByStatus(cases, "expected-failed");
   const unexpectedPasses = countRunsByStatus(cases, "unexpected-passed");
   const segments = [
     colors.green(`${expectedFailures} expected failures`),
-    unexpectedPasses > 0 ? colors.red(`${unexpectedPasses} unexpected passes`) : colors.dim(`${unexpectedPasses} unexpected passes`),
+    unexpectedPasses > 0
+      ? colors.red(`${unexpectedPasses} unexpected passes`)
+      : colors.dim(`${unexpectedPasses} unexpected passes`),
   ];
 
   return `${colors.dim(padCell("Statuses", SUMMARY_LABEL_WIDTH))} ${segments.join(colors.dim(" | "))}`;
@@ -394,7 +451,6 @@ function countRunsByStatus(cases: CaseResult[], status: RunnerResult["status"]):
     return sum + caseResult.runnerResults.filter((result) => result.status === status).length;
   }, 0);
 }
-
 
 function countPassedCases(cases: CaseResult[]): number {
   return cases.filter((caseResult) => caseResult.passed).length;
@@ -429,19 +485,24 @@ function averageSuiteTokens(result: SuiteRunResult): {
   };
 }
 
-function formatTokenSummary(usage: {
-  inputTokens?: number;
-  outputTokens?: number;
-  reasoningTokens?: number;
-  cacheTokens?: number;
-  totalTokens?: number;
-}, accent?: (value: string) => string): string {
+function formatTokenSummary(
+  usage: {
+    inputTokens?: number;
+    outputTokens?: number;
+    reasoningTokens?: number;
+    cacheTokens?: number;
+    totalTokens?: number;
+  },
+  accent?: (value: string) => string,
+): string {
   return [
     formatTokens(usage.inputTokens),
     formatTokens(usage.outputTokens),
     formatTokens(usage.reasoningTokens),
     formatTokens(usage.cacheTokens),
-    accent === undefined ? formatTokens(usage.totalTokens) : accent(formatTokens(usage.totalTokens)),
+    accent === undefined
+      ? formatTokens(usage.totalTokens)
+      : accent(formatTokens(usage.totalTokens)),
   ].join(" / ");
 }
 
@@ -486,7 +547,11 @@ function createRunKey(caseId: string, runnerId: string): string {
   return `${caseId}\u0000${runnerId}`;
 }
 
-function setInteractiveRunStatus(state: InteractiveState, key: string, status: InteractiveRunStatus): void {
+function setInteractiveRunStatus(
+  state: InteractiveState,
+  key: string,
+  status: InteractiveRunStatus,
+): void {
   const index = state.entryIndexByKey.get(key);
 
   if (index === undefined) {
@@ -537,8 +602,13 @@ function renderInteractiveRunList(
   symbols: ReturnType<typeof getSymbols>,
   frames: string[],
 ): void {
-  const caseWidth = state.entries.reduce((max, entry) => Math.max(max, visibleWidth(entry.caseId)), 0);
-  const lines = state.entries.map((entry) => formatInteractiveRunRow(entry, state, colors, symbols, frames, caseWidth));
+  const caseWidth = state.entries.reduce(
+    (max, entry) => Math.max(max, visibleWidth(entry.caseId)),
+    0,
+  );
+  const lines = state.entries.map((entry) =>
+    formatInteractiveRunRow(entry, state, colors, symbols, frames, caseWidth),
+  );
   state.renderedLineCount = redrawLines(lines, stdout, state.renderedLineCount);
 }
 
@@ -591,7 +661,8 @@ function formatInteractiveStatusIcon(
   symbols: ReturnType<typeof getSymbols>,
   frames: string[],
 ): string {
-  const accent = (value: string): string => colors.isColorSupported ? `${ACCENT_OPEN}${value}${ACCENT_CLOSE}` : value;
+  const accent = (value: string): string =>
+    colors.isColorSupported ? `${ACCENT_OPEN}${value}${ACCENT_CLOSE}` : value;
 
   switch (entry.status) {
     case "queued":
@@ -607,7 +678,11 @@ function formatInteractiveStatusIcon(
   }
 }
 
-function redrawLines(lines: string[], stdout: Pick<NodeJS.WriteStream, "write">, previousLineCount: number): number {
+function redrawLines(
+  lines: string[],
+  stdout: Pick<NodeJS.WriteStream, "write">,
+  previousLineCount: number,
+): number {
   const lineCount = Math.max(previousLineCount, lines.length);
 
   if (previousLineCount > 0) {

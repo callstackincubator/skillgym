@@ -1,4 +1,11 @@
-import type { AgentConfig, ClaudeCodeAgentConfig, CodexAgentConfig, CursorAgentConfig, OpenCodeAgentConfig, RunnerInfo } from "./runner.js";
+import type {
+  AgentConfig,
+  ClaudeCodeAgentConfig,
+  CodexAgentConfig,
+  CursorAgentConfig,
+  OpenCodeAgentConfig,
+  RunnerInfo,
+} from "./runner.js";
 import type { SessionReport } from "./session-report.js";
 
 export interface RunInput {

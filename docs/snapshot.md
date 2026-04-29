@@ -5,6 +5,7 @@
 Snapshot checks guard token usage regressions for each executed `caseId + runner.id` pair.
 
 This is useful for catching regressions caused by:
+
 - skill changes that make the agent do more work
 - tool changes that return too much data
 - model behavior changes that increase token usage unexpectedly
@@ -50,6 +51,7 @@ export default {
 ```
 
 Supported metrics:
+
 - `totalTokens`
 - `inputTokens`
 - `outputTokens`
@@ -69,6 +71,7 @@ skillgym run ./examples/basic-suite.ts --snapshots ./baselines.json
 ```
 
 Flags:
+
 - `--update-snapshots`: overwrite baselines for the executed runs
 - `--snapshots <path>`: override the configured snapshot file path
 

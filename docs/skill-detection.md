@@ -33,15 +33,18 @@ Use when there is only indirect textual evidence.
 ## Evidence examples
 
 Strong signals:
+
 - assistant message explicitly says it will use a named skill
 - direct read of `<skill>/SKILL.md`
 - explicit skill-load event in exported session data
 
 Medium signals:
+
 - read of a known skill-owned helper file
 - commands strongly tied to a skill workflow, without explicit naming
 
 Weak signals:
+
 - vague textual references that could match multiple skills
 
 ## V1 rule

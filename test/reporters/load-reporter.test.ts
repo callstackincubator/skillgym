@@ -44,7 +44,7 @@ describe("loadReporter", () => {
 
   test("loads custom reporter from relative default export path", async () => {
     const filePath = path.join(tempDir, "default-reporter.ts");
-    await writeFile(filePath, 'export default { onSuiteStart() {} };\n', "utf8");
+    await writeFile(filePath, "export default { onSuiteStart() {} };\n", "utf8");
 
     const reporter = await loadReporter("./default-reporter.ts", tempDir);
 
@@ -53,7 +53,7 @@ describe("loadReporter", () => {
 
   test("loads custom reporter from named export path", async () => {
     const filePath = path.join(tempDir, "named-reporter.ts");
-    await writeFile(filePath, 'export const reporter = { onSuiteFinish() {} };\n', "utf8");
+    await writeFile(filePath, "export const reporter = { onSuiteFinish() {} };\n", "utf8");
 
     const reporter = await loadReporter("./named-reporter.ts", tempDir);
 
@@ -62,7 +62,7 @@ describe("loadReporter", () => {
 
   test("throws useful error for invalid shape", async () => {
     const filePath = path.join(tempDir, "invalid-reporter.ts");
-    await writeFile(filePath, 'export default { hello() {} };\n', "utf8");
+    await writeFile(filePath, "export default { hello() {} };\n", "utf8");
 
     await expect(loadReporter("./invalid-reporter.ts", tempDir)).rejects.toThrow(
       /Reporter module must define at least one reporter hook .*invalid-reporter\.ts/,

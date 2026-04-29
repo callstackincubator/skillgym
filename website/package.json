@@ -1,10 +1,7 @@
 {
   "name": "website",
-  "type": "module",
   "version": "0.0.1",
-  "engines": {
-    "node": ">=22.12.0"
-  },
+  "type": "module",
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
@@ -14,5 +11,8 @@
   "dependencies": {
     "astro": "^6.1.6",
     "astro-seo": "^1.1.0"
+  },
+  "engines": {
+    "node": ">=22.12.0"
   }
 }

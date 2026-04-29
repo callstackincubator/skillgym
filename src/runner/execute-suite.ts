@@ -15,7 +15,12 @@ import { createRunnerInfo } from "./runner-info.js";
 import { executeRunner } from "./execute-runner.js";
 import { isModelRejectedResult } from "./model-rejection.js";
 import { scheduleExecutions, type PlannedExecution } from "./scheduler.js";
-import { createExecutionFailureResult, finalizeWorkspace, prepareWorkspace, resolveEffectiveWorkspace } from "./workspace.js";
+import {
+  createExecutionFailureResult,
+  finalizeWorkspace,
+  prepareWorkspace,
+  resolveEffectiveWorkspace,
+} from "./workspace.js";
 
 interface PlannedSuiteExecution {
   testCase: TestCase;
@@ -83,14 +88,19 @@ export async function executeSuite(
   });
 
   const selectedCases = normalizedCases.filter((testCase) => {
-    return (options.caseId === undefined || testCase.id === options.caseId)
-      && (selectedTags.length === 0 || testCase.tags?.some((tag) => selectedTags.includes(tag)) === true);
+    return (
+      (options.caseId === undefined || testCase.id === options.caseId) &&
+      (selectedTags.length === 0 ||
+        testCase.tags?.some((tag) => selectedTags.includes(tag)) === true)
+    );
   });
 
   if (selectedRunners.length === 0) {
-    const error = new Error(options.runner === undefined
-      ? "No runners configured."
-      : `No runners matched the requested filter: ${options.runner}`);
+    const error = new Error(
+      options.runner === undefined
+        ? "No runners configured."
+        : `No runners matched the requested filter: ${options.runner}`,
+    );
     await options.reporter?.onError?.({
       context: createReporterContext({
         cwd: resolvedWorkspace.mode === "shared" ? resolvedWorkspace.cwd : options.cwd,
@@ -165,8 +175,12 @@ export async function executeSuite(
       startedAt,
     });
 
-    const initialExecutions = plannedExecutions.filter((execution) => execution.item.caseIndex === 0);
-    const remainingExecutions = plannedExecutions.filter((execution) => execution.item.caseIndex !== 0);
+    const initialExecutions = plannedExecutions.filter(
+      (execution) => execution.item.caseIndex === 0,
+    );
+    const remainingExecutions = plannedExecutions.filter(
+      (execution) => execution.item.caseIndex !== 0,
+    );
 
     for (const execution of initialExecutions) {
       await executePlannedExecution(execution.item, {
@@ -204,7 +218,9 @@ export async function executeSuite(
       });
     });
 
-    const caseResults = plannedCaseResults.map((plannedCaseResult) => aggregatePlannedCaseResult(plannedCaseResult));
+    const caseResults = plannedCaseResults.map((plannedCaseResult) =>
+      aggregatePlannedCaseResult(plannedCaseResult),
+    );
 
     const result: SuiteRunResult = {
       suitePath: resolvedSuitePath,
@@ -215,7 +231,10 @@ export async function executeSuite(
       declaredTags,
       selectedTags,
       cases: caseResults,
-      runners: summarizeRunners(caseResults, selectedRunners.map((runner) => runner.info)),
+      runners: summarizeRunners(
+        caseResults,
+        selectedRunners.map((runner) => runner.info),
+      ),
     };
 
     await writeJson(path.join(outputDir, "results.json"), result);
@@ -301,22 +320,27 @@ async function executePlannedExecution(
     totalCases: options.selectedCases.length,
   });
 
-  const artifactDir = path.join(options.outputDir, sanitizePathSegment(item.testCase.id), item.runner.info.pathKey);
+  const artifactDir = path.join(
+    options.outputDir,
+    sanitizePathSegment(item.testCase.id),
+    item.runner.info.pathKey,
+  );
   await ensureDir(artifactDir);
 
   const rejectedResult = options.rejectedRunners.get(item.runner.id);
-  const rawResult = rejectedResult === undefined
-    ? await runExecution(item, {
-        resolvedWorkspace: options.resolvedWorkspace,
-        executeRunnerFn: options.executeRunnerFn,
-        outputDir: options.outputDir,
-        maxSteps: options.maxSteps,
-        snapshots: options.snapshots,
-        snapshotStore: options.snapshotStore,
-      })
-    : await createRejectedModelResult(item, artifactDir);
+  const rawResult =
+    rejectedResult === undefined
+      ? await runExecution(item, {
+          resolvedWorkspace: options.resolvedWorkspace,
+          executeRunnerFn: options.executeRunnerFn,
+          outputDir: options.outputDir,
+          maxSteps: options.maxSteps,
+          snapshots: options.snapshots,
+          snapshotStore: options.snapshotStore,
+        })
+      : await createRejectedModelResult(item, artifactDir);
 
-  if (rejectedResult === undefined && await isModelRejectedResult(rawResult)) {
+  if (rejectedResult === undefined && (await isModelRejectedResult(rawResult))) {
     rawResult.failureType = "runner-crash";
     rawResult.failureOrigin = "model-rejected";
     if (rawResult.error?.name === "AssertionError" || rawResult.error === undefined) {
@@ -370,7 +394,11 @@ async function runExecution(
     snapshotStore?: SnapshotStore;
   },
 ): Promise<RunnerResult> {
-  const artifactDir = path.join(options.outputDir, sanitizePathSegment(item.testCase.id), item.runner.info.pathKey);
+  const artifactDir = path.join(
+    options.outputDir,
+    sanitizePathSegment(item.testCase.id),
+    item.runner.info.pathKey,
+  );
   const executionStartedMs = Date.now();
   let result: RunnerResult;
   let preparedWorkspace;
@@ -384,15 +412,21 @@ async function runExecution(
       timeoutMs: item.timeoutMs,
     });
 
-    result = await options.executeRunnerFn(item.testCase, item.runner.info, getAdapter(item.runner.config.agent), {
-      cwd: preparedWorkspace.cwd,
-      artifactDir,
-      timeoutMs: item.timeoutMs,
-      maxSteps: options.maxSteps,
-      snapshots: options.snapshots !== undefined && options.snapshotStore !== undefined
-        ? { runtime: options.snapshots, store: options.snapshotStore }
-        : undefined,
-    });
+    result = await options.executeRunnerFn(
+      item.testCase,
+      item.runner.info,
+      getAdapter(item.runner.config.agent),
+      {
+        cwd: preparedWorkspace.cwd,
+        artifactDir,
+        timeoutMs: item.timeoutMs,
+        maxSteps: options.maxSteps,
+        snapshots:
+          options.snapshots !== undefined && options.snapshotStore !== undefined
+            ? { runtime: options.snapshots, store: options.snapshotStore }
+            : undefined,
+      },
+    );
   } catch (error) {
     const isWorkspaceFailure = preparedWorkspace === undefined;
     result = createExecutionFailureResult(error, {
@@ -400,9 +434,7 @@ async function runExecution(
       runner: item.runner.info,
       artifactDir,
       durationMs: Date.now() - executionStartedMs,
-      failureOrigin: isWorkspaceFailure
-        ? classifyWorkspaceFailureOrigin(error)
-        : undefined,
+      failureOrigin: isWorkspaceFailure ? classifyWorkspaceFailureOrigin(error) : undefined,
       failureLogPath: isWorkspaceFailure
         ? resolveWorkspaceFailureLogPath(artifactDir, error)
         : undefined,
@@ -421,23 +453,31 @@ async function runExecution(
   return result;
 }
 
-async function createRejectedModelResult(item: PlannedSuiteExecution, artifactDir: string): Promise<RunnerResult> {
-  const result = createExecutionFailureResult(new Error(
-    `Runner rejected configured model "${item.runner.info.agent.model ?? "unknown"}" during initial execution.`,
-  ), {
-    testCase: item.testCase,
-    runner: item.runner.info,
-    artifactDir,
-    durationMs: 0,
-    failureOrigin: "model-rejected",
-  });
+async function createRejectedModelResult(
+  item: PlannedSuiteExecution,
+  artifactDir: string,
+): Promise<RunnerResult> {
+  const result = createExecutionFailureResult(
+    new Error(
+      `Runner rejected configured model "${item.runner.info.agent.model ?? "unknown"}" during initial execution.`,
+    ),
+    {
+      testCase: item.testCase,
+      runner: item.runner.info,
+      artifactDir,
+      durationMs: 0,
+      failureOrigin: "model-rejected",
+    },
+  );
 
   await writeJson(path.join(artifactDir, "error.json"), result.error);
   await writeJson(path.join(artifactDir, "report.json"), result.report);
   return result;
 }
 
-function classifyWorkspaceFailureOrigin(error: unknown): import("../domain/result.js").RunnerFailureOrigin {
+function classifyWorkspaceFailureOrigin(
+  error: unknown,
+): import("../domain/result.js").RunnerFailureOrigin {
   if (error instanceof Error && error.message.startsWith("Workspace bootstrap failed:")) {
     return "workspace-bootstrap";
   }
@@ -454,7 +494,9 @@ function resolveWorkspaceFailureLogPath(artifactDir: string, error: unknown): st
 }
 
 function aggregatePlannedCaseResult(plannedCaseResult: PlannedCaseResult): CaseResult {
-  const runnerResults = plannedCaseResult.runnerResults.filter((result): result is RunnerResult => result !== undefined);
+  const runnerResults = plannedCaseResult.runnerResults.filter(
+    (result): result is RunnerResult => result !== undefined,
+  );
 
   if (runnerResults.length !== plannedCaseResult.runnerResults.length) {
     throw new Error(`Missing runner results for case ${plannedCaseResult.testCase.id}`);
@@ -489,7 +531,9 @@ function normalizeTags(tags: string[] | undefined, label: string): string[] {
 
   for (const [index, tag] of tags.entries()) {
     if (typeof tag !== "string" || tag.trim().length === 0) {
-      throw new Error(`Invalid tag for ${label} at index ${String(index)}: expected non-empty string`);
+      throw new Error(
+        `Invalid tag for ${label} at index ${String(index)}: expected non-empty string`,
+      );
     }
 
     if (!seen.has(tag)) {
@@ -528,13 +572,25 @@ function isNumber(value: number | undefined): value is number {
 function summarizeRunners(caseResults: CaseResult[], runners: RunnerInfo[]): RunnerSummary[] {
   return runners.map((runner) => {
     const runnerResults = caseResults
-      .map((caseResult) => caseResult.runnerResults.find((result) => result.runner.id === runner.id))
+      .map((caseResult) =>
+        caseResult.runnerResults.find((result) => result.runner.id === runner.id),
+      )
       .filter((result): result is RunnerResult => result !== undefined);
-    const inputTokens = runnerResults.map((result) => result.report.usage.inputTokens).filter(isNumber);
-    const outputTokens = runnerResults.map((result) => result.report.usage.outputTokens).filter(isNumber);
-    const reasoningTokens = runnerResults.map((result) => result.report.usage.reasoningTokens).filter(isNumber);
-    const cacheTokens = runnerResults.map((result) => result.report.usage.cacheTokens).filter(isNumber);
-    const totalTokens = runnerResults.map((result) => result.report.usage.totalTokens).filter(isNumber);
+    const inputTokens = runnerResults
+      .map((result) => result.report.usage.inputTokens)
+      .filter(isNumber);
+    const outputTokens = runnerResults
+      .map((result) => result.report.usage.outputTokens)
+      .filter(isNumber);
+    const reasoningTokens = runnerResults
+      .map((result) => result.report.usage.reasoningTokens)
+      .filter(isNumber);
+    const cacheTokens = runnerResults
+      .map((result) => result.report.usage.cacheTokens)
+      .filter(isNumber);
+    const totalTokens = runnerResults
+      .map((result) => result.report.usage.totalTokens)
+      .filter(isNumber);
     const passedCases = runnerResults.filter((result) => result.passed).length;
 
     return {
@@ -591,7 +647,10 @@ function createPlannedExecutions(
   });
 }
 
-function createPlannedCaseResults(selectedCases: TestCase[], runnerCount: number): PlannedCaseResult[] {
+function createPlannedCaseResults(
+  selectedCases: TestCase[],
+  runnerCount: number,
+): PlannedCaseResult[] {
   return selectedCases.map((testCase) => ({
     testCase,
     runnerResults: Array.from({ length: runnerCount }, () => undefined),
@@ -638,7 +697,10 @@ function createReporterContext(options: {
   };
 }
 
-function resolveMaxParallel(scheduleMode: ScheduleMode, configuredMaxParallel: number | undefined): number {
+function resolveMaxParallel(
+  scheduleMode: ScheduleMode,
+  configuredMaxParallel: number | undefined,
+): number {
   if (scheduleMode === "serial") {
     return 1;
   }

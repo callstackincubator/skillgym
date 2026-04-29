@@ -7,8 +7,8 @@ jobs:
   release:
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # push commits/tags and create GitHub releases
-      id-token: write   # required for npm provenance (OIDC)
+      contents: write # push commits/tags and create GitHub releases
+      id-token: write # required for npm provenance (OIDC)
 
     steps:
       - uses: actions/checkout@v4

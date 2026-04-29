@@ -1,6 +1,12 @@
 import path from "node:path";
 import { copyFile, readFile } from "node:fs/promises";
-import type { OpenCodeAgentConfig, RawRunArtifacts, RunHandle, RunInput, RunnerAdapter } from "../domain/adapter.js";
+import type {
+  OpenCodeAgentConfig,
+  RawRunArtifacts,
+  RunHandle,
+  RunInput,
+  RunnerAdapter,
+} from "../domain/adapter.js";
 import type { SessionEvent, SessionReport } from "../domain/session-report.js";
 import { resolveReportedPath } from "../normalize/reported-path.js";
 import { inferSkillsFromPaths } from "../normalize/skill-detection.js";
@@ -67,7 +73,9 @@ interface OpenCodePart {
 }
 
 export class OpenCodeAdapter extends BaseAdapter implements RunnerAdapter {
-  constructor(private readonly options: OpenCodeAgentConfig = { type: "opencode", model: "openai/gpt-5" }) {
+  constructor(
+    private readonly options: OpenCodeAgentConfig = { type: "opencode", model: "openai/gpt-5" },
+  ) {
     super();
   }
 
@@ -83,12 +91,9 @@ export class OpenCodeAdapter extends BaseAdapter implements RunnerAdapter {
       "--thinking",
       input.prompt,
     ];
-    const handle = await this.runCommand(
-      command,
-      args,
-      input,
-      { env: getOpenCodeEnv(input, this.options.env) },
-    );
+    const handle = await this.runCommand(command, args, input, {
+      env: getOpenCodeEnv(input, this.options.env),
+    });
     return handle;
   }
 
@@ -104,7 +109,9 @@ export class OpenCodeAdapter extends BaseAdapter implements RunnerAdapter {
     const sessionId = this.extractSessionId(stdout) ?? this.extractSessionId(stderr);
 
     if (sessionId === undefined) {
-      throw new Error("OpenCode run did not emit a session id; cannot export structured session data.");
+      throw new Error(
+        "OpenCode run did not emit a session id; cannot export structured session data.",
+      );
     }
 
     const exportCommand = this.options.command ?? "opencode";
@@ -198,7 +205,11 @@ export class OpenCodeAdapter extends BaseAdapter implements RunnerAdapter {
           continue;
         }
 
-        if (part.type === "text" && typeof part.text === "string" && (role === "user" || role === "assistant")) {
+        if (
+          part.type === "text" &&
+          typeof part.text === "string" &&
+          (role === "user" || role === "assistant")
+        ) {
           const assistantPhase = role === "assistant" ? inferAssistantPhase(part.text) : undefined;
           events.push({
             type: "message",
@@ -266,9 +277,13 @@ export class OpenCodeAdapter extends BaseAdapter implements RunnerAdapter {
         evidence: ["Loaded via skill tool"],
       })),
     );
-    const finalOutput = [...events]
-      .reverse()
-      .find((event): event is Extract<SessionEvent, { type: "message" }> => event.type === "message" && event.role === "assistant")?.text ?? "";
+    const finalOutput =
+      [...events]
+        .reverse()
+        .find(
+          (event): event is Extract<SessionEvent, { type: "message" }> =>
+            event.type === "message" && event.role === "assistant",
+        )?.text ?? "";
     return {
       runner: input.runner,
       sessionId: artifacts.sessionId,
@@ -331,7 +346,11 @@ function extractOpenCodeRunError(text: string): string | undefined {
         };
       };
 
-      if (parsed.type === "error" && typeof parsed.error?.message === "string" && parsed.error.message.length > 0) {
+      if (
+        parsed.type === "error" &&
+        typeof parsed.error?.message === "string" &&
+        parsed.error.message.length > 0
+      ) {
         return parsed.error.message;
       }
     } catch {
@@ -429,7 +448,9 @@ function parseOpenCodeExport(value: string): OpenCodeExport & { messages: OpenCo
   return parsed;
 }
 
-function isOpenCodeExport(value: unknown): value is OpenCodeExport & { messages: OpenCodeMessage[] } {
+function isOpenCodeExport(
+  value: unknown,
+): value is OpenCodeExport & { messages: OpenCodeMessage[] } {
   return isRecord(value) && isRecord(value.info) && Array.isArray(value.messages);
 }
 
@@ -517,9 +538,10 @@ function sumOpenCodeTokenUsage(messages: OpenCodeMessage[]): {
   const outputTokens = seen.outputTokens ? totals.outputTokens : undefined;
   const reasoningTokens = seen.reasoningTokens ? totals.reasoningTokens : undefined;
   const cacheTokens = seen.cacheTokens ? totals.cacheTokens : undefined;
-  const totalTokens = inputTokens !== undefined && outputTokens !== undefined && reasoningTokens !== undefined
-    ? inputTokens + outputTokens + reasoningTokens - (cacheTokens ?? 0)
-    : undefined;
+  const totalTokens =
+    inputTokens !== undefined && outputTokens !== undefined && reasoningTokens !== undefined
+      ? inputTokens + outputTokens + reasoningTokens - (cacheTokens ?? 0)
+      : undefined;
 
   return {
     inputTokens,
@@ -543,7 +565,9 @@ function extractReadPath(tool: string, input: unknown): string | undefined {
 }
 
 function resolveOpenCodePartBaseDir(input: unknown, fallbackDir: string): string {
-  return readStringFromUnknown(input, "workdir") ?? readStringFromUnknown(input, "cwd") ?? fallbackDir;
+  return (
+    readStringFromUnknown(input, "workdir") ?? readStringFromUnknown(input, "cwd") ?? fallbackDir
+  );
 }
 
 function unixMsToIso(value: number | undefined): string | undefined {
@@ -576,7 +600,10 @@ function mergeDetectedSkills(
   return [...merged.values()];
 }
 
-function compareConfidence(left: "explicit" | "strong" | "medium" | "weak", right: "explicit" | "strong" | "medium" | "weak"): number {
+function compareConfidence(
+  left: "explicit" | "strong" | "medium" | "weak",
+  right: "explicit" | "strong" | "medium" | "weak",
+): number {
   const order = ["explicit", "strong", "medium", "weak"] as const;
   return order.indexOf(left) - order.indexOf(right);
 }

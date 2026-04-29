@@ -25,7 +25,8 @@ const suite: TestCase[] = [
   // Requires maxSteps: 1 in skillgym.config.js to reproduce the failure.
   {
     id: "max-steps-exceeded",
-    prompt: "Run `echo step1`, `echo step2`, `echo step3`, `echo step4`, `echo step5` as five separate bash commands, then say: all steps done",
+    prompt:
+      "Run `echo step1`, `echo step2`, `echo step3`, `echo step4`, `echo step5` as five separate bash commands, then say: all steps done",
     async assert(_report, ctx) {
       assert.match(ctx.finalOutput(), /all steps done/i);
     },

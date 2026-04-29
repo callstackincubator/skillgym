@@ -8,7 +8,9 @@ import { OpenCodeAdapter } from "../../src/adapters/opencode.js";
 const tempDirs: string[] = [];
 
 afterEach(async () => {
-  await Promise.all(tempDirs.splice(0).map((tempDir) => rm(tempDir, { recursive: true, force: true })));
+  await Promise.all(
+    tempDirs.splice(0).map((tempDir) => rm(tempDir, { recursive: true, force: true })),
+  );
 });
 
 test("OpenCodeAdapter collect parses export payload wrapped in extra text", async () => {
@@ -45,7 +47,7 @@ test("OpenCodeAdapter collect parses export payload wrapped in extra text", asyn
 
   const stdoutPath = path.join(tempDir, "stdout.log");
   const stderrPath = path.join(tempDir, "stderr.log");
-  await writeFile(stdoutPath, 'session ready: ses_123\n', "utf8");
+  await writeFile(stdoutPath, "session ready: ses_123\n", "utf8");
   await writeFile(stderrPath, "", "utf8");
 
   const artifacts = await adapter.collect(
@@ -100,7 +102,7 @@ test("OpenCodeAdapter collect fails when export output is invalid JSON", async (
 
   const stdoutPath = path.join(tempDir, "stdout.log");
   const stderrPath = path.join(tempDir, "stderr.log");
-  await writeFile(stdoutPath, 'session ready: ses_123\n', "utf8");
+  await writeFile(stdoutPath, "session ready: ses_123\n", "utf8");
   await writeFile(stderrPath, "", "utf8");
 
   await expect(
@@ -127,7 +129,11 @@ test("OpenCodeAdapter collect fails when run output contains an explicit error e
 
   const stdoutPath = path.join(tempDir, "stdout.log");
   const stderrPath = path.join(tempDir, "stderr.log");
-  await writeFile(stdoutPath, '{"type":"error","error":{"message":"The requested model is not supported."}}\n', "utf8");
+  await writeFile(
+    stdoutPath,
+    '{"type":"error","error":{"message":"The requested model is not supported."}}\n',
+    "utf8",
+  );
   await writeFile(stderrPath, "", "utf8");
 
   await expect(
@@ -208,9 +214,11 @@ test("OpenCodeAdapter normalize sums message tokens across the exported conversa
   expect(report.usage.reasoningTokens).toBe(4);
   expect(report.usage.cacheTokens).toBe(26_009);
   expect(report.files.observedReads).toEqual(["/tmp/find-skills/SKILL.md"]);
-  expect(report.events).toEqual(expect.arrayContaining([
-    expect.objectContaining({ type: "fileRead", path: "/tmp/find-skills/SKILL.md" }),
-  ]));
+  expect(report.events).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ type: "fileRead", path: "/tmp/find-skills/SKILL.md" }),
+    ]),
+  );
 });
 
 test("OpenCodeAdapter normalize resolves relative read paths against message cwd", async () => {
@@ -245,9 +253,11 @@ test("OpenCodeAdapter normalize resolves relative read paths against message cwd
   });
 
   expect(report.files.observedReads).toEqual(["/tmp/isolated-workspace/docs/guide.md"]);
-  expect(report.events).toEqual(expect.arrayContaining([
-    expect.objectContaining({ type: "fileRead", path: "/tmp/isolated-workspace/docs/guide.md" }),
-  ]));
+  expect(report.events).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ type: "fileRead", path: "/tmp/isolated-workspace/docs/guide.md" }),
+    ]),
+  );
 });
 
 test("OpenCodeAdapter run seeds isolated runtime and auth file", async () => {
@@ -275,7 +285,12 @@ test("OpenCodeAdapter run seeds isolated runtime and auth file", async () => {
       XDG_STATE_HOME: path.join(input.artifactsDir, "opencode-xdg", "state"),
       XDG_CACHE_HOME: path.join(input.artifactsDir, "opencode-xdg", "cache"),
     });
-    expect(await readFile(path.join(input.artifactsDir, "opencode-xdg", "data", "opencode", "auth.json"), "utf8")).toBe('{"provider":"token"}\n');
+    expect(
+      await readFile(
+        path.join(input.artifactsDir, "opencode-xdg", "data", "opencode", "auth.json"),
+        "utf8",
+      ),
+    ).toBe('{"provider":"token"}\n');
   } finally {
     process.env.HOME = previousHome;
   }

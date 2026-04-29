@@ -54,6 +54,7 @@ export const workspace = {
 ```
 
 Behavior:
+
 - runs execute directly in the shared directory
 - `cwd` is optional
 - if omitted, shared mode falls back to config `run.cwd`, then `process.cwd()`
@@ -69,6 +70,7 @@ export const workspace = {
 ```
 
 Behavior:
+
 - each case x runner execution gets its own workspace
 - workspace path lives under `outputDir/workspaces/<case-id>/<runner-path-key>`
 - the workspace starts empty unless `templateDir` is set
@@ -90,11 +92,13 @@ export const workspace = {
 ```
 
 Bootstrap command behavior:
+
 - `cwd` is the isolated workspace
 - non-zero exit fails that execution before the agent runs
 - stdout and stderr are written to the execution artifact directory
 
 Runtime environment variables:
+
 - `SKILLGYM_WORKSPACE`
 - `SKILLGYM_CASE_ID`
 - `SKILLGYM_RUNNER_ID`
@@ -104,6 +108,7 @@ Runtime environment variables:
 ## Cleanup
 
 Cleanup behavior is fixed:
+
 - successful isolated runs delete their workspace
 - failed isolated runs preserve their workspace
 
@@ -112,6 +117,7 @@ Preserved workspaces live under `outputDir/workspaces`.
 ## Path resolution
 
 Path rules:
+
 - config `run.workspace` paths resolve from the config file directory
 - suite `workspace` paths resolve from the suite file directory
 - `bootstrap.command` and path-like `bootstrap.args` are resolved from the config or suite directory before the bootstrap runs inside the isolated workspace

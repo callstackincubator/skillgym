@@ -11,7 +11,9 @@ import { createSessionReport } from "../helpers/session-report.js";
 const tempDirs: string[] = [];
 
 afterEach(async () => {
-  await Promise.all(tempDirs.splice(0).map((tempDir) => rm(tempDir, { recursive: true, force: true })));
+  await Promise.all(
+    tempDirs.splice(0).map((tempDir) => rm(tempDir, { recursive: true, force: true })),
+  );
 });
 
 test("loadSuite reads named workspace export", async () => {
@@ -63,7 +65,9 @@ test("executeSuite provisions isolated workspaces from suite template and remove
     executeRunnerFn: async (_testCase, _runner, _adapter, options) => {
       seenCwds.push(options.cwd);
       expect(await readFile(path.join(options.cwd, "README.md"), "utf8")).toBe("template\n");
-      expect(await readFile(path.join(options.cwd, ".git", "HEAD"), "utf8")).toContain("refs/heads/main");
+      expect(await readFile(path.join(options.cwd, ".git", "HEAD"), "utf8")).toContain(
+        "refs/heads/main",
+      );
       return {
         runner,
         passed: true,
@@ -80,7 +84,10 @@ test("executeSuite provisions isolated workspaces from suite template and remove
   expect(seenCwds).toHaveLength(1);
   await expect(stat(seenCwds[0]!)).rejects.toThrow();
 
-  const workspaceMetadata = await readFile(path.join(runOutputDir, "alpha", runner.pathKey, "workspace.json"), "utf8");
+  const workspaceMetadata = await readFile(
+    path.join(runOutputDir, "alpha", runner.pathKey, "workspace.json"),
+    "utf8",
+  );
   expect(workspaceMetadata).toContain('"mode": "isolated"');
   expect(workspaceMetadata).toContain('"preserved": false');
 });
@@ -91,13 +98,7 @@ test("executeSuite preserves failed isolated workspaces and writes bootstrap log
   const scriptPath = path.join(tempDir, "bootstrap.sh");
   await writeFile(
     scriptPath,
-    [
-      "#!/bin/sh",
-      "echo bootstrap-start",
-      "echo $SKILLGYM_CASE_ID >&2",
-      "exit 4",
-      "",
-    ].join("\n"),
+    ["#!/bin/sh", "echo bootstrap-start", "echo $SKILLGYM_CASE_ID >&2", "exit 4", ""].join("\n"),
     "utf8",
   );
   const runner = createRunnerInfo("open", { type: "opencode", model: "openai/gpt-5" });
@@ -126,7 +127,9 @@ test("executeSuite preserves failed isolated workspaces and writes bootstrap log
   expect(result.cases[0]?.runnerResults[0]?.passed).toBe(false);
   expect(result.cases[0]?.runnerResults[0]?.error?.message).toContain("Workspace bootstrap failed");
   expect(result.cases[0]?.runnerResults[0]?.failureOrigin).toBe("workspace-bootstrap");
-  expect(result.cases[0]?.runnerResults[0]?.failureLogPath).toBe(path.join(runOutputDir, "alpha", runner.pathKey, "bootstrap.stderr.log"));
+  expect(result.cases[0]?.runnerResults[0]?.failureLogPath).toBe(
+    path.join(runOutputDir, "alpha", runner.pathKey, "bootstrap.stderr.log"),
+  );
 
   const workspaceRoot = path.join(runOutputDir, "workspaces", "alpha");
   const entries = await readdir(workspaceRoot);
@@ -150,38 +153,48 @@ test("executeSuite resolves suite-relative bootstrap script args before running 
   const suiteDir = path.join(tempDir, "suite-dir");
   const scriptPath = path.join(suiteDir, "bootstrap.sh");
   await mkdir(suiteDir, { recursive: true });
-  await writeFile(scriptPath, "#!/bin/sh\nprintf 'Bootstrap marker: suite-relative\\n' > bootstrap-output.txt\n", "utf8");
+  await writeFile(
+    scriptPath,
+    "#!/bin/sh\nprintf 'Bootstrap marker: suite-relative\\n' > bootstrap-output.txt\n",
+    "utf8",
+  );
 
   const runner = createRunnerInfo("open", { type: "opencode", model: "openai/gpt-5" });
   let seenCwd = "";
-  const result = await executeSuite(path.join(suiteDir, "suite.ts"), [{ id: "alpha", prompt: "hello", assert() {} }], {
-    cwd: tempDir,
-    outputDir,
-    suiteWorkspace: {
-      mode: "isolated",
-      bootstrap: {
-        command: "sh",
-        args: ["./bootstrap.sh"],
+  const result = await executeSuite(
+    path.join(suiteDir, "suite.ts"),
+    [{ id: "alpha", prompt: "hello", assert() {} }],
+    {
+      cwd: tempDir,
+      outputDir,
+      suiteWorkspace: {
+        mode: "isolated",
+        bootstrap: {
+          command: "sh",
+          args: ["./bootstrap.sh"],
+        },
+      },
+      config: {
+        runners: {
+          open: { agent: { type: "opencode", model: "openai/gpt-5" } },
+        },
+      },
+      executeRunnerFn: async (_testCase, _runner, _adapter, options) => {
+        seenCwd = options.cwd;
+        expect(await readFile(path.join(options.cwd, "bootstrap-output.txt"), "utf8")).toContain(
+          "suite-relative",
+        );
+        return {
+          runner,
+          passed: true,
+          status: "passed",
+          durationMs: 10,
+          artifactDir: options.artifactDir,
+          report: createSessionReport({ runner, prompt: "hello" }),
+        };
       },
     },
-    config: {
-      runners: {
-        open: { agent: { type: "opencode", model: "openai/gpt-5" } },
-      },
-    },
-    executeRunnerFn: async (_testCase, _runner, _adapter, options) => {
-      seenCwd = options.cwd;
-      expect(await readFile(path.join(options.cwd, "bootstrap-output.txt"), "utf8")).toContain("suite-relative");
-      return {
-        runner,
-        passed: true,
-        status: "passed",
-        durationMs: 10,
-        artifactDir: options.artifactDir,
-        report: createSessionReport({ runner, prompt: "hello" }),
-      };
-    },
-  });
+  );
 
   expect(result.cases[0]?.passed).toBe(true);
   expect(seenCwd).not.toBe("");

@@ -70,7 +70,9 @@ function normalizeTags(tags: string[] | undefined, label: string): string[] {
 
   for (const [index, tag] of tags.entries()) {
     if (typeof tag !== "string" || tag.trim().length === 0) {
-      throw new Error(`Invalid tag for ${label} at index ${String(index)}: expected non-empty string`);
+      throw new Error(
+        `Invalid tag for ${label} at index ${String(index)}: expected non-empty string`,
+      );
     }
 
     if (!seen.has(tag)) {

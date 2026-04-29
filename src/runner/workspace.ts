@@ -3,9 +3,20 @@ import process from "node:process";
 import type { RunnerFailureOrigin, RunnerFailureType, RunnerResult } from "../domain/result.js";
 import type { RunnerInfo } from "../domain/runner.js";
 import type { SessionReport } from "../domain/session-report.js";
-import type { SuiteWorkspaceConfig, TestCase, WorkspaceBootstrapConfig } from "../domain/test-case.js";
+import type {
+  SuiteWorkspaceConfig,
+  TestCase,
+  WorkspaceBootstrapConfig,
+} from "../domain/test-case.js";
 import { serializeError } from "../utils/error.js";
-import { copyDir, ensureDir, ensureDirectoryExists, removeDir, writeJson, writeText } from "../utils/fs.js";
+import {
+  copyDir,
+  ensureDir,
+  ensureDirectoryExists,
+  removeDir,
+  writeJson,
+  writeText,
+} from "../utils/fs.js";
 import { execFileCapture } from "../utils/process.js";
 
 export interface ResolvedWorkspaceConfig {
@@ -49,9 +60,10 @@ export interface PreparedWorkspace {
 }
 
 export function resolveEffectiveWorkspace(options: WorkspaceSetupOptions): ResolvedWorkspaceConfig {
-  const suiteWorkspace = options.suiteWorkspace === undefined
-    ? undefined
-    : resolveSuiteWorkspacePaths(options.suiteWorkspace, options.suiteDir);
+  const suiteWorkspace =
+    options.suiteWorkspace === undefined
+      ? undefined
+      : resolveSuiteWorkspacePaths(options.suiteWorkspace, options.suiteDir);
   const configWorkspace = options.configWorkspace;
   const effective = suiteWorkspace ?? configWorkspace;
 
@@ -77,21 +89,30 @@ export function resolveEffectiveWorkspace(options: WorkspaceSetupOptions): Resol
   };
 }
 
-export function validateSuiteWorkspaceConfig(config: SuiteWorkspaceConfig, configPath = "workspace"): void {
+export function validateSuiteWorkspaceConfig(
+  config: SuiteWorkspaceConfig,
+  configPath = "workspace",
+): void {
   if (config.mode === "shared") {
     if (config.templateDir !== undefined) {
-      throw new Error(`Invalid suite config at ${configPath}.templateDir: expected this key to be omitted when workspace mode is "shared"`);
+      throw new Error(
+        `Invalid suite config at ${configPath}.templateDir: expected this key to be omitted when workspace mode is "shared"`,
+      );
     }
 
     if (config.bootstrap !== undefined) {
-      throw new Error(`Invalid suite config at ${configPath}.bootstrap: expected this key to be omitted when workspace mode is "shared"`);
+      throw new Error(
+        `Invalid suite config at ${configPath}.bootstrap: expected this key to be omitted when workspace mode is "shared"`,
+      );
     }
 
     return;
   }
 
   if (config.cwd !== undefined) {
-    throw new Error(`Invalid suite config at ${configPath}.cwd: expected this key to be omitted when workspace mode is "isolated"`);
+    throw new Error(
+      `Invalid suite config at ${configPath}.cwd: expected this key to be omitted when workspace mode is "isolated"`,
+    );
   }
 }
 
@@ -119,7 +140,12 @@ export async function prepareWorkspace(
     };
   }
 
-  const workspacePath = path.join(options.outputDir, "workspaces", sanitizePathSegment(options.testCase.id), options.runner.pathKey);
+  const workspacePath = path.join(
+    options.outputDir,
+    "workspaces",
+    sanitizePathSegment(options.testCase.id),
+    options.runner.pathKey,
+  );
   let bootstrap: BootstrapResult | undefined;
 
   try {
@@ -132,9 +158,10 @@ export async function prepareWorkspace(
       await ensureDir(workspacePath);
     }
 
-    bootstrap = config.bootstrap === undefined
-      ? undefined
-      : await runBootstrap(config.bootstrap, workspacePath, options);
+    bootstrap =
+      config.bootstrap === undefined
+        ? undefined
+        : await runBootstrap(config.bootstrap, workspacePath, options);
 
     await writeWorkspaceMetadata(path.join(options.artifactDir, "workspace.json"), {
       mode: "isolated",
@@ -255,7 +282,10 @@ export function createExecutionFailureResult(
   };
 }
 
-function resolveSuiteWorkspacePaths(config: SuiteWorkspaceConfig, suiteDir: string): SuiteWorkspaceConfig {
+function resolveSuiteWorkspacePaths(
+  config: SuiteWorkspaceConfig,
+  suiteDir: string,
+): SuiteWorkspaceConfig {
   if (config.mode === "shared") {
     return {
       mode: "shared",
@@ -265,13 +295,17 @@ function resolveSuiteWorkspacePaths(config: SuiteWorkspaceConfig, suiteDir: stri
 
   return {
     mode: "isolated",
-    templateDir: config.templateDir === undefined ? undefined : path.resolve(suiteDir, config.templateDir),
-    bootstrap: config.bootstrap === undefined ? undefined : {
-      command: resolvePathLikeValue(config.bootstrap.command, suiteDir),
-      args: config.bootstrap.args?.map((arg) => resolvePathLikeValue(arg, suiteDir)),
-      timeoutMs: config.bootstrap.timeoutMs,
-      env: config.bootstrap.env === undefined ? undefined : { ...config.bootstrap.env },
-    },
+    templateDir:
+      config.templateDir === undefined ? undefined : path.resolve(suiteDir, config.templateDir),
+    bootstrap:
+      config.bootstrap === undefined
+        ? undefined
+        : {
+            command: resolvePathLikeValue(config.bootstrap.command, suiteDir),
+            args: config.bootstrap.args?.map((arg) => resolvePathLikeValue(arg, suiteDir)),
+            timeoutMs: config.bootstrap.timeoutMs,
+            env: config.bootstrap.env === undefined ? undefined : { ...config.bootstrap.env },
+          },
   };
 }
 
@@ -298,13 +332,12 @@ async function runBootstrap(
     },
   });
 
-  await Promise.all([
-    writeText(stdoutPath, result.stdout),
-    writeText(stderrPath, result.stderr),
-  ]);
+  await Promise.all([writeText(stdoutPath, result.stdout), writeText(stderrPath, result.stderr)]);
 
   if (result.exitCode !== 0) {
-    throw new Error(`Workspace bootstrap failed: ${config.command} ${args.join(" ")} (exit ${String(result.exitCode)})`);
+    throw new Error(
+      `Workspace bootstrap failed: ${config.command} ${args.join(" ")} (exit ${String(result.exitCode)})`,
+    );
   }
 
   return {
@@ -326,7 +359,10 @@ async function cleanupWorkspace(options: {
     return { preserved: false };
   } catch (error) {
     const serialized = serializeError(error);
-    await writeText(path.join(options.artifactDir, "workspace.cleanup-error.log"), serialized.message);
+    await writeText(
+      path.join(options.artifactDir, "workspace.cleanup-error.log"),
+      serialized.message,
+    );
     return {
       preserved: true,
       cleanupError: serialized.message,
@@ -362,11 +398,13 @@ function resolvePathLikeValue(value: string, configDir: string): string {
 }
 
 function looksPathLike(value: string): boolean {
-  return value === "."
-    || value === ".."
-    || value.startsWith("./")
-    || value.startsWith("../")
-    || value.startsWith(".\\")
-    || value.startsWith("..\\")
-    || value.startsWith("/");
+  return (
+    value === "." ||
+    value === ".." ||
+    value.startsWith("./") ||
+    value.startsWith("../") ||
+    value.startsWith(".\\") ||
+    value.startsWith("..\\") ||
+    value.startsWith("/")
+  );
 }

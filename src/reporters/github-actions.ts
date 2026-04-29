@@ -12,7 +12,9 @@ interface GitHubActionsReporterOptions {
   env?: NodeJS.ProcessEnv;
 }
 
-export function createGitHubActionsReporter(options: GitHubActionsReporterOptions = {}): BenchmarkReporter {
+export function createGitHubActionsReporter(
+  options: GitHubActionsReporterOptions = {},
+): BenchmarkReporter {
   const stdout = options.stdout ?? process.stdout;
   const env = options.env ?? process.env;
 
@@ -70,7 +72,9 @@ function formatCommandProperties(properties: Map<string, string>): string {
     return "";
   }
 
-  return ` ${Array.from(properties.entries()).map(([key, value]) => `${key}=${escapeCommandProperty(value)}`).join(",")}`;
+  return ` ${Array.from(properties.entries())
+    .map(([key, value]) => `${key}=${escapeCommandProperty(value)}`)
+    .join(",")}`;
 }
 
 function escapeCommandProperty(value: string): string {
@@ -83,10 +87,7 @@ function escapeCommandProperty(value: string): string {
 }
 
 function escapeCommandMessage(value: string): string {
-  return value
-    .replace(/%/g, "%25")
-    .replace(/\r/g, "%0D")
-    .replace(/\n/g, "%0A");
+  return value.replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A");
 }
 
 function formatJobSummary(result: SuiteRunResult): string {
@@ -102,11 +103,16 @@ function formatJobSummary(result: SuiteRunResult): string {
     `- Runs: ${passedRuns} passed, ${totalRuns - passedRuns} failed`,
     `- Duration: ${formatDuration(result.durationMs)}`,
     `- Output: \`${result.outputDir}\``,
-    ...(result.selectedTags.length > 0 ? [`- Tags: ${result.selectedTags.map((t) => `\`${t}\``).join(", ")}`] : []),
+    ...(result.selectedTags.length > 0
+      ? [`- Tags: ${result.selectedTags.map((t) => `\`${t}\``).join(", ")}`]
+      : []),
   ];
 
   for (const summary of result.runners) {
-    lines.push("", `### Runner: \`${summary.runner.id}\` ${formatRunnerAgentLabel(summary.runner)}`);
+    lines.push(
+      "",
+      `### Runner: \`${summary.runner.id}\` ${formatRunnerAgentLabel(summary.runner)}`,
+    );
     lines.push("");
     lines.push("| Case | Duration | Input | Output | Reasoning | Cache | Billable |");
     lines.push("| --- | ---: | ---: | ---: | ---: | ---: | ---: |");
@@ -187,7 +193,10 @@ function countPassedCases(cases: CaseResult[]): number {
 }
 
 function countPassedRuns(cases: CaseResult[]): number {
-  return cases.reduce((sum, caseResult) => sum + caseResult.runnerResults.filter((result) => result.passed).length, 0);
+  return cases.reduce(
+    (sum, caseResult) => sum + caseResult.runnerResults.filter((result) => result.passed).length,
+    0,
+  );
 }
 
 function countTotalRuns(cases: CaseResult[]): number {

@@ -15,11 +15,7 @@ interface CliErrorRule {
 export function formatCliError(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   const presentation = classifyCliError(message);
-  const lines = [
-    pc.red(pc.bold(`Error: ${presentation.title}`)),
-    "",
-    presentation.detail,
-  ];
+  const lines = [pc.red(pc.bold(`Error: ${presentation.title}`)), "", presentation.detail];
 
   if (presentation.fixes.length > 0) {
     lines.push("", pc.bold("Try:"));
@@ -47,15 +43,20 @@ const cliErrorRules: CliErrorRule[] = [
       "Run `skillgym help` to see the available flags.",
     ],
   })),
-  exactRule("missing-config", "No skillgym config found. Create skillgym.config.ts with a non-empty runners map.", () => ({
-    title: "missing configuration",
-    detail: "skillgym could not find a `skillgym.config.*` file with at least one configured runner.",
-    fixes: [
-      "Create `skillgym.config.ts`, `skillgym.config.mjs`, or another supported config file next to your suite or in a parent directory.",
-      "Define at least one runner under `runners`, for example `{ runners: { open: { agent: { type: 'opencode', model: 'openai/gpt-5' } } } }`.",
-      "Use `--config <path>` if your config lives somewhere else.",
-    ],
-  })),
+  exactRule(
+    "missing-config",
+    "No skillgym config found. Create skillgym.config.ts with a non-empty runners map.",
+    () => ({
+      title: "missing configuration",
+      detail:
+        "skillgym could not find a `skillgym.config.*` file with at least one configured runner.",
+      fixes: [
+        "Create `skillgym.config.ts`, `skillgym.config.mjs`, or another supported config file next to your suite or in a parent directory.",
+        "Define at least one runner under `runners`, for example `{ runners: { open: { agent: { type: 'opencode', model: 'openai/gpt-5' } } } }`.",
+        "Use `--config <path>` if your config lives somewhere else.",
+      ],
+    }),
+  ),
   prefixRule("multiple-config-files", "Multiple config files found in ", (message) => ({
     title: "multiple config files found",
     detail: message,
@@ -126,10 +127,7 @@ const cliErrorRules: CliErrorRule[] = [
   exactRule("case-filter-miss", "No test cases matched the requested filters.", () => ({
     title: "case filter did not match anything",
     detail: "The selected suite does not contain a case matching the provided filters.",
-    fixes: [
-      "Check the case id passed to `--case`.",
-      "Remove `--case` to run the full suite.",
-    ],
+    fixes: ["Check the case id passed to `--case`.", "Remove `--case` to run the full suite."],
   })),
   prefixRule("runner-command-failed", "Command failed: ", (message) => ({
     title: "runner command failed",
@@ -140,22 +138,30 @@ const cliErrorRules: CliErrorRule[] = [
       "Inspect the saved `stdout.log` and `stderr.log` artifacts for the underlying tool output.",
     ],
   })),
-  exactRule("opencode-missing-session-id", "OpenCode run did not emit a session id; cannot export structured session data.", () => ({
-    title: "OpenCode did not produce a session id",
-    detail: "skillgym could not correlate the run with an exported OpenCode session.",
-    fixes: [
-      "Make sure the installed `opencode` CLI supports both `run --format json` and `export`.",
-      "Re-run the command and inspect the saved stdout/stderr artifacts to see what OpenCode actually emitted.",
-    ],
-  })),
-  prefixRule("opencode-invalid-export-json", "OpenCode export returned invalid JSON:", (message) => ({
-    title: "OpenCode export returned unreadable data",
-    detail: message,
-    fixes: [
-      "Check whether the installed `opencode` version changed its export format.",
-      "Inspect `session.export.json` or the export command artifacts to confirm what was returned.",
-    ],
-  })),
+  exactRule(
+    "opencode-missing-session-id",
+    "OpenCode run did not emit a session id; cannot export structured session data.",
+    () => ({
+      title: "OpenCode did not produce a session id",
+      detail: "skillgym could not correlate the run with an exported OpenCode session.",
+      fixes: [
+        "Make sure the installed `opencode` CLI supports both `run --format json` and `export`.",
+        "Re-run the command and inspect the saved stdout/stderr artifacts to see what OpenCode actually emitted.",
+      ],
+    }),
+  ),
+  prefixRule(
+    "opencode-invalid-export-json",
+    "OpenCode export returned invalid JSON:",
+    (message) => ({
+      title: "OpenCode export returned unreadable data",
+      detail: message,
+      fixes: [
+        "Check whether the installed `opencode` version changed its export format.",
+        "Inspect `session.export.json` or the export command artifacts to confirm what was returned.",
+      ],
+    }),
+  ),
   oneOfExactRule(
     "opencode-missing-export-data",
     [

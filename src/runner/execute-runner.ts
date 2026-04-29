@@ -74,7 +74,13 @@ export async function executeRunner(
 
     if (options.snapshots !== undefined) {
       try {
-        applySnapshotCheck(testCase.id, runner, report, options.snapshots.store, options.snapshots.runtime);
+        applySnapshotCheck(
+          testCase.id,
+          runner,
+          report,
+          options.snapshots.store,
+          options.snapshots.runtime,
+        );
       } catch (error) {
         return await writeAndReturnFailure(error, {
           testCase,
@@ -120,7 +126,11 @@ export async function executeRunner(
       runner,
       artifactDir,
       durationMs: Date.now() - startedMs,
-      failureType: isMaxStepsExceededError(error) ? "runner-crash" : isCommandTimeoutError(error) ? "timeout" : undefined,
+      failureType: isMaxStepsExceededError(error)
+        ? "runner-crash"
+        : isCommandTimeoutError(error)
+          ? "timeout"
+          : undefined,
       failureOrigin: isMaxStepsExceededError(error) ? "max-steps" : "runner",
       failureLogPath: path.join(artifactDir, "stderr.log"),
     });
@@ -143,11 +153,14 @@ function applySnapshotCheck(
     );
   }
 
-  store.check({
-    caseId,
-    runner,
-    actual,
-  }, runtime);
+  store.check(
+    {
+      caseId,
+      runner,
+      actual,
+    },
+    runtime,
+  );
 }
 
 async function writeAndReturnFailure(

@@ -72,7 +72,13 @@ export interface SkillDetection {
 
 ```ts
 export type SessionEvent =
-  | { type: "message"; role: "user" | "assistant"; phase?: "thinking" | "commentary" | "final"; text: string; at?: string }
+  | {
+      type: "message";
+      role: "user" | "assistant";
+      phase?: "thinking" | "commentary" | "final";
+      text: string;
+      at?: string;
+    }
   | { type: "toolCall"; tool: string; args?: unknown; at?: string }
   | { type: "toolResult"; tool?: string; output: string; at?: string }
   | { type: "command"; command: string; at?: string }
@@ -87,6 +93,7 @@ When a runner emits a relative path, normalization resolves it against the best 
 ## Token semantics
 
 Preferred source order:
+
 1. provider-reported usage
 2. derived estimate from structured artifacts
 3. character counts for diagnostics only

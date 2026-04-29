@@ -2,8 +2,19 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, expect, test } from "vitest";
-import type { BenchmarkReporter, RunnerInfo, RunnerResult, SuiteRunResult, TestCase } from "../../src/index.js";
-import type { RawRunArtifacts, RunHandle, RunInput, RunnerAdapter } from "../../src/domain/adapter.js";
+import type {
+  BenchmarkReporter,
+  RunnerInfo,
+  RunnerResult,
+  SuiteRunResult,
+  TestCase,
+} from "../../src/index.js";
+import type {
+  RawRunArtifacts,
+  RunHandle,
+  RunInput,
+  RunnerAdapter,
+} from "../../src/domain/adapter.js";
 import type { SnapshotRuntimeOptions } from "../../src/snapshots/store.js";
 import { executeRunner } from "../../src/runner/execute-runner.js";
 import { classifyExpectedFailure, executeSuite } from "../../src/runner/execute-suite.js";
@@ -13,7 +24,9 @@ import { createSessionReport } from "../helpers/session-report.js";
 const tempDirs: string[] = [];
 
 afterEach(async () => {
-  await Promise.all(tempDirs.splice(0).map((tempDir) => rm(tempDir, { recursive: true, force: true })));
+  await Promise.all(
+    tempDirs.splice(0).map((tempDir) => rm(tempDir, { recursive: true, force: true })),
+  );
 });
 
 test("executeSuite with serial schedule preserves lifecycle order", async () => {
@@ -21,7 +34,9 @@ test("executeSuite with serial schedule preserves lifecycle order", async () => 
   const calls: string[] = [];
   const reporter: BenchmarkReporter = {
     onSuiteStart(event) {
-      calls.push(`suite:start:${event.context.scheduleMode}:${event.runners.map((runner) => runner.id).join(",")}`);
+      calls.push(
+        `suite:start:${event.context.scheduleMode}:${event.runners.map((runner) => runner.id).join(",")}`,
+      );
     },
     onCaseStart(event) {
       calls.push(`case:start:${event.testCase.id}`);
@@ -55,13 +70,14 @@ test("executeSuite with serial schedule preserves lifecycle order", async () => 
     schedule: "serial",
     reporter,
     isInteractive: false,
-      config: {
-        runners: {
-          open: { agent: { type: "opencode", model: "openai/gpt-5" } },
-          code: { agent: { type: "codex", model: "gpt-5" } },
-        },
+    config: {
+      runners: {
+        open: { agent: { type: "opencode", model: "openai/gpt-5" } },
+        code: { agent: { type: "codex", model: "gpt-5" } },
       },
-      executeRunnerFn: async (testCase, runner, _adapter, options) => createRunnerResult({
+    },
+    executeRunnerFn: async (testCase, runner, _adapter, options) =>
+      createRunnerResult({
         caseId: testCase.id,
         runner,
         passed: !(testCase.id === "alpha" && runner.id === "code"),
@@ -71,7 +87,7 @@ test("executeSuite with serial schedule preserves lifecycle order", async () => 
         outputTokens: runner.id === "open" ? 21 : 32,
         reasoningTokens: runner.id === "open" ? 2 : undefined,
         observedReads: runner.id === "open" ? 1 : 2,
-    }),
+      }),
   });
 
   expect(calls).toEqual([
@@ -121,12 +137,12 @@ test("executeSuite with parallel schedule keeps final ordering stable while hook
     schedule: "parallel",
     reporter,
     isInteractive: false,
-      config: {
-        runners: {
-          open: { agent: { type: "opencode", model: "openai/gpt-5" } },
-          code: { agent: { type: "codex", model: "gpt-5" } },
-        },
+    config: {
+      runners: {
+        open: { agent: { type: "opencode", model: "openai/gpt-5" } },
+        code: { agent: { type: "codex", model: "gpt-5" } },
       },
+    },
     executeRunnerFn: async (testCase, runner, _adapter, options) => {
       const deferred = createDeferred<RunnerResult>();
       pending.set(`${testCase.id}:${runner.id}`, deferred);
@@ -155,69 +171,76 @@ test("executeSuite with parallel schedule keeps final ordering stable while hook
     "runner:finish:alpha:code",
     "case:finish:alpha",
   ]);
-  expect(calls.slice(6, 9)).toEqual(expect.arrayContaining([
-    "case:start:beta",
-    "runner:start:beta:open",
-    "runner:start:beta:code",
-  ]));
-  expect(calls.slice(9, 11)).toEqual(expect.arrayContaining([
-    "runner:finish:beta:code",
-    "runner:finish:beta:open",
-  ]));
+  expect(calls.slice(6, 9)).toEqual(
+    expect.arrayContaining(["case:start:beta", "runner:start:beta:open", "runner:start:beta:code"]),
+  );
+  expect(calls.slice(9, 11)).toEqual(
+    expect.arrayContaining(["runner:finish:beta:code", "runner:finish:beta:open"]),
+  );
   expect(calls[11]).toBe("case:finish:beta");
   expect(result.cases.map((caseResult) => caseResult.caseId)).toEqual(["alpha", "beta"]);
-  expect(result.cases[0]?.runnerResults.map((runnerResult) => runnerResult.runner.id)).toEqual(["open", "code"]);
-  expect(result.cases[1]?.runnerResults.map((runnerResult) => runnerResult.runner.id)).toEqual(["open", "code"]);
+  expect(result.cases[0]?.runnerResults.map((runnerResult) => runnerResult.runner.id)).toEqual([
+    "open",
+    "code",
+  ]);
+  expect(result.cases[1]?.runnerResults.map((runnerResult) => runnerResult.runner.id)).toEqual([
+    "open",
+    "code",
+  ]);
 });
 
 test("executeSuite blocks remaining runs for a runner after initial model rejection", async () => {
   const outputDir = await createTempDir();
   const started: string[] = [];
 
-  const result = await executeSuite("./suite.ts", [
-    { id: "alpha", prompt: "a", assert() {} },
-    { id: "beta", prompt: "b", assert() {} },
-    { id: "gamma", prompt: "c", assert() {} },
-  ], {
-    cwd: outputDir,
-    outputDir,
-    schedule: "parallel",
-    isInteractive: false,
-    config: {
-      runners: {
-        open: { agent: { type: "opencode", model: "openai/gpt-5" } },
-        code: { agent: { type: "codex", model: "gpt-5" } },
+  const result = await executeSuite(
+    "./suite.ts",
+    [
+      { id: "alpha", prompt: "a", assert() {} },
+      { id: "beta", prompt: "b", assert() {} },
+      { id: "gamma", prompt: "c", assert() {} },
+    ],
+    {
+      cwd: outputDir,
+      outputDir,
+      schedule: "parallel",
+      isInteractive: false,
+      config: {
+        runners: {
+          open: { agent: { type: "opencode", model: "openai/gpt-5" } },
+          code: { agent: { type: "codex", model: "gpt-5" } },
+        },
       },
-    },
-    executeRunnerFn: async (testCase, runner, _adapter, options) => {
-      started.push(`${testCase.id}:${runner.id}`);
+      executeRunnerFn: async (testCase, runner, _adapter, options) => {
+        started.push(`${testCase.id}:${runner.id}`);
 
-      if (testCase.id === "alpha" && runner.id === "code") {
-        await writeFile(
-          path.join(options.artifactDir, "stdout.log"),
-          '{"type":"error","message":"{\"type\":\"error\",\"status\":400,\"error\":{\"type\":\"invalid_request_error\",\"message\":\"The \'gpt-5\' model is not supported when using Codex with a ChatGPT account.\"}}"}\n',
-          "utf8",
-        );
-        await writeFile(path.join(options.artifactDir, "stderr.log"), "", "utf8");
+        if (testCase.id === "alpha" && runner.id === "code") {
+          await writeFile(
+            path.join(options.artifactDir, "stdout.log"),
+            '{"type":"error","message":"{\"type\":\"error\",\"status\":400,\"error\":{\"type\":\"invalid_request_error\",\"message\":\"The \'gpt-5\' model is not supported when using Codex with a ChatGPT account.\"}}"}\n',
+            "utf8",
+          );
+          await writeFile(path.join(options.artifactDir, "stderr.log"), "", "utf8");
+
+          return {
+            ...createRunnerResultForKey(testCase.id, runner.id, outputDir, false),
+            artifactDir: options.artifactDir,
+            error: {
+              name: "Error",
+              message: "Command failed: codex",
+            },
+            failureType: "runner-crash",
+            failureOrigin: "runner",
+          };
+        }
 
         return {
-          ...createRunnerResultForKey(testCase.id, runner.id, outputDir, false),
+          ...createRunnerResultForKey(testCase.id, runner.id, outputDir, true),
           artifactDir: options.artifactDir,
-          error: {
-            name: "Error",
-            message: "Command failed: codex",
-          },
-          failureType: "runner-crash",
-          failureOrigin: "runner",
         };
-      }
-
-      return {
-        ...createRunnerResultForKey(testCase.id, runner.id, outputDir, true),
-        artifactDir: options.artifactDir,
-      };
+      },
     },
-  });
+  );
 
   expect(started.slice(0, 2)).toEqual(["alpha:open", "alpha:code"]);
   expect(started.slice(2)).toEqual(expect.arrayContaining(["beta:open", "gamma:open"]));
@@ -235,9 +258,9 @@ test("executeSuite blocks remaining runs for a runner after initial model reject
     passed: false,
     failureOrigin: "model-rejected",
   });
-  expect(result.cases[1]?.runnerResults.find((entry) => entry.runner.id === "code")?.error?.message).toContain(
-    'Runner rejected configured model "gpt-5" during initial execution.',
-  );
+  expect(
+    result.cases[1]?.runnerResults.find((entry) => entry.runner.id === "code")?.error?.message,
+  ).toContain('Runner rejected configured model "gpt-5" during initial execution.');
 });
 
 test("executeSuite with parallel schedule respects maxParallel", async () => {
@@ -246,46 +269,50 @@ test("executeSuite with parallel schedule respects maxParallel", async () => {
   let active = 0;
   let maxActive = 0;
 
-  const suitePromise = executeSuite("./suite.ts", [
-    { id: "alpha", prompt: "a", assert() {} },
-    { id: "beta", prompt: "b", assert() {} },
-  ], {
-    cwd: outputDir,
-    outputDir,
-    schedule: "parallel",
-    maxParallel: 2,
-    isInteractive: false,
-    config: {
-      runners: {
-        open: { agent: { type: "opencode", model: "openai/gpt-5" } },
-        code: { agent: { type: "codex", model: "gpt-5" } },
+  const suitePromise = executeSuite(
+    "./suite.ts",
+    [
+      { id: "alpha", prompt: "a", assert() {} },
+      { id: "beta", prompt: "b", assert() {} },
+    ],
+    {
+      cwd: outputDir,
+      outputDir,
+      schedule: "parallel",
+      maxParallel: 2,
+      isInteractive: false,
+      config: {
+        runners: {
+          open: { agent: { type: "opencode", model: "openai/gpt-5" } },
+          code: { agent: { type: "codex", model: "gpt-5" } },
+        },
+      },
+      executeRunnerFn: async (testCase, runner, _adapter, options) => {
+        const key = `${testCase.id}:${runner.id}`;
+        const deferred = createDeferred<void>();
+        pending.set(key, deferred);
+        active += 1;
+        maxActive = Math.max(maxActive, active);
+
+        try {
+          await deferred.promise;
+          return createRunnerResult({
+            caseId: testCase.id,
+            runner,
+            passed: true,
+            durationMs: 10,
+            artifactDir: options.artifactDir,
+            totalTokens: 100,
+            outputTokens: 20,
+            reasoningTokens: 2,
+            observedReads: 1,
+          });
+        } finally {
+          active -= 1;
+        }
       },
     },
-    executeRunnerFn: async (testCase, runner, _adapter, options) => {
-      const key = `${testCase.id}:${runner.id}`;
-      const deferred = createDeferred<void>();
-      pending.set(key, deferred);
-      active += 1;
-      maxActive = Math.max(maxActive, active);
-
-      try {
-        await deferred.promise;
-        return createRunnerResult({
-          caseId: testCase.id,
-          runner,
-          passed: true,
-          durationMs: 10,
-          artifactDir: options.artifactDir,
-          totalTokens: 100,
-          outputTokens: 20,
-          reasoningTokens: 2,
-          observedReads: 1,
-        });
-      } finally {
-        active -= 1;
-      }
-    },
-  });
+  );
 
   await waitFor(() => pending.size === 1);
   expect(maxActive).toBe(1);
@@ -318,14 +345,17 @@ test("executeSuite with isolated-by-runner runs serially within a runner and con
   ]);
   let maxGlobalConcurrency = 0;
 
-  const resultPromise = executeSuite("./suite.ts", [
-    { id: "alpha", prompt: "a", assert() {} },
-    { id: "beta", prompt: "b", assert() {} },
-  ], {
-    cwd: outputDir,
-    outputDir,
-    schedule: "isolated-by-runner",
-    isInteractive: false,
+  const resultPromise = executeSuite(
+    "./suite.ts",
+    [
+      { id: "alpha", prompt: "a", assert() {} },
+      { id: "beta", prompt: "b", assert() {} },
+    ],
+    {
+      cwd: outputDir,
+      outputDir,
+      schedule: "isolated-by-runner",
+      isInteractive: false,
       config: {
         runners: {
           open: { agent: { type: "opencode", model: "openai/gpt-5" } },
@@ -333,33 +363,37 @@ test("executeSuite with isolated-by-runner runs serially within a runner and con
         },
       },
       executeRunnerFn: async (testCase, runner, _adapter, options) => {
-      started.push(`${testCase.id}:${runner.id}`);
-      activeByRunner.set(runner.id, (activeByRunner.get(runner.id) ?? 0) + 1);
-      maxGlobalConcurrency = Math.max(maxGlobalConcurrency, [...activeByRunner.values()].reduce((sum, value) => sum + value, 0));
+        started.push(`${testCase.id}:${runner.id}`);
+        activeByRunner.set(runner.id, (activeByRunner.get(runner.id) ?? 0) + 1);
+        maxGlobalConcurrency = Math.max(
+          maxGlobalConcurrency,
+          [...activeByRunner.values()].reduce((sum, value) => sum + value, 0),
+        );
 
-      try {
-        if (testCase.id === "alpha") {
-          await firstRunBlockers.get(runner.id)?.promise;
-        } else {
-          await secondRunBlockers.get(runner.id)?.promise;
+        try {
+          if (testCase.id === "alpha") {
+            await firstRunBlockers.get(runner.id)?.promise;
+          } else {
+            await secondRunBlockers.get(runner.id)?.promise;
+          }
+
+          return createRunnerResult({
+            caseId: testCase.id,
+            runner,
+            passed: true,
+            durationMs: 10,
+            artifactDir: options.artifactDir,
+            totalTokens: 100,
+            outputTokens: 20,
+            reasoningTokens: 2,
+            observedReads: 1,
+          });
+        } finally {
+          activeByRunner.set(runner.id, (activeByRunner.get(runner.id) ?? 1) - 1);
         }
-
-        return createRunnerResult({
-          caseId: testCase.id,
-          runner,
-          passed: true,
-          durationMs: 10,
-          artifactDir: options.artifactDir,
-          totalTokens: 100,
-          outputTokens: 20,
-          reasoningTokens: 2,
-          observedReads: 1,
-        });
-      } finally {
-        activeByRunner.set(runner.id, (activeByRunner.get(runner.id) ?? 1) - 1);
-      }
+      },
     },
-  });
+  );
 
   await waitFor(() => started.length === 1);
   expect(started).toEqual(["alpha:open"]);
@@ -379,8 +413,14 @@ test("executeSuite with isolated-by-runner runs serially within a runner and con
   expect(started.indexOf("beta:open")).toBeGreaterThan(started.indexOf("alpha:open"));
   expect(started.indexOf("beta:code")).toBeGreaterThan(started.indexOf("alpha:code"));
   expect(result.cases.map((caseResult) => caseResult.caseId)).toEqual(["alpha", "beta"]);
-  expect(result.cases[0]?.runnerResults.map((runnerResult) => runnerResult.runner.id)).toEqual(["open", "code"]);
-  expect(result.cases[1]?.runnerResults.map((runnerResult) => runnerResult.runner.id)).toEqual(["open", "code"]);
+  expect(result.cases[0]?.runnerResults.map((runnerResult) => runnerResult.runner.id)).toEqual([
+    "open",
+    "code",
+  ]);
+  expect(result.cases[1]?.runnerResults.map((runnerResult) => runnerResult.runner.id)).toEqual([
+    "open",
+    "code",
+  ]);
 });
 
 test("executeSuite with isolated-by-runner caps active runner lanes", async () => {
@@ -388,46 +428,54 @@ test("executeSuite with isolated-by-runner caps active runner lanes", async () =
   const started: string[] = [];
   const pending = new Map<string, Deferred<void>>();
 
-  const suitePromise = executeSuite("./suite.ts", [
-    { id: "alpha", prompt: "a", assert() {} },
-    { id: "beta", prompt: "b", assert() {} },
-  ], {
-    cwd: outputDir,
-    outputDir,
-    schedule: "isolated-by-runner",
-    maxParallel: 2,
-    isInteractive: false,
-    config: {
-      runners: {
-        open: { agent: { type: "opencode", model: "openai/gpt-5" } },
-        code: { agent: { type: "codex", model: "gpt-5" } },
-        cursor: { agent: { type: "cursor-agent", model: "composer-2-fast" } },
+  const suitePromise = executeSuite(
+    "./suite.ts",
+    [
+      { id: "alpha", prompt: "a", assert() {} },
+      { id: "beta", prompt: "b", assert() {} },
+    ],
+    {
+      cwd: outputDir,
+      outputDir,
+      schedule: "isolated-by-runner",
+      maxParallel: 2,
+      isInteractive: false,
+      config: {
+        runners: {
+          open: { agent: { type: "opencode", model: "openai/gpt-5" } },
+          code: { agent: { type: "codex", model: "gpt-5" } },
+          cursor: { agent: { type: "cursor-agent", model: "composer-2-fast" } },
+        },
+      },
+      executeRunnerFn: async (testCase, runner, _adapter, options) => {
+        const key = `${testCase.id}:${runner.id}`;
+        started.push(key);
+
+        const shouldBlock =
+          key === "alpha:open" ||
+          key === "alpha:code" ||
+          key === "beta:open" ||
+          key === "beta:code";
+        if (shouldBlock) {
+          const deferred = createDeferred<void>();
+          pending.set(key, deferred);
+          await deferred.promise;
+        }
+
+        return createRunnerResult({
+          caseId: testCase.id,
+          runner,
+          passed: true,
+          durationMs: 10,
+          artifactDir: options.artifactDir,
+          totalTokens: 100,
+          outputTokens: 20,
+          reasoningTokens: 2,
+          observedReads: 1,
+        });
       },
     },
-    executeRunnerFn: async (testCase, runner, _adapter, options) => {
-      const key = `${testCase.id}:${runner.id}`;
-      started.push(key);
-
-      const shouldBlock = key === "alpha:open" || key === "alpha:code" || key === "beta:open" || key === "beta:code";
-      if (shouldBlock) {
-        const deferred = createDeferred<void>();
-        pending.set(key, deferred);
-        await deferred.promise;
-      }
-
-      return createRunnerResult({
-        caseId: testCase.id,
-        runner,
-        passed: true,
-        durationMs: 10,
-        artifactDir: options.artifactDir,
-        totalTokens: 100,
-        outputTokens: 20,
-        reasoningTokens: 2,
-        observedReads: 1,
-      });
-    },
-  });
+  );
 
   await waitFor(() => started.includes("alpha:open"));
   expect(started).toEqual(["alpha:open"]);
@@ -499,58 +547,83 @@ test("classifyExpectedFailure maps raw outcomes to expectation-aware statuses", 
   const normalCase: TestCase = { id: "normal", prompt: "a", assert() {} };
   const expectedCase: TestCase = { id: "expected", prompt: "a", expectedFail: true, assert() {} };
 
-  expect(classifyExpectedFailure(normalCase, createRunnerResult({
-    caseId: "normal",
-    runner,
-    passed: true,
-    durationMs: 10,
-    artifactDir: path.join(outputDir, "normal", runner.pathKey),
-    totalTokens: 100,
-    outputTokens: 20,
-    observedReads: 1,
-  }))).toMatchObject({ passed: true, status: "passed" });
-  expect(classifyExpectedFailure(normalCase, createRunnerResult({
-    caseId: "normal",
-    runner,
-    passed: false,
-    durationMs: 10,
-    artifactDir: path.join(outputDir, "normal", runner.pathKey),
-    totalTokens: 100,
-    outputTokens: 20,
-    observedReads: 1,
-  }))).toMatchObject({ passed: false, status: "failed" });
-  expect(classifyExpectedFailure(expectedCase, createRunnerResult({
-    caseId: "expected",
-    runner,
-    passed: false,
-    durationMs: 10,
-    artifactDir: path.join(outputDir, "expected", runner.pathKey),
-    totalTokens: 100,
-    outputTokens: 20,
-    observedReads: 1,
-  }))).toMatchObject({ passed: true, status: "expected-failed" });
-  expect(classifyExpectedFailure(expectedCase, createRunnerResult({
-    caseId: "expected",
-    runner,
-    passed: true,
-    durationMs: 10,
-    artifactDir: path.join(outputDir, "expected", runner.pathKey),
-    totalTokens: 100,
-    outputTokens: 20,
-    observedReads: 1,
-  }))).toMatchObject({ passed: false, status: "unexpected-passed" });
-  expect(classifyExpectedFailure(expectedCase, createRunnerResult({
-    caseId: "expected",
-    runner,
-    passed: false,
-    durationMs: 10,
-    artifactDir: path.join(outputDir, "expected", runner.pathKey),
-    totalTokens: 100,
-    outputTokens: 20,
-    observedReads: 1,
-    failureType: "runner-crash",
-    failureOrigin: "runner",
-  }))).toMatchObject({ passed: false, status: "failed" });
+  expect(
+    classifyExpectedFailure(
+      normalCase,
+      createRunnerResult({
+        caseId: "normal",
+        runner,
+        passed: true,
+        durationMs: 10,
+        artifactDir: path.join(outputDir, "normal", runner.pathKey),
+        totalTokens: 100,
+        outputTokens: 20,
+        observedReads: 1,
+      }),
+    ),
+  ).toMatchObject({ passed: true, status: "passed" });
+  expect(
+    classifyExpectedFailure(
+      normalCase,
+      createRunnerResult({
+        caseId: "normal",
+        runner,
+        passed: false,
+        durationMs: 10,
+        artifactDir: path.join(outputDir, "normal", runner.pathKey),
+        totalTokens: 100,
+        outputTokens: 20,
+        observedReads: 1,
+      }),
+    ),
+  ).toMatchObject({ passed: false, status: "failed" });
+  expect(
+    classifyExpectedFailure(
+      expectedCase,
+      createRunnerResult({
+        caseId: "expected",
+        runner,
+        passed: false,
+        durationMs: 10,
+        artifactDir: path.join(outputDir, "expected", runner.pathKey),
+        totalTokens: 100,
+        outputTokens: 20,
+        observedReads: 1,
+      }),
+    ),
+  ).toMatchObject({ passed: true, status: "expected-failed" });
+  expect(
+    classifyExpectedFailure(
+      expectedCase,
+      createRunnerResult({
+        caseId: "expected",
+        runner,
+        passed: true,
+        durationMs: 10,
+        artifactDir: path.join(outputDir, "expected", runner.pathKey),
+        totalTokens: 100,
+        outputTokens: 20,
+        observedReads: 1,
+      }),
+    ),
+  ).toMatchObject({ passed: false, status: "unexpected-passed" });
+  expect(
+    classifyExpectedFailure(
+      expectedCase,
+      createRunnerResult({
+        caseId: "expected",
+        runner,
+        passed: false,
+        durationMs: 10,
+        artifactDir: path.join(outputDir, "expected", runner.pathKey),
+        totalTokens: 100,
+        outputTokens: 20,
+        observedReads: 1,
+        failureType: "runner-crash",
+        failureOrigin: "runner",
+      }),
+    ),
+  ).toMatchObject({ passed: false, status: "failed" });
 });
 
 test("executeSuite aggregates runner summaries from case-centric results", async () => {
@@ -573,37 +646,37 @@ test("executeSuite aggregates runner summaries from case-centric results", async
     outputDir,
     reporter,
     isInteractive: false,
-      config: {
-        runners: {
-          open: { agent: { type: "opencode", model: "openai/gpt-5" } },
-          code: { agent: { type: "codex", model: "gpt-5" } },
-        },
+    config: {
+      runners: {
+        open: { agent: { type: "opencode", model: "openai/gpt-5" } },
+        code: { agent: { type: "codex", model: "gpt-5" } },
       },
-      executeRunnerFn: async (testCase, runner, _adapter, options) => {
-        if (runner.id === "open") {
-          return createRunnerResult({
-            caseId: testCase.id,
-            runner,
-            passed: true,
-            durationMs: testCase.id === "alpha" ? 20 : 40,
-            artifactDir: options.artifactDir,
-            totalTokens: testCase.id === "alpha" ? 200 : 300,
-            outputTokens: 20,
-            reasoningTokens: 5,
-            observedReads: 1,
-        });
-      }
-
+    },
+    executeRunnerFn: async (testCase, runner, _adapter, options) => {
+      if (runner.id === "open") {
         return createRunnerResult({
           caseId: testCase.id,
           runner,
-          passed: testCase.id === "beta",
-          durationMs: testCase.id === "alpha" ? 50 : 70,
+          passed: true,
+          durationMs: testCase.id === "alpha" ? 20 : 40,
           artifactDir: options.artifactDir,
-          totalTokens: 400,
-          outputTokens: 30,
-          reasoningTokens: undefined,
-          observedReads: 2,
+          totalTokens: testCase.id === "alpha" ? 200 : 300,
+          outputTokens: 20,
+          reasoningTokens: 5,
+          observedReads: 1,
+        });
+      }
+
+      return createRunnerResult({
+        caseId: testCase.id,
+        runner,
+        passed: testCase.id === "beta",
+        durationMs: testCase.id === "alpha" ? 50 : 70,
+        artifactDir: options.artifactDir,
+        totalTokens: 400,
+        outputTokens: 30,
+        reasoningTokens: undefined,
+        observedReads: 2,
       });
     },
   });
@@ -644,37 +717,48 @@ test("executeSuite aggregates runner summaries from case-centric results", async
 test("executeSuite aggregates expected failures as suite-health passes", async () => {
   const outputDir = await createTempDir();
 
-  const result = await executeSuite("./suite.ts", [
-    { id: "known-gap", prompt: "a", expectedFail: true, assert() {} },
-    { id: "stable", prompt: "b", assert() {} },
-  ], {
-    cwd: outputDir,
-    outputDir,
-    isInteractive: false,
-    config: {
-      runners: {
-        open: { agent: { type: "opencode", model: "openai/gpt-5" } },
+  const result = await executeSuite(
+    "./suite.ts",
+    [
+      { id: "known-gap", prompt: "a", expectedFail: true, assert() {} },
+      { id: "stable", prompt: "b", assert() {} },
+    ],
+    {
+      cwd: outputDir,
+      outputDir,
+      isInteractive: false,
+      config: {
+        runners: {
+          open: { agent: { type: "opencode", model: "openai/gpt-5" } },
+        },
       },
+      executeRunnerFn: async (testCase, runner, _adapter, options) =>
+        createRunnerResult({
+          caseId: testCase.id,
+          runner,
+          passed: testCase.id !== "known-gap",
+          durationMs: 10,
+          artifactDir: options.artifactDir,
+          totalTokens: 100,
+          outputTokens: 20,
+          observedReads: 1,
+        }),
     },
-    executeRunnerFn: async (testCase, runner, _adapter, options) => createRunnerResult({
-      caseId: testCase.id,
-      runner,
-      passed: testCase.id !== "known-gap",
-      durationMs: 10,
-      artifactDir: options.artifactDir,
-      totalTokens: 100,
-      outputTokens: 20,
-      observedReads: 1,
-    }),
-  });
+  );
 
   expect(result.cases).toMatchObject([
-    { caseId: "known-gap", passed: true, runnerResults: [{ passed: true, status: "expected-failed" }] },
+    {
+      caseId: "known-gap",
+      passed: true,
+      runnerResults: [{ passed: true, status: "expected-failed" }],
+    },
     { caseId: "stable", passed: true, runnerResults: [{ passed: true, status: "passed" }] },
   ]);
   expect(result.runners[0]).toMatchObject({ totalCases: 2, passedCases: 2, successRate: 1 });
 
-  const saved = JSON.parse(await readFile(path.join(result.outputDir, "results.json"), "utf8")) as SuiteRunResult;
+  const saved = JSON.parse(
+    await readFile(path.join(result.outputDir, "results.json"), "utf8"),
+  ) as SuiteRunResult;
   expect(saved.cases[0]?.runnerResults[0]?.status).toBe("expected-failed");
 });
 
@@ -694,7 +778,10 @@ test("executeSuite filters cases by tags with OR semantics and preserves result 
     tags: ["fast", "regression"],
     reporter: {
       onSuiteStart(event) {
-        contexts.push({ tagFilter: event.context.tagFilter, declaredTags: event.context.declaredTags });
+        contexts.push({
+          tagFilter: event.context.tagFilter,
+          declaredTags: event.context.declaredTags,
+        });
       },
     },
     isInteractive: false,
@@ -719,15 +806,21 @@ test("executeSuite filters cases by tags with OR semantics and preserves result 
   });
 
   expect(executed).toEqual(["alpha", "beta"]);
-  expect(contexts).toEqual([{ tagFilter: ["fast", "regression"], declaredTags: ["smoke", "fast", "regression"] }]);
+  expect(contexts).toEqual([
+    { tagFilter: ["fast", "regression"], declaredTags: ["smoke", "fast", "regression"] },
+  ]);
   expect(result.declaredTags).toEqual(["smoke", "fast", "regression"]);
   expect(result.selectedTags).toEqual(["fast", "regression"]);
-  expect(result.cases.map((caseResult) => ({ caseId: caseResult.caseId, tags: caseResult.tags }))).toEqual([
+  expect(
+    result.cases.map((caseResult) => ({ caseId: caseResult.caseId, tags: caseResult.tags })),
+  ).toEqual([
     { caseId: "alpha", tags: ["smoke", "fast"] },
     { caseId: "beta", tags: ["regression"] },
   ]);
 
-  const saved = JSON.parse(await readFile(path.join(result.outputDir, "results.json"), "utf8")) as SuiteRunResult;
+  const saved = JSON.parse(
+    await readFile(path.join(result.outputDir, "results.json"), "utf8"),
+  ) as SuiteRunResult;
   expect(saved.declaredTags).toEqual(["smoke", "fast", "regression"]);
   expect(saved.selectedTags).toEqual(["fast", "regression"]);
   expect(saved.cases[0]?.tags).toEqual(["smoke", "fast"]);
@@ -776,25 +869,27 @@ test("executeSuite reports active tag filters when no cases match", async () => 
   const outputDir = await createTempDir();
   let errorContext: { tagFilter?: string[]; declaredTags: string[] } | undefined;
 
-  await expect(executeSuite("./suite.ts", [{ id: "alpha", prompt: "a", tags: ["smoke"], assert() {} }], {
-    cwd: outputDir,
-    outputDir,
-    tags: ["missing"],
-    reporter: {
-      onError(event) {
-        errorContext = {
-          tagFilter: event.context?.tagFilter,
-          declaredTags: event.context?.declaredTags ?? [],
-        };
+  await expect(
+    executeSuite("./suite.ts", [{ id: "alpha", prompt: "a", tags: ["smoke"], assert() {} }], {
+      cwd: outputDir,
+      outputDir,
+      tags: ["missing"],
+      reporter: {
+        onError(event) {
+          errorContext = {
+            tagFilter: event.context?.tagFilter,
+            declaredTags: event.context?.declaredTags ?? [],
+          };
+        },
       },
-    },
-    isInteractive: false,
-    config: {
-      runners: {
-        open: { agent: { type: "opencode", model: "openai/gpt-5" } },
+      isInteractive: false,
+      config: {
+        runners: {
+          open: { agent: { type: "opencode", model: "openai/gpt-5" } },
+        },
       },
-    },
-  })).rejects.toThrow("No test cases matched the requested filters.");
+    }),
+  ).rejects.toThrow("No test cases matched the requested filters.");
 
   expect(errorContext).toEqual({ tagFilter: ["missing"], declaredTags: ["smoke"] });
 });
@@ -804,19 +899,23 @@ test("executeSuite preserves unrelated snapshots and writes new entries for exec
   const snapshotsPath = path.join(outputDir, "skillgym.snapshots.json");
   await writeFile(
     snapshotsPath,
-    JSON.stringify({
-      version: 1,
-      entries: {
-        "other-case::other-runner": {
-          caseId: "other-case",
-          runnerId: "other-runner",
-          metric: "totalTokens",
-          value: 88,
-          agentType: "opencode",
-          updatedAt: "2026-04-04T12:00:00.000Z",
+    JSON.stringify(
+      {
+        version: 1,
+        entries: {
+          "other-case::other-runner": {
+            caseId: "other-case",
+            runnerId: "other-runner",
+            metric: "totalTokens",
+            value: 88,
+            agentType: "opencode",
+            updatedAt: "2026-04-04T12:00:00.000Z",
+          },
         },
       },
-    }, null, 2),
+      null,
+      2,
+    ),
     "utf8",
   );
 
@@ -829,12 +928,8 @@ test("executeSuite preserves unrelated snapshots and writes new entries for exec
       },
     },
     snapshots: createSnapshotRuntime(snapshotsPath),
-    executeRunnerFn: async (testCase, runner, _adapter, options) => executeRunner(
-      testCase,
-      runner,
-      createSnapshotAdapter(runner, 150),
-      options,
-    ),
+    executeRunnerFn: async (testCase, runner, _adapter, options) =>
+      executeRunner(testCase, runner, createSnapshotAdapter(runner, 150), options),
   });
 
   const saved = JSON.parse(await readFile(snapshotsPath, "utf8")) as {
@@ -850,19 +945,23 @@ test("executeSuite refreshes matching snapshots in update mode", async () => {
   const snapshotsPath = path.join(outputDir, "skillgym.snapshots.json");
   await writeFile(
     snapshotsPath,
-    JSON.stringify({
-      version: 1,
-      entries: {
-        "alpha::open": {
-          caseId: "alpha",
-          runnerId: "open",
-          metric: "totalTokens",
-          value: 100,
-          agentType: "opencode",
-          updatedAt: "2026-04-04T12:00:00.000Z",
+    JSON.stringify(
+      {
+        version: 1,
+        entries: {
+          "alpha::open": {
+            caseId: "alpha",
+            runnerId: "open",
+            metric: "totalTokens",
+            value: 100,
+            agentType: "opencode",
+            updatedAt: "2026-04-04T12:00:00.000Z",
+          },
         },
       },
-    }, null, 2),
+      null,
+      2,
+    ),
     "utf8",
   );
 
@@ -878,12 +977,8 @@ test("executeSuite refreshes matching snapshots in update mode", async () => {
       ...createSnapshotRuntime(snapshotsPath),
       updateSnapshots: true,
     },
-    executeRunnerFn: async (testCase, runner, _adapter, options) => executeRunner(
-      testCase,
-      runner,
-      createSnapshotAdapter(runner, 222),
-      options,
-    ),
+    executeRunnerFn: async (testCase, runner, _adapter, options) =>
+      executeRunner(testCase, runner, createSnapshotAdapter(runner, 222), options),
   });
 
   const saved = JSON.parse(await readFile(snapshotsPath, "utf8")) as {
@@ -893,7 +988,12 @@ test("executeSuite refreshes matching snapshots in update mode", async () => {
   expect(saved.entries["alpha::open"]?.value).toBe(222);
 });
 
-function createRunnerResultForKey(caseId: string, runnerId: string, outputDir: string, passed: boolean): RunnerResult {
+function createRunnerResultForKey(
+  caseId: string,
+  runnerId: string,
+  outputDir: string,
+  passed: boolean,
+): RunnerResult {
   const runner = createRunnerInfo(
     runnerId,
     runnerId === "code"
@@ -926,9 +1026,10 @@ function createRunnerResult(options: {
   failureType?: RunnerResult["failureType"];
   failureOrigin?: RunnerResult["failureOrigin"];
 }): RunnerResult {
-  const inputTokens = options.totalTokens === undefined
-    ? undefined
-    : options.totalTokens - options.outputTokens - (options.reasoningTokens ?? 0);
+  const inputTokens =
+    options.totalTokens === undefined
+      ? undefined
+      : options.totalTokens - options.outputTokens - (options.reasoningTokens ?? 0);
 
   return {
     runner: options.runner,
@@ -942,8 +1043,8 @@ function createRunnerResult(options: {
           name: "AssertionError",
           message: "expected skill to be loaded before command execution",
         },
-    failureType: options.passed ? undefined : options.failureType ?? "assertion",
-    failureOrigin: options.passed ? undefined : options.failureOrigin ?? "assertion",
+    failureType: options.passed ? undefined : (options.failureType ?? "assertion"),
+    failureOrigin: options.passed ? undefined : (options.failureOrigin ?? "assertion"),
     report: createSessionReport({
       runner: options.runner,
       usage: {

@@ -1,7 +1,13 @@
 import path from "node:path";
 import { cp, readdir, readFile, stat } from "node:fs/promises";
 import os from "node:os";
-import type { CodexAgentConfig, RawRunArtifacts, RunHandle, RunInput, RunnerAdapter } from "../domain/adapter.js";
+import type {
+  CodexAgentConfig,
+  RawRunArtifacts,
+  RunHandle,
+  RunInput,
+  RunnerAdapter,
+} from "../domain/adapter.js";
 import type { SessionEvent, SessionReport } from "../domain/session-report.js";
 import { resolveReportedPath } from "../normalize/reported-path.js";
 import { inferSkillsFromPaths } from "../normalize/skill-detection.js";
@@ -29,18 +35,13 @@ export class CodexAdapter extends BaseAdapter implements RunnerAdapter {
       input.prompt,
     ];
     await Promise.all([ensureDir(codexHome), ensureDir(codexSqliteHome), seedCodexRuntime(input)]);
-    const handle = await this.runCommand(
-      command,
-      args,
-      input,
-      {
-        env: {
-          ...this.options.env,
-          CODEX_HOME: codexHome,
-          CODEX_SQLITE_HOME: codexSqliteHome,
-        },
+    const handle = await this.runCommand(command, args, input, {
+      env: {
+        ...this.options.env,
+        CODEX_HOME: codexHome,
+        CODEX_SQLITE_HOME: codexSqliteHome,
       },
-    );
+    });
     return handle;
   }
 
@@ -48,7 +49,10 @@ export class CodexAdapter extends BaseAdapter implements RunnerAdapter {
     const stdout = await readFile(handle.stdoutPath, "utf8");
     const stderr = await readFile(handle.stderrPath, "utf8");
     const stdoutRecords = parseJsonLines(stdout);
-    const sessionPath = await this.findLatestSessionAfter(handle.startedAt, getCodexSessionsDir(input));
+    const sessionPath = await this.findLatestSessionAfter(
+      handle.startedAt,
+      getCodexSessionsDir(input),
+    );
 
     if (sessionPath === undefined && stdoutRecords.length === 0) {
       return {
@@ -135,7 +139,11 @@ export class CodexAdapter extends BaseAdapter implements RunnerAdapter {
 
       const payloadInfo = isRecord(payload?.info) ? payload.info : undefined;
 
-      if (type === "event_msg" && payload?.type === "token_count" && isRecord(payloadInfo?.total_token_usage)) {
+      if (
+        type === "event_msg" &&
+        payload?.type === "token_count" &&
+        isRecord(payloadInfo?.total_token_usage)
+      ) {
         const usage = payloadInfo.total_token_usage as Record<string, unknown>;
         totalTokens = readNumber(usage, "total_tokens") ?? totalTokens;
         inputTokens = readNumber(usage, "input_tokens") ?? inputTokens;
@@ -187,11 +195,15 @@ export class CodexAdapter extends BaseAdapter implements RunnerAdapter {
 
       if (type === "response_item" && payload?.type === "function_call") {
         const tool = readString(payload, "name") ?? readString(payload, "tool");
-        const args = parseMaybeJson(readString(payload, "arguments")) ?? payload.arguments ?? payload.args;
+        const args =
+          parseMaybeJson(readString(payload, "arguments")) ?? payload.arguments ?? payload.args;
         const callId = readString(payload, "call_id") ?? readString(payload, "callId");
 
         if (callId !== undefined) {
-          callBaseDirs.set(callId, resolveCodexCallBaseDir(args, turnCwd ?? sessionCwd ?? input.cwd));
+          callBaseDirs.set(
+            callId,
+            resolveCodexCallBaseDir(args, turnCwd ?? sessionCwd ?? input.cwd),
+          );
         }
 
         if (tool !== undefined) {
@@ -208,7 +220,11 @@ export class CodexAdapter extends BaseAdapter implements RunnerAdapter {
         const output = readString(payload, "output") ?? stringifyUnknown(payload.output ?? payload);
         const toolName = resolveCodexToolName(output);
         const callId = readString(payload, "call_id") ?? readString(payload, "callId");
-        const baseDir = (callId === undefined ? undefined : callBaseDirs.get(callId)) ?? turnCwd ?? sessionCwd ?? input.cwd;
+        const baseDir =
+          (callId === undefined ? undefined : callBaseDirs.get(callId)) ??
+          turnCwd ??
+          sessionCwd ??
+          input.cwd;
 
         events.push({
           type: "toolResult",
@@ -236,11 +252,18 @@ export class CodexAdapter extends BaseAdapter implements RunnerAdapter {
     }
 
     const detectedSkills = inferSkillsFromPaths(observedReads);
-    const finalOutput = [...events]
-      .reverse()
-      .find((event): event is Extract<SessionEvent, { type: "message" }> => event.type === "message" && event.role === "assistant")?.text ?? artifacts.stdout;
+    const finalOutput =
+      [...events]
+        .reverse()
+        .find(
+          (event): event is Extract<SessionEvent, { type: "message" }> =>
+            event.type === "message" && event.role === "assistant",
+        )?.text ?? artifacts.stdout;
     const reasoningChars = events
-      .filter((event): event is Extract<SessionEvent, { type: "message" }> => event.type === "message" && event.phase === "thinking")
+      .filter(
+        (event): event is Extract<SessionEvent, { type: "message" }> =>
+          event.type === "message" && event.phase === "thinking",
+      )
       .reduce((sum, event) => sum + event.text.length, 0);
     const normalizedTotalTokens =
       inputTokens !== undefined && outputTokens !== undefined && reasoningTokens !== undefined
@@ -284,7 +307,10 @@ export class CodexAdapter extends BaseAdapter implements RunnerAdapter {
     };
   }
 
-  private async findLatestSessionAfter(startedAtIso: string, sessionsDir: string): Promise<string | undefined> {
+  private async findLatestSessionAfter(
+    startedAtIso: string,
+    sessionsDir: string,
+  ): Promise<string | undefined> {
     const startedAtMs = new Date(startedAtIso).getTime();
     const sessionPaths = await listJsonlFiles(sessionsDir);
     const candidates: Array<{ filePath: string; mtimeMs: number }> = [];
@@ -317,7 +343,13 @@ async function seedCodexRuntime(input: RunInput): Promise<void> {
   const sourceHome = getUserCodexHome();
   const targetHome = getCodexHome(input);
 
-  for (const entry of ["auth.json", "config.toml", "version.json", "AGENTS.md", ".codex-global-state.json"]) {
+  for (const entry of [
+    "auth.json",
+    "config.toml",
+    "version.json",
+    "AGENTS.md",
+    ".codex-global-state.json",
+  ]) {
     await copyCodexEntry(path.join(sourceHome, entry), path.join(targetHome, entry));
   }
 }

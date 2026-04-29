@@ -10,7 +10,9 @@ import { createSessionReport } from "../helpers/session-report.js";
 const tempDirs: string[] = [];
 
 afterEach(async () => {
-  await Promise.all(tempDirs.splice(0).map((tempDir) => rm(tempDir, { recursive: true, force: true })));
+  await Promise.all(
+    tempDirs.splice(0).map((tempDir) => rm(tempDir, { recursive: true, force: true })),
+  );
 });
 
 test("github-actions reporter formats escaped annotations for failed runs", async () => {
@@ -26,10 +28,17 @@ test("github-actions reporter formats escaped annotations for failed runs", asyn
     env: {},
   });
 
-  await reporter.onSuiteFinish?.({ context: createContext(), result: createSuiteResult({ runner, caseId: "case,a", errorMessage: "boom,\n100%" }) });
+  await reporter.onSuiteFinish?.({
+    context: createContext(),
+    result: createSuiteResult({ runner, caseId: "case,a", errorMessage: "boom,\n100%" }),
+  });
 
-  expect(writes.join("")).toContain("::error title=case%2Ca > code%3Amain,file=/workspace/examples/basic-suite.ts,line=14,col=15::");
-  expect(writes.join("")).toContain("failure type: assertion%0Afailure origin: assertion%0Aerror: AssertionError: boom,%0A100%25");
+  expect(writes.join("")).toContain(
+    "::error title=case%2Ca > code%3Amain,file=/workspace/examples/basic-suite.ts,line=14,col=15::",
+  );
+  expect(writes.join("")).toContain(
+    "failure type: assertion%0Afailure origin: assertion%0Aerror: AssertionError: boom,%0A100%25",
+  );
   expect(writes.join("")).toContain("artifacts: .skillgym-results/run-1/case,a/code-main");
 });
 
@@ -46,7 +55,10 @@ test("github-actions reporter includes file metadata from user stack frames", as
     env: {},
   });
 
-  await reporter.onSuiteFinish?.({ context: createContext(), result: createSuiteResult({ runner, caseId: "case-a" }) });
+  await reporter.onSuiteFinish?.({
+    context: createContext(),
+    result: createSuiteResult({ runner, caseId: "case-a" }),
+  });
 
   expect(writes.join("")).toContain("file=/workspace/examples/basic-suite.ts,line=14,col=15");
 });
@@ -57,11 +69,18 @@ test("github-actions reporter writes a job summary when GITHUB_STEP_SUMMARY is s
   const summaryPath = path.join(tempDir, "summary.md");
   const runner = createRunnerInfo("open-main", { type: "opencode", model: "openai/gpt-5" });
   const reporter = createGitHubActionsReporter({
-    stdout: { write() { return true; } },
+    stdout: {
+      write() {
+        return true;
+      },
+    },
     env: { GITHUB_STEP_SUMMARY: summaryPath },
   });
 
-  await reporter.onSuiteFinish?.({ context: createContext(), result: createSuiteResult({ runner, caseId: "case-a" }) });
+  await reporter.onSuiteFinish?.({
+    context: createContext(),
+    result: createSuiteResult({ runner, caseId: "case-a" }),
+  });
 
   const summary = await readFile(summaryPath, "utf8");
   expect(summary).toContain("## SkillGym Summary");
@@ -71,7 +90,9 @@ test("github-actions reporter writes a job summary when GITHUB_STEP_SUMMARY is s
   expect(summary).toContain("### Runner: `open-main` (opencode, openai/gpt-5)");
   expect(summary).toContain("| Case | Duration | Input | Output | Reasoning | Cache | Billable |");
   expect(summary).toContain("| ❌ `case-a` | 24s | 9,830 | 1,104 | 0 | 0 | 12,000 |");
-  expect(summary).toContain("- `case-a > open-main`; assertion; AssertionError: expected skill to be loaded before command execution; artifacts: `.skillgym-results/run-1/case-a/open-main`; log: `.skillgym-results/run-1/case-a/open-main/stderr.log`");
+  expect(summary).toContain(
+    "- `case-a > open-main`; assertion; AssertionError: expected skill to be loaded before command execution; artifacts: `.skillgym-results/run-1/case-a/open-main`; log: `.skillgym-results/run-1/case-a/open-main/stderr.log`",
+  );
 });
 
 test("github-actions reporter skips job summary writes when GITHUB_STEP_SUMMARY is absent", async () => {
@@ -87,7 +108,12 @@ test("github-actions reporter skips job summary writes when GITHUB_STEP_SUMMARY 
     env: {},
   });
 
-  await expect(reporter.onSuiteFinish?.({ context: createContext(), result: createSuiteResult({ runner, caseId: "case-a" }) })).resolves.toBeUndefined();
+  await expect(
+    reporter.onSuiteFinish?.({
+      context: createContext(),
+      result: createSuiteResult({ runner, caseId: "case-a" }),
+    }),
+  ).resolves.toBeUndefined();
   expect(writes.join("")).toContain("::error");
 });
 
@@ -107,8 +133,16 @@ function createContext() {
   };
 }
 
-function createSuiteResult(options: { runner: RunnerInfo; caseId: string; errorMessage?: string }): SuiteRunResult {
-  const runnerResult = createFailedRunnerResult(options.runner, options.caseId, options.errorMessage);
+function createSuiteResult(options: {
+  runner: RunnerInfo;
+  caseId: string;
+  errorMessage?: string;
+}): SuiteRunResult {
+  const runnerResult = createFailedRunnerResult(
+    options.runner,
+    options.caseId,
+    options.errorMessage,
+  );
 
   return {
     suitePath: "examples/basic-suite.ts",
@@ -123,7 +157,11 @@ function createSuiteResult(options: { runner: RunnerInfo; caseId: string; errorM
   };
 }
 
-function createFailedRunnerResult(runner: RunnerInfo, caseId: string, errorMessage = "expected skill to be loaded before command execution"): RunnerResult {
+function createFailedRunnerResult(
+  runner: RunnerInfo,
+  caseId: string,
+  errorMessage = "expected skill to be loaded before command execution",
+): RunnerResult {
   return {
     runner,
     passed: false,

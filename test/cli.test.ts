@@ -11,7 +11,9 @@ const tsxLoaderPath = path.join(repoRoot, "node_modules", "tsx", "dist", "loader
 const tempDirs: string[] = [];
 
 afterEach(async () => {
-  await Promise.all(tempDirs.splice(0).map((tempDir) => rm(tempDir, { recursive: true, force: true })));
+  await Promise.all(
+    tempDirs.splice(0).map((tempDir) => rm(tempDir, { recursive: true, force: true })),
+  );
 });
 
 test("cli without args prints full MOTD banner", async () => {
@@ -95,7 +97,12 @@ test("cli run exits non-zero for assertion failures without printing a generic s
       filePath: path.join(tempDir, "skillgym.config.ts"),
     })),
     resolveReporterOptions: vi.fn(() => ({ reporter: undefined, cwd: tempDir })),
-    resolveRunOptions: vi.fn(() => ({ cwd: tempDir, outputDir: path.join(tempDir, ".skillgym-results"), schedule: "serial", tags: [] })),
+    resolveRunOptions: vi.fn(() => ({
+      cwd: tempDir,
+      outputDir: path.join(tempDir, ".skillgym-results"),
+      schedule: "serial",
+      tags: [],
+    })),
   }));
   vi.doMock("../src/reporters/index.js", () => ({
     loadReporter: vi.fn(async () => undefined),
@@ -122,14 +129,23 @@ test("cli run exits non-zero for assertion failures without printing a generic s
       outputDir: path.join(tempDir, ".skillgym-results", "run-1"),
       declaredTags: [],
       selectedTags: [],
-      cases: [{ caseId: "alpha", tags: [], passed: false, runnerResults: [{ passed: false, status: "failed" }] }],
+      cases: [
+        {
+          caseId: "alpha",
+          tags: [],
+          passed: false,
+          runnerResults: [{ passed: false, status: "failed" }],
+        },
+      ],
       runners: [],
     })),
   }));
 
   const { RunFailuresError, runCommand } = await import("../src/cli/run.js");
 
-  await expect(runCommand({ suitePath: "./suite.ts", cwd: tempDir })).rejects.toBeInstanceOf(RunFailuresError);
+  await expect(runCommand({ suitePath: "./suite.ts", cwd: tempDir })).rejects.toBeInstanceOf(
+    RunFailuresError,
+  );
 
   vi.doUnmock("../src/config.js");
   vi.doUnmock("../src/reporters/index.js");
@@ -150,7 +166,14 @@ test("cli run treats expected assertion failures as successful suite health", as
     outputDir: path.join(tempDir, ".skillgym-results", "run-1"),
     declaredTags: [],
     selectedTags: [],
-    cases: [{ caseId: "alpha", tags: [], passed: true, runnerResults: [{ passed: true, status: "expected-failed" }] }],
+    cases: [
+      {
+        caseId: "alpha",
+        tags: [],
+        passed: true,
+        runnerResults: [{ passed: true, status: "expected-failed" }],
+      },
+    ],
     runners: [],
   });
 
@@ -170,11 +193,20 @@ test("cli run exits non-zero for unexpected passes", async () => {
     outputDir: path.join(tempDir, ".skillgym-results", "run-1"),
     declaredTags: [],
     selectedTags: [],
-    cases: [{ caseId: "alpha", tags: [], passed: false, runnerResults: [{ passed: false, status: "unexpected-passed" }] }],
+    cases: [
+      {
+        caseId: "alpha",
+        tags: [],
+        passed: false,
+        runnerResults: [{ passed: false, status: "unexpected-passed" }],
+      },
+    ],
     runners: [],
   });
 
-  await expect(runCommand({ suitePath: "./suite.ts", cwd: tempDir })).rejects.toBeInstanceOf(RunFailuresError);
+  await expect(runCommand({ suitePath: "./suite.ts", cwd: tempDir })).rejects.toBeInstanceOf(
+    RunFailuresError,
+  );
 
   unmockRunCommandDependencies();
 });
@@ -191,7 +223,12 @@ async function importRunCommandWithSuiteResult(tempDir: string, suiteResult: unk
       filePath: path.join(tempDir, "skillgym.config.ts"),
     })),
     resolveReporterOptions: vi.fn(() => ({ reporter: undefined, cwd: tempDir })),
-    resolveRunOptions: vi.fn((options) => ({ cwd: tempDir, outputDir: path.join(tempDir, ".skillgym-results"), schedule: "serial", tags: options.tags })),
+    resolveRunOptions: vi.fn((options) => ({
+      cwd: tempDir,
+      outputDir: path.join(tempDir, ".skillgym-results"),
+      schedule: "serial",
+      tags: options.tags,
+    })),
   }));
   vi.doMock("../src/reporters/index.js", () => ({
     loadReporter: vi.fn(async () => undefined),
@@ -236,7 +273,14 @@ test("cli run passes repeated and comma-separated tag filters to execution", asy
     outputDir: path.join(tempDir, ".skillgym-results", "run-1"),
     declaredTags: ["smoke", "gestures", "regression"],
     selectedTags: ["smoke", "gestures", "regression"],
-    cases: [{ caseId: "alpha", tags: ["smoke"], passed: true, runnerResults: [{ passed: true, status: "passed" }] }],
+    cases: [
+      {
+        caseId: "alpha",
+        tags: ["smoke"],
+        passed: true,
+        runnerResults: [{ passed: true, status: "passed" }],
+      },
+    ],
     runners: [],
   }));
 
@@ -251,7 +295,12 @@ test("cli run passes repeated and comma-separated tag filters to execution", asy
       filePath: path.join(tempDir, "skillgym.config.ts"),
     })),
     resolveReporterOptions: vi.fn(() => ({ reporter: undefined, cwd: tempDir })),
-    resolveRunOptions: vi.fn((options) => ({ cwd: tempDir, outputDir: path.join(tempDir, ".skillgym-results"), schedule: "serial", tags: options.tags })),
+    resolveRunOptions: vi.fn((options) => ({
+      cwd: tempDir,
+      outputDir: path.join(tempDir, ".skillgym-results"),
+      schedule: "serial",
+      tags: options.tags,
+    })),
   }));
   vi.doMock("../src/reporters/index.js", () => ({
     loadReporter: vi.fn(async () => undefined),
@@ -273,11 +322,19 @@ test("cli run passes repeated and comma-separated tag filters to execution", asy
 
   const { runCommand } = await import("../src/cli/run.js");
 
-  await runCommand({ suitePath: "./suite.ts", cwd: tempDir, tags: ["smoke", "gestures", "regression"] });
-
-  expect(executeSuite).toHaveBeenCalledWith("./suite.ts", expect.any(Array), expect.objectContaining({
+  await runCommand({
+    suitePath: "./suite.ts",
+    cwd: tempDir,
     tags: ["smoke", "gestures", "regression"],
-  }));
+  });
+
+  expect(executeSuite).toHaveBeenCalledWith(
+    "./suite.ts",
+    expect.any(Array),
+    expect.objectContaining({
+      tags: ["smoke", "gestures", "regression"],
+    }),
+  );
 
   unmockRunCommandDependencies();
 });

@@ -37,7 +37,12 @@ export function visibleWidth(value: string): number {
   return stringWidth(value);
 }
 
-export function getSymbols(isUnicode: boolean): { pass: string; fail: string; bullet: string; warning: string } {
+export function getSymbols(isUnicode: boolean): {
+  pass: string;
+  fail: string;
+  bullet: string;
+  warning: string;
+} {
   if (isUnicode) {
     return {
       pass: "✓",

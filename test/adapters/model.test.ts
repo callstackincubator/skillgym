@@ -14,7 +14,16 @@ test("OpenCodeAdapter passes configured model to opencode run", async () => {
 
   expect(adapter.lastCall).toEqual({
     command: "opencode",
-    args: ["--pure", "run", "--model", "openai/gpt-5", "--format", "json", "--thinking", "solve it"],
+    args: [
+      "--pure",
+      "run",
+      "--model",
+      "openai/gpt-5",
+      "--format",
+      "json",
+      "--thinking",
+      "solve it",
+    ],
   });
   expect(adapter.lastEnv).toMatchObject({
     XDG_DATA_HOME: "/tmp/artifacts/opencode-xdg/data",
@@ -35,7 +44,18 @@ test("CodexAdapter passes configured model to codex exec", async () => {
 
   expect(adapter.lastCall).toEqual({
     command: "npx",
-    args: ["--yes", "codex", "exec", "--model", "gpt-5", "--json", "--skip-git-repo-check", "-C", "/tmp/workspace", "solve it"],
+    args: [
+      "--yes",
+      "codex",
+      "exec",
+      "--model",
+      "gpt-5",
+      "--json",
+      "--skip-git-repo-check",
+      "-C",
+      "/tmp/workspace",
+      "solve it",
+    ],
   });
   expect(adapter.lastEnv).toMatchObject({
     CODEX_HOME: "/tmp/artifacts/codex-home",

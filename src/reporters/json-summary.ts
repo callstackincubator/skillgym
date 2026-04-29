@@ -88,7 +88,9 @@ function summarizeSuiteResult(result: SuiteRunResult): SummarySuiteResult {
   };
 }
 
-export function createJsonSummaryReporter(options: JsonSummaryReporterOptions = {}): BenchmarkReporter {
+export function createJsonSummaryReporter(
+  options: JsonSummaryReporterOptions = {},
+): BenchmarkReporter {
   const stdout = options.stdout ?? process.stdout;
 
   return {
