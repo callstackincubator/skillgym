@@ -267,7 +267,15 @@ async function executePlannedExecution(
     : await createRejectedModelResult(item, artifactDir);
 
   if (rejectedResult === undefined && await isModelRejectedResult(result)) {
+    result.failureType = "runner-crash";
     result.failureOrigin = "model-rejected";
+    if (result.error?.name === "AssertionError" || result.error === undefined) {
+      result.error = {
+        name: "Error",
+        message: `Runner rejected configured model "${item.runner.info.agent.model ?? "unknown"}" during initial execution.`,
+      };
+    }
+    result.failureLogPath ??= path.join(artifactDir, "stderr.log");
     options.rejectedRunners.set(item.runner.id, result);
     await writeJson(path.join(artifactDir, "error.json"), result.error);
     await writeJson(path.join(artifactDir, "report.json"), result.report);
