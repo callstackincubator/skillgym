@@ -49,6 +49,7 @@ export default suite;
 export interface TestCase {
   id: string;
   prompt: string;
+  tags?: string[];
   timeoutMs?: number;
   assert(report: SessionReport, ctx: AssertionContext): void | Promise<void>;
 }
@@ -58,10 +59,36 @@ Field meanings:
 
 - `id`: stable identifier used in results and artifact paths
 - `prompt`: the exact prompt sent to the runner
+- `tags`: optional labels for selecting cases with `--tag`; multiple selected tags use OR matching
 - `timeoutMs`: optional per-case timeout override
 - `assert(report, ctx)`: pass or fail logic for that execution
 
 `TestCase` does not include runner selection. Each case runs against the selected configured runners.
+
+## Tags
+
+Tags let you run subsets of a suite without changing case order:
+
+```ts
+const suite: TestCase[] = [
+  {
+    id: "login-smoke",
+    tags: ["smoke", "auth"],
+    prompt: "Verify the login screen behavior.",
+    assert() {},
+  },
+];
+```
+
+Run tagged cases with `--tag`. Repeated flags and comma-separated values are OR-matched, so a case runs when it has any selected tag:
+
+```sh
+skillgym run ./suite.ts --tag smoke
+skillgym run ./suite.ts --tag smoke --tag auth
+skillgym run ./suite.ts --tag smoke,auth
+```
+
+You can also set defaults in config with `run.tags: ["smoke"]`. CLI `--tag` values override config tags.
 
 ## Assertions in a test case
 

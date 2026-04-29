@@ -102,6 +102,7 @@ function formatJobSummary(result: SuiteRunResult): string {
     `- Runs: ${passedRuns} passed, ${totalRuns - passedRuns} failed`,
     `- Duration: ${formatDuration(result.durationMs)}`,
     `- Output: \`${result.outputDir}\``,
+    ...(result.selectedTags.length > 0 ? [`- Tags: ${result.selectedTags.map((t) => `\`${t}\``).join(", ")}`] : []),
   ];
 
   for (const summary of result.runners) {

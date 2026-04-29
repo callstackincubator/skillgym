@@ -24,6 +24,7 @@ export type SuiteWorkspaceConfig =
 export interface TestCase {
   id: string;
   prompt: string;
+  tags?: string[];
   timeoutMs?: number;
   assert(report: SessionReport, ctx: AssertionContext): void | Promise<void>;
 }

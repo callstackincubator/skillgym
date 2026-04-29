@@ -68,7 +68,10 @@ test("github-actions reporter writes a job summary when GITHUB_STEP_SUMMARY is s
   expect(summary).toContain("- Suite: `examples/basic-suite.ts`");
   expect(summary).toContain("- Cases: 0 passed, 1 failed");
   expect(summary).toContain("- Runs: 0 passed, 1 failed");
-  expect(summary).toContain("| `open-main` | 0/1 | 24s | 12000 |");
+  expect(summary).toContain("### Runner: `open-main` (opencode, openai/gpt-5)");
+  expect(summary).toContain("| Case | Duration | Input | Output | Reasoning | Cache | Billable |");
+  expect(summary).toContain("| ❌ `case-a` |");
+  expect(summary).toContain("| 12,000 |");
   expect(summary).toContain("- `case-a > open-main`; assertion; AssertionError: expected skill to be loaded before command execution; artifacts: `.skillgym-results/run-1/case-a/open-main`; log: `.skillgym-results/run-1/case-a/open-main/stderr.log`");
 });
 
@@ -100,6 +103,8 @@ function createContext() {
     selectedRunnerCount: 1,
     selectedExecutionCount: 1,
     scheduleMode: "serial" as const,
+    maxParallel: 1,
+    declaredTags: [],
   };
 }
 
@@ -112,7 +117,9 @@ function createSuiteResult(options: { runner: RunnerInfo; caseId: string; errorM
     endedAt: "2026-04-02T12:01:00.000Z",
     durationMs: 60_000,
     outputDir: ".skillgym-results/run-1",
-    cases: [{ caseId: options.caseId, passed: false, runnerResults: [runnerResult] }],
+    declaredTags: [],
+    selectedTags: [],
+    cases: [{ caseId: options.caseId, tags: [], passed: false, runnerResults: [runnerResult] }],
     runners: [createRunnerSummary(options.runner)],
   };
 }

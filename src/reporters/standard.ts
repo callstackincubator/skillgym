@@ -88,6 +88,9 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
       writeLine(`${colors.dim("Workspace ")}${colors.bold(event.context.workspaceMode === "shared" ? event.context.cwd : `${event.context.workspaceMode} per run`)}`, stdout);
       writeLine(`${colors.dim("Output    ")}${colors.bold(event.context.outputDir)}`, stdout);
       writeLine(`${colors.dim("Cases     ")}${String(event.context.selectedCaseCount)}`, stdout);
+      if (event.context.tagFilter !== undefined) {
+        writeLine(`${colors.dim("Tags      ")}${event.context.tagFilter.join(", ")}`, stdout);
+      }
       writeLine(`${colors.dim("Runners   ")}${String(event.context.selectedRunnerCount)}`, stdout);
       writeLine(`${colors.dim("Runs      ")}${String(event.context.selectedExecutionCount)}`, stdout);
       writeLine(`${colors.dim("Parallel  ")}${String(event.context.maxParallel)}`, stdout);

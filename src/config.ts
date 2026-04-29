@@ -16,7 +16,7 @@ const CONFIG_FILENAMES = [
 ] as const;
 
 const TOP_LEVEL_KEYS = ["run", "defaults", "runners", "snapshots"] as const;
-const RUN_KEYS = ["cwd", "outputDir", "reporter", "schedule", "workspace", "maxSteps", "maxParallel"] as const;
+const RUN_KEYS = ["cwd", "outputDir", "reporter", "schedule", "workspace", "maxSteps", "maxParallel", "tags"] as const;
 const DEFAULT_KEYS = ["timeoutMs"] as const;
 const RUNNER_KEYS = ["agent"] as const;
 const COMMON_AGENT_KEYS = ["type", "command", "commandArgs", "env", "model"] as const;
@@ -55,6 +55,7 @@ export interface SkillGymConfig {
     workspace?: SuiteWorkspaceConfig;
     maxSteps?: number;
     maxParallel?: number;
+    tags?: string[];
   };
   defaults?: {
     timeoutMs?: number;
@@ -108,6 +109,7 @@ export function resolveRunOptions(
     outputDir?: string;
     schedule?: string;
     maxParallel?: string;
+    tags?: string[];
   },
   config: SkillGymConfig,
 ): {
@@ -115,6 +117,7 @@ export function resolveRunOptions(
   outputDir?: string;
   schedule: ScheduleMode;
   maxParallel?: number;
+  tags: string[];
 } {
   const maxParallel = cliOptions.maxParallel !== undefined
     ? parseIntegerString(cliOptions.maxParallel, "CLI option --max-parallel", 1)
@@ -127,6 +130,7 @@ export function resolveRunOptions(
       ? parseScheduleMode(cliOptions.schedule, "CLI option --schedule")
       : config.run?.schedule ?? "serial",
     ...(maxParallel === undefined ? {} : { maxParallel }),
+    tags: cliOptions.tags ?? config.run?.tags ?? [],
   };
 }
 
@@ -214,6 +218,7 @@ function resolveConfigPaths(config: SkillGymConfig, configDir: string): SkillGym
       workspace: config.run.workspace === undefined ? undefined : resolveWorkspaceConfigPaths(config.run.workspace, configDir),
       ...(config.run.maxSteps === undefined ? {} : { maxSteps: config.run.maxSteps }),
       ...(config.run.maxParallel === undefined ? {} : { maxParallel: config.run.maxParallel }),
+      ...(config.run.tags === undefined ? {} : { tags: config.run.tags }),
     },
     defaults: config.defaults === undefined ? undefined : {
       timeoutMs: config.defaults.timeoutMs,
@@ -297,6 +302,7 @@ function parseRunConfig(value: unknown, configPath: string): SkillGymConfig["run
     workspace: parseOptionalWorkspaceConfig(record.workspace, `${configPath}.workspace`),
     ...(maxSteps === undefined ? {} : { maxSteps }),
     ...(maxParallel === undefined ? {} : { maxParallel }),
+    tags: parseOptionalStringArray(record.tags, `${configPath}.tags`),
   };
 }
 

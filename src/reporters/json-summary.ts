@@ -24,6 +24,7 @@ interface SummaryRunnerResult {
 
 interface SummaryCaseResult {
   caseId: string;
+  tags: string[];
   passed: boolean;
   runnerResults: SummaryRunnerResult[];
 }
@@ -34,6 +35,8 @@ interface SummarySuiteResult {
   endedAt: string;
   durationMs: number;
   outputDir: string;
+  declaredTags: string[];
+  selectedTags: string[];
   cases: SummaryCaseResult[];
   runners: SuiteRunResult["runners"];
 }
@@ -65,6 +68,7 @@ function summarizeRunnerResult(result: RunnerResult): SummaryRunnerResult {
 function summarizeCaseResult(result: CaseResult): SummaryCaseResult {
   return {
     caseId: result.caseId,
+    tags: result.tags,
     passed: result.passed,
     runnerResults: result.runnerResults.map(summarizeRunnerResult),
   };
@@ -77,6 +81,8 @@ function summarizeSuiteResult(result: SuiteRunResult): SummarySuiteResult {
     endedAt: result.endedAt,
     durationMs: result.durationMs,
     outputDir: result.outputDir,
+    declaredTags: result.declaredTags,
+    selectedTags: result.selectedTags,
     cases: result.cases.map(summarizeCaseResult),
     runners: result.runners,
   };

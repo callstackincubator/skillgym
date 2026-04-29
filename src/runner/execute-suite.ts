@@ -44,6 +44,7 @@ export async function executeSuite(
     maxParallel?: number;
     caseId?: string;
     runner?: string;
+    tags?: string[];
     config: {
       defaults?: {
         timeoutMs?: number;
@@ -51,6 +52,7 @@ export async function executeSuite(
       run?: {
         workspace?: SuiteWorkspaceConfig;
         maxSteps?: number;
+        tags?: string[];
       };
       runners: Record<string, RunnerConfig>;
     };
@@ -69,6 +71,9 @@ export async function executeSuite(
   const maxParallel = resolveMaxParallel(scheduleMode, options.maxParallel);
   await ensureDir(outputDir);
   const selectedRunners = selectRunners(options.config.runners, options.runner);
+  const normalizedCases = normalizeTestCases(testCases);
+  const declaredTags = collectDeclaredTags(normalizedCases);
+  const selectedTags = normalizeTags(options.tags ?? options.config.run?.tags, "tag filters");
   const resolvedWorkspace = resolveEffectiveWorkspace({
     baseCwd: options.cwd,
     suiteWorkspace: options.suiteWorkspace,
@@ -76,8 +81,9 @@ export async function executeSuite(
     suiteDir: path.dirname(resolvedSuitePath),
   });
 
-  const selectedCases = testCases.filter((testCase) => {
-    return options.caseId === undefined || testCase.id === options.caseId;
+  const selectedCases = normalizedCases.filter((testCase) => {
+    return (options.caseId === undefined || testCase.id === options.caseId)
+      && (selectedTags.length === 0 || testCase.tags?.some((tag) => selectedTags.includes(tag)) === true);
   });
 
   if (selectedRunners.length === 0) {
@@ -96,6 +102,8 @@ export async function executeSuite(
         workspaceMode: resolvedWorkspace.mode,
         caseFilter: options.caseId,
         runnerFilter: options.runner,
+        tagFilter: selectedTags,
+        declaredTags,
         isInteractive: options.isInteractive,
       }),
       error,
@@ -117,6 +125,8 @@ export async function executeSuite(
         workspaceMode: resolvedWorkspace.mode,
         caseFilter: options.caseId,
         runnerFilter: options.runner,
+        tagFilter: selectedTags,
+        declaredTags,
         isInteractive: options.isInteractive,
       }),
       error,
@@ -135,6 +145,8 @@ export async function executeSuite(
     workspaceMode: resolvedWorkspace.mode,
     caseFilter: options.caseId,
     runnerFilter: options.runner,
+    tagFilter: selectedTags,
+    declaredTags,
     isInteractive: options.isInteractive,
   });
   const executeRunnerFn = options.executeRunnerFn ?? executeRunner;
@@ -261,6 +273,8 @@ export async function executeSuite(
       endedAt: nowIso(),
       durationMs: Date.now() - startedMs,
       outputDir,
+      declaredTags,
+      selectedTags,
       cases: caseResults,
       runners: summarizeRunners(caseResults, selectedRunners.map((runner) => runner.info)),
     };
@@ -300,9 +314,59 @@ function aggregatePlannedCaseResult(plannedCaseResult: PlannedCaseResult): CaseR
 
   return {
     caseId: plannedCaseResult.testCase.id,
+    tags: plannedCaseResult.testCase.tags ?? [],
     passed: runnerResults.every((result) => result.passed),
     runnerResults,
   };
+}
+
+function normalizeTestCases(testCases: TestCase[]): TestCase[] {
+  return testCases.map((testCase) => ({
+    ...testCase,
+    tags: normalizeTags(testCase.tags, `case ${testCase.id}`),
+  }));
+}
+
+function normalizeTags(tags: string[] | undefined, label: string): string[] {
+  if (tags === undefined) {
+    return [];
+  }
+
+  if (!Array.isArray(tags)) {
+    throw new Error(`Invalid tags for ${label}: expected array of non-empty strings`);
+  }
+
+  const normalized: string[] = [];
+  const seen = new Set<string>();
+
+  for (const [index, tag] of tags.entries()) {
+    if (typeof tag !== "string" || tag.trim().length === 0) {
+      throw new Error(`Invalid tag for ${label} at index ${String(index)}: expected non-empty string`);
+    }
+
+    if (!seen.has(tag)) {
+      seen.add(tag);
+      normalized.push(tag);
+    }
+  }
+
+  return normalized;
+}
+
+function collectDeclaredTags(testCases: TestCase[]): string[] {
+  const tags: string[] = [];
+  const seen = new Set<string>();
+
+  for (const testCase of testCases) {
+    for (const tag of testCase.tags ?? []) {
+      if (!seen.has(tag)) {
+        seen.add(tag);
+        tags.push(tag);
+      }
+    }
+  }
+
+  return tags;
 }
 
 function timestampDirName(): string {
@@ -404,6 +468,8 @@ function createReporterContext(options: {
   maxParallel: number;
   caseFilter?: string;
   runnerFilter?: string;
+  tagFilter: string[];
+  declaredTags: string[];
   isInteractive?: boolean;
 }): ReporterContext {
   return {
@@ -419,6 +485,8 @@ function createReporterContext(options: {
     maxParallel: options.maxParallel,
     caseFilter: options.caseFilter,
     runnerFilter: options.runnerFilter,
+    tagFilter: options.tagFilter.length === 0 ? undefined : options.tagFilter,
+    declaredTags: options.declaredTags,
   };
 }
 

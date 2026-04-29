@@ -32,7 +32,7 @@ export async function loadSuite(filePath: string): Promise<LoadedSuite> {
     return {
       filePath: absolutePath,
       dirPath: path.dirname(absolutePath),
-      cases: suite,
+      cases: normalizeTestCases(suite),
       workspace: imported.workspace,
     };
   }
@@ -44,7 +44,40 @@ export async function loadSuite(filePath: string): Promise<LoadedSuite> {
   return {
     filePath: absolutePath,
     dirPath: path.dirname(absolutePath),
-    cases: Object.values(suite),
+    cases: normalizeTestCases(Object.values(suite)),
     workspace: imported.workspace,
   };
+}
+
+function normalizeTestCases(cases: TestCase[]): TestCase[] {
+  return cases.map((testCase) => ({
+    ...testCase,
+    tags: normalizeTags(testCase.tags, `case ${testCase.id}`),
+  }));
+}
+
+function normalizeTags(tags: string[] | undefined, label: string): string[] {
+  if (tags === undefined) {
+    return [];
+  }
+
+  if (!Array.isArray(tags)) {
+    throw new Error(`Invalid tags for ${label}: expected array of non-empty strings`);
+  }
+
+  const normalized: string[] = [];
+  const seen = new Set<string>();
+
+  for (const [index, tag] of tags.entries()) {
+    if (typeof tag !== "string" || tag.trim().length === 0) {
+      throw new Error(`Invalid tag for ${label} at index ${String(index)}: expected non-empty string`);
+    }
+
+    if (!seen.has(tag)) {
+      seen.add(tag);
+      normalized.push(tag);
+    }
+  }
+
+  return normalized;
 }
