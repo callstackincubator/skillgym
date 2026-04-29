@@ -240,6 +240,70 @@ test("executeSuite blocks remaining runs for a runner after initial model reject
   );
 });
 
+test("executeSuite with parallel schedule respects maxParallel", async () => {
+  const outputDir = await createTempDir();
+  const pending = new Map<string, Deferred<void>>();
+  let active = 0;
+  let maxActive = 0;
+
+  const suitePromise = executeSuite("./suite.ts", [
+    { id: "alpha", prompt: "a", assert() {} },
+    { id: "beta", prompt: "b", assert() {} },
+  ], {
+    cwd: outputDir,
+    outputDir,
+    schedule: "parallel",
+    maxParallel: 2,
+    isInteractive: false,
+    config: {
+      runners: {
+        open: { agent: { type: "opencode", model: "openai/gpt-5" } },
+        code: { agent: { type: "codex", model: "gpt-5" } },
+      },
+    },
+    executeRunnerFn: async (testCase, runner, _adapter, options) => {
+      const key = `${testCase.id}:${runner.id}`;
+      const deferred = createDeferred<void>();
+      pending.set(key, deferred);
+      active += 1;
+      maxActive = Math.max(maxActive, active);
+
+      try {
+        await deferred.promise;
+        return createRunnerResult({
+          caseId: testCase.id,
+          runner,
+          passed: true,
+          durationMs: 10,
+          artifactDir: options.artifactDir,
+          totalTokens: 100,
+          outputTokens: 20,
+          reasoningTokens: 2,
+          observedReads: 1,
+        });
+      } finally {
+        active -= 1;
+      }
+    },
+  });
+
+  await waitFor(() => pending.size === 1);
+  expect(maxActive).toBe(1);
+
+  pending.get("alpha:open")?.resolve();
+  await waitFor(() => pending.size === 2);
+
+  pending.get("alpha:code")?.resolve();
+  await waitFor(() => pending.size === 4);
+  expect(maxActive).toBe(2);
+
+  pending.get("beta:open")?.resolve();
+  pending.get("beta:code")?.resolve();
+
+  await suitePromise;
+  expect(maxActive).toBe(2);
+});
+
 test("executeSuite with isolated-by-runner runs serially within a runner and concurrently across runners", async () => {
   const outputDir = await createTempDir();
   const started: string[] = [];
@@ -317,6 +381,78 @@ test("executeSuite with isolated-by-runner runs serially within a runner and con
   expect(result.cases.map((caseResult) => caseResult.caseId)).toEqual(["alpha", "beta"]);
   expect(result.cases[0]?.runnerResults.map((runnerResult) => runnerResult.runner.id)).toEqual(["open", "code"]);
   expect(result.cases[1]?.runnerResults.map((runnerResult) => runnerResult.runner.id)).toEqual(["open", "code"]);
+});
+
+test("executeSuite with isolated-by-runner caps active runner lanes", async () => {
+  const outputDir = await createTempDir();
+  const started: string[] = [];
+  const pending = new Map<string, Deferred<void>>();
+
+  const suitePromise = executeSuite("./suite.ts", [
+    { id: "alpha", prompt: "a", assert() {} },
+    { id: "beta", prompt: "b", assert() {} },
+  ], {
+    cwd: outputDir,
+    outputDir,
+    schedule: "isolated-by-runner",
+    maxParallel: 2,
+    isInteractive: false,
+    config: {
+      runners: {
+        open: { agent: { type: "opencode", model: "openai/gpt-5" } },
+        code: { agent: { type: "codex", model: "gpt-5" } },
+        cursor: { agent: { type: "cursor-agent", model: "composer-2-fast" } },
+      },
+    },
+    executeRunnerFn: async (testCase, runner, _adapter, options) => {
+      const key = `${testCase.id}:${runner.id}`;
+      started.push(key);
+
+      const shouldBlock = key === "alpha:open" || key === "alpha:code" || key === "beta:open" || key === "beta:code";
+      if (shouldBlock) {
+        const deferred = createDeferred<void>();
+        pending.set(key, deferred);
+        await deferred.promise;
+      }
+
+      return createRunnerResult({
+        caseId: testCase.id,
+        runner,
+        passed: true,
+        durationMs: 10,
+        artifactDir: options.artifactDir,
+        totalTokens: 100,
+        outputTokens: 20,
+        reasoningTokens: 2,
+        observedReads: 1,
+      });
+    },
+  });
+
+  await waitFor(() => started.includes("alpha:open"));
+  expect(started).toEqual(["alpha:open"]);
+  expect(started).not.toContain("alpha:cursor");
+
+  pending.get("alpha:open")?.resolve();
+  await waitFor(() => started.includes("alpha:code"));
+  expect(started).not.toContain("alpha:cursor");
+  expect(started).not.toContain("beta:open");
+
+  pending.get("alpha:code")?.resolve();
+  await waitFor(() => started.includes("alpha:cursor"));
+
+  pending.get("alpha:cursor")?.resolve();
+  await waitFor(() => started.includes("beta:open") && started.includes("beta:code"));
+  expect(started).not.toContain("beta:cursor");
+
+  pending.get("beta:open")?.resolve();
+  await waitFor(() => started.includes("beta:cursor"));
+
+  for (const deferred of pending.values()) {
+    deferred.resolve();
+  }
+
+  await suitePromise;
 });
 
 test("executeSuite reports runner execution errors as failed runs", async () => {

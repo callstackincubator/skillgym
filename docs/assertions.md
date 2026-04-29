@@ -98,6 +98,8 @@ assert.skills.only(report, ["find-skills", "upgrading-expo"]);
 
 Command assertions operate on observed command events in execution order.
 
+Use raw string or `RegExp` matchers when you only care about the emitted command text. Use `commandMatcher(...)` when you want stable checks against the executable, positional arguments, options, repeated flags, or `--` handling.
+
 Available methods:
 
 - `assert.commands.includes(report, matcher, options?)`
@@ -129,13 +131,32 @@ Descriptions:
 Example:
 
 ```ts
+import { assert, commandMatcher } from "skillgym";
+
 assert.commands.includes(report, "npx skills find");
 assert.commands.notIncludes(report, "npm install");
 assert.commands.count(report, /pnpm test/, 2);
 assert.commands.before(report, /skills find/, /pnpm install/);
+assert.commands.includes(
+  report,
+  commandMatcher("pnpm").arg("test").option("--filter", "unit").flag("--watch"),
+);
 assert.commands.first(report, /rozenite --help/);
 assert.commands.last(report, /agent session stop/);
 ```
+
+Structured command matcher semantics:
+
+- string and `RegExp` command matchers keep the current raw-text behavior
+- `executable` matches the leading command token
+- positional arguments preserve order
+- option order is ignored
+- grouped short flags such as `-abc` are normalized as `-a`, `-b`, and `-c`
+- option values from `--name value`, `--name=value`, and short attached forms such as `-p80` are normalized to the same matcher model
+- bare `--` ends option parsing, and later tokens are treated as positional arguments
+- `includes`, `count`, `before`, `first`, and `last` allow extra options and extra positionals unless the matcher uses `strict: true`, `exact: true`, or `.strict()` / `.exact()` on the builder
+
+Normalization is best-effort. Some runners emit direct command strings, while others reconstruct commands from shell-wrapped output. Assertion failures show both the raw command and the parsed interpretation used for matching.
 
 ## File reads
 

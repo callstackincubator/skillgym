@@ -4,6 +4,23 @@ import type { SessionReport, ToolCallEvent } from "../domain/session-report.js";
 export type Matcher = string | RegExp;
 export type SkillConfidence = "weak" | "medium" | "strong" | "explicit";
 
+export type CommandValueMatcher = Matcher | true;
+
+export interface StructuredCommandMatcher {
+  executable?: Matcher;
+  positionals?: readonly Matcher[];
+  options?: Readonly<Record<string, CommandValueMatcher | readonly CommandValueMatcher[]>>;
+  endOfOptions?: boolean;
+  exact?: boolean;
+  strict?: boolean;
+}
+
+export interface CommandMatcherBuilderLike {
+  build(): StructuredCommandMatcher;
+}
+
+export type CommandMatcher = Matcher | StructuredCommandMatcher | CommandMatcherBuilderLike;
+
 export interface ToolCallMatcher {
   tool?: Matcher;
   where?: (args: unknown, event: ToolCallEvent) => boolean;
@@ -28,17 +45,17 @@ export interface SkillAssertions {
 }
 
 export interface CommandAssertions {
-  includes(report: SessionReport, matcher: Matcher, options?: AssertionOptions): void;
-  notIncludes(report: SessionReport, matcher: Matcher, options?: AssertionOptions): void;
-  count(report: SessionReport, matcher: Matcher, expected: number, options?: AssertionOptions): void;
-  atLeast(report: SessionReport, matcher: Matcher, min: number, options?: AssertionOptions): void;
-  atMost(report: SessionReport, matcher: Matcher, max: number, options?: AssertionOptions): void;
-  before(report: SessionReport, firstMatcher: Matcher, secondMatcher: Matcher, options?: AssertionOptions): void;
-  only(report: SessionReport, matchers: readonly Matcher[], options?: AssertionOptions): void;
+  includes(report: SessionReport, matcher: CommandMatcher, options?: AssertionOptions): void;
+  notIncludes(report: SessionReport, matcher: CommandMatcher, options?: AssertionOptions): void;
+  count(report: SessionReport, matcher: CommandMatcher, expected: number, options?: AssertionOptions): void;
+  atLeast(report: SessionReport, matcher: CommandMatcher, min: number, options?: AssertionOptions): void;
+  atMost(report: SessionReport, matcher: CommandMatcher, max: number, options?: AssertionOptions): void;
+  before(report: SessionReport, firstMatcher: CommandMatcher, secondMatcher: CommandMatcher, options?: AssertionOptions): void;
+  only(report: SessionReport, matchers: readonly CommandMatcher[], options?: AssertionOptions): void;
   size(report: SessionReport, expected: number, options?: AssertionOptions): void;
-  exactlyOne(report: SessionReport, matcher: Matcher, options?: AssertionOptions): void;
-  first(report: SessionReport, matcher: Matcher, options?: AssertionOptions): void;
-  last(report: SessionReport, matcher: Matcher, options?: AssertionOptions): void;
+  exactlyOne(report: SessionReport, matcher: CommandMatcher, options?: AssertionOptions): void;
+  first(report: SessionReport, matcher: CommandMatcher, options?: AssertionOptions): void;
+  last(report: SessionReport, matcher: CommandMatcher, options?: AssertionOptions): void;
 }
 
 export interface FileReadAssertions {
