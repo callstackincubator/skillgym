@@ -18,6 +18,7 @@ export async function runCommand(options: {
   cwd?: string;
   outputDir?: string;
   schedule?: string;
+  maxParallel?: string;
   caseId?: string;
   runner?: string;
   reporter?: string;
@@ -25,6 +26,7 @@ export async function runCommand(options: {
   configPath?: string;
   updateSnapshots?: boolean;
   snapshotsPath?: string;
+  tags?: string[];
 }): Promise<void> {
   const loadedConfig = await loadConfig({
     suitePath: options.suitePath,
@@ -35,6 +37,8 @@ export async function runCommand(options: {
       cwd: options.cwd,
       outputDir: options.outputDir,
       schedule: options.schedule,
+      maxParallel: options.maxParallel,
+      tags: options.tags,
     },
     loadedConfig.config,
   );
@@ -69,8 +73,10 @@ export async function runCommand(options: {
     cwd: path.resolve(runOptions.cwd),
     outputDir: runOptions.outputDir,
     schedule: runOptions.schedule,
+    maxParallel: runOptions.maxParallel,
     caseId: options.caseId,
     runner: options.runner,
+    tags: runOptions.tags,
     config: loadedConfig.config,
     suiteWorkspace: suite.workspace,
     snapshots,

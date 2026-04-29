@@ -18,6 +18,7 @@ export type RunnerResultStatus = "passed" | "failed" | "expected-failed" | "unex
 
 export interface CaseResult {
   caseId: string;
+  tags: string[];
   passed: boolean;
   runnerResults: RunnerResult[];
 }
@@ -41,6 +42,8 @@ export interface SuiteRunResult {
   endedAt: string;
   durationMs: number;
   outputDir: string;
+  declaredTags: string[];
+  selectedTags: string[];
   cases: CaseResult[];
   runners: RunnerSummary[];
 }
@@ -57,6 +60,7 @@ export type RunnerFailureOrigin =
   | "assertion"
   | "assert-hook"
   | "max-steps"
+  | "model-rejected"
   | "runner"
   | "workspace-bootstrap"
   | "workspace-setup"

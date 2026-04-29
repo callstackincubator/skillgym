@@ -2,9 +2,42 @@ import { mkdtemp, open, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { StringDecoder } from "node:string_decoder";
-import spawn, { SubprocessError } from "nano-spawn";
+import nanoSpawn, { SubprocessError } from "nano-spawn";
+import type { Options, Subprocess } from "nano-spawn";
 import type { AgentType } from "../domain/runner.js";
 import { MaxStepsExceededError, createMaxStepsMonitor } from "../limits/max-steps.js";
+
+function spawn(command: string, args: string[], options: Options): Subprocess {
+  const subprocess = nanoSpawn(command, args, options);
+
+  void subprocess.nodeChildProcess.then((child) => {
+    const terminate = async (signal: NodeJS.Signals): Promise<void> => {
+      try {
+        child.kill(signal);
+      } catch {
+        // child already exited
+      }
+      process.off("SIGINT", sigintHandler);
+      process.off("SIGTERM", sigtermHandler);
+      process.kill(process.pid, signal);
+    };
+
+    const sigintHandler = () => void terminate("SIGINT");
+    const sigtermHandler = () => void terminate("SIGTERM");
+
+    process.on("SIGINT", sigintHandler);
+    process.on("SIGTERM", sigtermHandler);
+
+    void subprocess.finally(() => {
+      process.off("SIGINT", sigintHandler);
+      process.off("SIGTERM", sigtermHandler);
+    }).catch(() => {
+      // The subprocess promise may reject on non-zero exit; cleanup still needs to run without leaking an unhandled rejection.
+    });
+  });
+
+  return subprocess;
+}
 
 export interface ExecResult {
   stdout: string;

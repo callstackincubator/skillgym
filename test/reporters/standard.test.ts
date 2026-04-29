@@ -35,6 +35,9 @@ test("standard reporter prints runner-grouped results and failure artifacts", as
     selectedRunnerCount: 2,
     selectedExecutionCount: 4,
     scheduleMode: "serial" as const,
+    maxParallel: 1,
+    tagFilter: ["smoke", "gestures"],
+    declaredTags: [],
   };
   const suiteResult: SuiteRunResult = {
     suitePath: context.suitePath,
@@ -42,6 +45,8 @@ test("standard reporter prints runner-grouped results and failure artifacts", as
     endedAt: "2026-04-02T12:01:42.000Z",
     durationMs: 102_000,
     outputDir: context.outputDir,
+    declaredTags: [],
+    selectedTags: ["smoke", "gestures"],
     cases: [
       createCaseResult({
         caseId: "case-a",
@@ -84,9 +89,13 @@ test("standard reporter prints runner-grouped results and failure artifacts", as
 
   const output = writes.join("");
 
+  expect(output).toContain("skillgym");
+  expect(output).toContain("Prove your agent skills work before you ship them.");
   expect(output).toContain("Suite     examples/basic-suite.ts");
   expect(output).toContain("Runners   2");
+  expect(output).toContain("Tags      smoke, gestures");
   expect(output).toContain("Runs      4");
+  expect(output).toContain("Parallel  1");
   expect(output).toContain("Runner: open-main");
   expect(output).toContain("Runner: code-main");
   expect(output).toContain("case                       time           tokens in / out / reason / cache / billable");
@@ -135,6 +144,8 @@ test("standard reporter interactive mode renders queued, running, and finished r
     selectedRunnerCount: 2,
     selectedExecutionCount: 4,
     scheduleMode: "parallel" as const,
+    maxParallel: 4,
+    declaredTags: [],
   };
 
   const openRunner = createRunnerInfo("open-main", { type: "opencode", model: "openai/gpt-5" });
@@ -235,6 +246,8 @@ test("standard reporter labels expected failures and unexpected passes", async (
     selectedRunnerCount: 1,
     selectedExecutionCount: 2,
     scheduleMode: "serial" as const,
+    maxParallel: 1,
+    declaredTags: [],
   };
   const suiteResult: SuiteRunResult = {
     suitePath: context.suitePath,
@@ -242,6 +255,8 @@ test("standard reporter labels expected failures and unexpected passes", async (
     endedAt: "2026-04-02T12:01:42.000Z",
     durationMs: 102_000,
     outputDir: context.outputDir,
+    declaredTags: [],
+    selectedTags: [],
     cases: [
       createCaseResult({
         caseId: "known-gap",
@@ -277,7 +292,7 @@ test("standard reporter labels expected failures and unexpected passes", async (
   expect(output).not.toContain("known-gap > open-main");
 });
 
-test("standard reporter prints warning line for non-serial schedules only", async () => {
+test("standard reporter prints warning line for overlapping shared-workspace schedules", async () => {
   const parallelWrites: string[] = [];
   const serialWrites: string[] = [];
   const parallelReporter = createStandardReporter({
@@ -317,6 +332,8 @@ test("standard reporter prints warning line for non-serial schedules only", asyn
       selectedRunnerCount: 1,
       selectedExecutionCount: 1,
       scheduleMode: "parallel",
+      maxParallel: 2,
+      declaredTags: [],
     },
     cases: [],
     runners: [runner],
@@ -333,6 +350,8 @@ test("standard reporter prints warning line for non-serial schedules only", asyn
       selectedRunnerCount: 1,
       selectedExecutionCount: 1,
       scheduleMode: "serial",
+      maxParallel: 1,
+      declaredTags: [],
     },
     cases: [],
     runners: [runner],
@@ -369,6 +388,8 @@ test("standard reporter prints friendly runner crash message with log path", asy
     selectedRunnerCount: 1,
     selectedExecutionCount: 1,
     scheduleMode: "serial" as const,
+    maxParallel: 1,
+    declaredTags: [],
   };
   const suiteResult: SuiteRunResult = {
     suitePath: context.suitePath,
@@ -376,6 +397,8 @@ test("standard reporter prints friendly runner crash message with log path", asy
     endedAt: "2026-04-02T12:01:42.000Z",
     durationMs: 102_000,
     outputDir: context.outputDir,
+    declaredTags: [],
+    selectedTags: [],
     cases: [
       createCaseResult({
         caseId: "case-a",
@@ -446,6 +469,8 @@ test("standard reporter points workspace bootstrap failures to bootstrap logs", 
     selectedRunnerCount: 1,
     selectedExecutionCount: 1,
     scheduleMode: "serial" as const,
+    maxParallel: 1,
+    declaredTags: [],
   };
   const suiteResult: SuiteRunResult = {
     suitePath: context.suitePath,
@@ -453,6 +478,8 @@ test("standard reporter points workspace bootstrap failures to bootstrap logs", 
     endedAt: "2026-04-02T12:01:42.000Z",
     durationMs: 102_000,
     outputDir: context.outputDir,
+    declaredTags: [],
+    selectedTags: [],
     cases: [
       createCaseResult({
         caseId: "case-a",
@@ -527,6 +554,8 @@ test("standard reporter renders max-steps failures with a clear message", async 
     selectedRunnerCount: 1,
     selectedExecutionCount: 1,
     scheduleMode: "serial" as const,
+    maxParallel: 1,
+    declaredTags: [],
   };
   const suiteResult: SuiteRunResult = {
     suitePath: context.suitePath,
@@ -534,6 +563,8 @@ test("standard reporter renders max-steps failures with a clear message", async 
     endedAt: "2026-04-02T12:01:42.000Z",
     durationMs: 102_000,
     outputDir: context.outputDir,
+    declaredTags: [],
+    selectedTags: [],
     cases: [
       createCaseResult({
         caseId: "case-a",
@@ -605,6 +636,8 @@ test("standard reporter suppresses shared-workspace warning for isolated mode", 
       selectedRunnerCount: 1,
       selectedExecutionCount: 1,
       scheduleMode: "parallel",
+      maxParallel: 2,
+      declaredTags: [],
     },
     cases: [],
     runners: [createRunnerInfo("open-main", { type: "opencode", model: "openai/gpt-5" })],
@@ -615,12 +648,79 @@ test("standard reporter suppresses shared-workspace warning for isolated mode", 
   expect(writes.join("")).toContain("Workspace isolated per run");
 });
 
+test("standard reporter formats model-rejected failures as runner crashes with specific detail", async () => {
+  const writes: string[] = [];
+  const reporter = createStandardReporter({
+    stdout: {
+      isTTY: false,
+      columns: 120,
+      write(chunk: string) {
+        writes.push(chunk);
+        return true;
+      },
+    },
+    isInteractive: false,
+    isUnicode: true,
+  });
+
+  const runner = createRunnerInfo("code-main", { type: "codex", model: "gpt-5" });
+  const context = {
+    isInteractive: false,
+    cwd: "/workspace",
+    workspaceMode: "shared" as const,
+    suitePath: "examples/basic-suite.ts",
+    outputDir: ".skillgym-results/run-1",
+    selectedCaseCount: 1,
+    selectedRunnerCount: 1,
+    selectedExecutionCount: 1,
+    scheduleMode: "serial" as const,
+    maxParallel: 1,
+    declaredTags: [],
+  };
+  const result: SuiteRunResult = {
+    suitePath: context.suitePath,
+    startedAt: "2026-04-02T12:00:00.000Z",
+    endedAt: "2026-04-02T12:00:01.000Z",
+    durationMs: 1_000,
+    outputDir: context.outputDir,
+    declaredTags: [],
+    selectedTags: [],
+    cases: [{
+      caseId: "case-a",
+      tags: [],
+      passed: false,
+      runnerResults: [{
+        ...createRunnerResult({ runner, passed: false, artifactDir: ".skillgym-results/run-1/case-a/code-main", totalTokens: 12_000 }),
+        error: { name: "Error", message: "Runner rejected configured model \"gpt-5\" during initial execution." },
+        failureType: "runner-crash",
+        failureOrigin: "model-rejected",
+      }],
+    }],
+    runners: [createRunnerSummary({ runner, passedCases: 0, totalCases: 1, averageDurationMs: 24_800, averageTotalTokens: 12_000 })],
+  };
+
+  await reporter.onRunnerFinish?.({
+    context,
+    testCase: { id: "case-a", prompt: "", assert() {} },
+    runner,
+    result: result.cases[0]!.runnerResults[0]!,
+    caseIndex: 1,
+    totalCases: 1,
+  });
+  await reporter.onSuiteFinish?.({ context, result });
+
+  const output = writes.join("");
+  expect(output).toContain("Runner rejected the configured model.");
+  expect(output).toContain('Error: Runner rejected configured model "gpt-5" during initial execution.');
+});
+
 function createCaseResult(options: {
   caseId: string;
   runnerResults: RunnerResult[];
 }): CaseResult {
   return {
     caseId: options.caseId,
+    tags: [],
     passed: options.runnerResults.every((result) => result.passed),
     runnerResults: options.runnerResults,
   };

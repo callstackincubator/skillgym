@@ -3,6 +3,7 @@ import path from "node:path";
 import type { RunnerConfig } from "./domain/runner.js";
 import type { SuiteWorkspaceConfig, WorkspaceBootstrapConfig } from "./domain/test-case.js";
 import { SCHEDULE_MODES, type ScheduleMode } from "./domain/schedule.js";
+import { isBuiltInReporter } from "./reporters/builtins.js";
 import { importFromPath } from "./utils/import.js";
 
 const CONFIG_FILENAMES = [
@@ -15,7 +16,7 @@ const CONFIG_FILENAMES = [
 ] as const;
 
 const TOP_LEVEL_KEYS = ["run", "defaults", "runners", "snapshots"] as const;
-const RUN_KEYS = ["cwd", "outputDir", "reporter", "schedule", "workspace", "maxSteps"] as const;
+const RUN_KEYS = ["cwd", "outputDir", "reporter", "schedule", "workspace", "maxSteps", "maxParallel", "tags"] as const;
 const DEFAULT_KEYS = ["timeoutMs"] as const;
 const RUNNER_KEYS = ["agent"] as const;
 const COMMON_AGENT_KEYS = ["type", "command", "commandArgs", "env", "model"] as const;
@@ -53,6 +54,8 @@ export interface SkillGymConfig {
     schedule?: ScheduleMode;
     workspace?: SuiteWorkspaceConfig;
     maxSteps?: number;
+    maxParallel?: number;
+    tags?: string[];
   };
   defaults?: {
     timeoutMs?: number;
@@ -105,19 +108,29 @@ export function resolveRunOptions(
     cwd?: string;
     outputDir?: string;
     schedule?: string;
+    maxParallel?: string;
+    tags?: string[];
   },
   config: SkillGymConfig,
 ): {
   cwd: string;
   outputDir?: string;
   schedule: ScheduleMode;
+  maxParallel?: number;
+  tags: string[];
 } {
+  const maxParallel = cliOptions.maxParallel !== undefined
+    ? parseIntegerString(cliOptions.maxParallel, "CLI option --max-parallel", 1)
+    : config.run?.maxParallel;
+
   return {
     cwd: cliOptions.cwd !== undefined ? path.resolve(cliOptions.cwd) : config.run?.cwd ?? process.cwd(),
     outputDir: cliOptions.outputDir !== undefined ? path.resolve(cliOptions.outputDir) : config.run?.outputDir,
     schedule: cliOptions.schedule !== undefined
       ? parseScheduleMode(cliOptions.schedule, "CLI option --schedule")
       : config.run?.schedule ?? "serial",
+    ...(maxParallel === undefined ? {} : { maxParallel }),
+    tags: cliOptions.tags ?? config.run?.tags ?? [],
   };
 }
 
@@ -204,6 +217,8 @@ function resolveConfigPaths(config: SkillGymConfig, configDir: string): SkillGym
       schedule: config.run.schedule,
       workspace: config.run.workspace === undefined ? undefined : resolveWorkspaceConfigPaths(config.run.workspace, configDir),
       ...(config.run.maxSteps === undefined ? {} : { maxSteps: config.run.maxSteps }),
+      ...(config.run.maxParallel === undefined ? {} : { maxParallel: config.run.maxParallel }),
+      ...(config.run.tags === undefined ? {} : { tags: config.run.tags }),
     },
     defaults: config.defaults === undefined ? undefined : {
       timeoutMs: config.defaults.timeoutMs,
@@ -252,7 +267,7 @@ function resolvePathLikeValue(value: string, configDir: string): string {
 }
 
 function resolveReporterSpecifier(value: string, configDir: string): string {
-  if (value === "standard" || path.isAbsolute(value)) {
+  if (isBuiltInReporter(value) || path.isAbsolute(value)) {
     return value;
   }
 
@@ -277,6 +292,7 @@ function parseRunConfig(value: unknown, configPath: string): SkillGymConfig["run
   ensureKnownKeys(record, RUN_KEYS, configPath);
 
   const maxSteps = parseOptionalInteger(record.maxSteps, `${configPath}.maxSteps`, 1);
+  const maxParallel = parseOptionalInteger(record.maxParallel, `${configPath}.maxParallel`, 1);
 
   return {
     cwd: parseOptionalNonEmptyString(record.cwd, `${configPath}.cwd`),
@@ -285,6 +301,8 @@ function parseRunConfig(value: unknown, configPath: string): SkillGymConfig["run
     schedule: parseOptionalScheduleMode(record.schedule, `${configPath}.schedule`),
     workspace: parseOptionalWorkspaceConfig(record.workspace, `${configPath}.workspace`),
     ...(maxSteps === undefined ? {} : { maxSteps }),
+    ...(maxParallel === undefined ? {} : { maxParallel }),
+    tags: parseOptionalStringArray(record.tags, `${configPath}.tags`),
   };
 }
 
@@ -551,6 +569,16 @@ function parseOptionalInteger(
   }
 
   return value;
+}
+
+function parseIntegerString(value: string, configPath: string, minimum: number): number {
+  const parsed = Number(value);
+
+  if (!Number.isInteger(parsed) || parsed < minimum) {
+    throw invalidConfig(configPath, `expected integer >= ${String(minimum)}`);
+  }
+
+  return parsed;
 }
 
 function parseOptionalSnapshotMetric(value: unknown, configPath: string): SnapshotMetric | undefined {
