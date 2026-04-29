@@ -406,6 +406,7 @@ function createRunnerResult(options: {
   return {
     runner: options.runner,
     passed: true,
+    status: "passed",
     durationMs: 10,
     artifactDir: options.artifactDir,
     report: createSessionReport({ runner: options.runner }),

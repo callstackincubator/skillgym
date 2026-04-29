@@ -26,6 +26,7 @@ export interface TestCase {
   prompt: string;
   tags?: string[];
   timeoutMs?: number;
+  expectedFail?: boolean;
   assert(report: SessionReport, ctx: AssertionContext): void | Promise<void>;
 }
 

@@ -103,6 +103,10 @@ The built-in `standard` reporter is optimized for polished CLI output.
 - Non-interactive mode avoids redraws and prints stable lines only.
 - Non-serial schedules with concurrency above 1 print a warning because runs may overlap in the same workspace.
 - Every run prints suite metadata, compact per-run token columns (`in`, `out`, `reason`, `cache`, `billable`) when available, a final summary, and failure artifact paths.
+- Run statuses are reported as `passed`, `failed`, `expected-failed`, or `unexpected-passed`.
+- Expected failures count as passed suite health, are labeled `expected failure`, and are excluded from the failure details section.
+- Unexpected passes count as failures and are labeled `unexpected pass` because the benchmark expectation may be stale.
+- Summary output includes expected-failure and unexpected-pass counts in addition to pass/fail totals.
 - Full stack traces are not shown by default.
 
 Reporter-visible token metrics on `RunnerSummary` include:

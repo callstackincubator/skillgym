@@ -4,6 +4,7 @@ import type { SessionReport } from "./session-report.js";
 export interface RunnerResult {
   runner: RunnerInfo;
   passed: boolean;
+  status: RunnerResultStatus;
   durationMs: number;
   artifactDir: string;
   report: SessionReport;
@@ -12,6 +13,8 @@ export interface RunnerResult {
   failureOrigin?: RunnerFailureOrigin;
   failureLogPath?: string;
 }
+
+export type RunnerResultStatus = "passed" | "failed" | "expected-failed" | "unexpected-passed";
 
 export interface CaseResult {
   caseId: string;

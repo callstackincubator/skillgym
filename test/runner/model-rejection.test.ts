@@ -96,6 +96,7 @@ async function createResultWithLogs(options: {
   return {
     runner,
     passed: false,
+    status: "failed",
     durationMs: 1,
     artifactDir,
     error: {

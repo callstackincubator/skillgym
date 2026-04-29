@@ -32,6 +32,7 @@ test("json-summary reporter omits session internals and prints summary on suite 
           {
             runner,
             passed: false,
+            status: "failed",
             durationMs: 18_200,
             artifactDir: ".skillgym-results/run-1/case-a/open-main",
             failureType: "assertion",
@@ -200,6 +201,7 @@ test("json-summary reporter is silent until suite finishes", async () => {
     result: {
       runner,
       passed: true,
+      status: "passed",
       durationMs: 1000,
       artifactDir: ".out/c/r",
       report: {

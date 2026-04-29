@@ -109,6 +109,7 @@ export async function executeRunner(
     return {
       runner,
       passed: true,
+      status: "passed",
       durationMs: Date.now() - startedMs,
       artifactDir,
       report,

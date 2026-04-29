@@ -127,6 +127,7 @@ function createFailedRunnerResult(runner: RunnerInfo, caseId: string, errorMessa
   return {
     runner,
     passed: false,
+    status: "failed",
     durationMs: 24_800,
     artifactDir: `.skillgym-results/run-1/${caseId}/${runner.id.replace(/[:]/g, "-")}`,
     error: {

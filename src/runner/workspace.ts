@@ -244,6 +244,7 @@ export function createExecutionFailureResult(
   return {
     runner: options.runner,
     passed: false,
+    status: "failed",
     durationMs: options.durationMs,
     artifactDir: options.artifactDir,
     report: fallbackReport,

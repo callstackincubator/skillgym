@@ -228,6 +228,36 @@ export async function executeSuite(
   }
 }
 
+export function classifyExpectedFailure(testCase: TestCase, result: RunnerResult): RunnerResult {
+  if (testCase.expectedFail !== true) {
+    return {
+      ...result,
+      status: result.passed ? "passed" : "failed",
+    };
+  }
+
+  if (result.passed) {
+    return {
+      ...result,
+      passed: false,
+      status: "unexpected-passed",
+    };
+  }
+
+  if (result.failureType === "assertion" && result.failureOrigin === "assertion") {
+    return {
+      ...result,
+      passed: true,
+      status: "expected-failed",
+    };
+  }
+
+  return {
+    ...result,
+    status: "failed",
+  };
+}
+
 async function executePlannedExecution(
   item: PlannedSuiteExecution,
   options: {
@@ -275,7 +305,7 @@ async function executePlannedExecution(
   await ensureDir(artifactDir);
 
   const rejectedResult = options.rejectedRunners.get(item.runner.id);
-  const result = rejectedResult === undefined
+  const rawResult = rejectedResult === undefined
     ? await runExecution(item, {
         resolvedWorkspace: options.resolvedWorkspace,
         executeRunnerFn: options.executeRunnerFn,
@@ -286,20 +316,22 @@ async function executePlannedExecution(
       })
     : await createRejectedModelResult(item, artifactDir);
 
-  if (rejectedResult === undefined && await isModelRejectedResult(result)) {
-    result.failureType = "runner-crash";
-    result.failureOrigin = "model-rejected";
-    if (result.error?.name === "AssertionError" || result.error === undefined) {
-      result.error = {
+  if (rejectedResult === undefined && await isModelRejectedResult(rawResult)) {
+    rawResult.failureType = "runner-crash";
+    rawResult.failureOrigin = "model-rejected";
+    if (rawResult.error?.name === "AssertionError" || rawResult.error === undefined) {
+      rawResult.error = {
         name: "Error",
         message: `Runner rejected configured model "${item.runner.info.agent.model ?? "unknown"}" during initial execution.`,
       };
     }
-    result.failureLogPath ??= path.join(artifactDir, "stderr.log");
-    options.rejectedRunners.set(item.runner.id, result);
-    await writeJson(path.join(artifactDir, "error.json"), result.error);
-    await writeJson(path.join(artifactDir, "report.json"), result.report);
+    rawResult.failureLogPath ??= path.join(artifactDir, "stderr.log");
+    options.rejectedRunners.set(item.runner.id, rawResult);
+    await writeJson(path.join(artifactDir, "error.json"), rawResult.error);
+    await writeJson(path.join(artifactDir, "report.json"), rawResult.report);
   }
+
+  const result = classifyExpectedFailure(item.testCase, rawResult);
 
   options.caseResults[item.caseIndex]!.runnerResults[item.runnerIndex] = result;
 

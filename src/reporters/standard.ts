@@ -32,6 +32,7 @@ interface FailureEntry {
   failureType?: RunnerFailureType;
   failureOrigin?: RunnerFailureOrigin;
   failureLogPath?: string;
+  status: RunnerResult["status"];
 }
 
 interface StandardReporterOptions {
@@ -40,7 +41,7 @@ interface StandardReporterOptions {
   isUnicode?: boolean;
 }
 
-type InteractiveRunStatus = "queued" | "running" | "passed" | "failed";
+type InteractiveRunStatus = "queued" | "running" | "passed" | "failed" | "expected-failed" | "unexpected-passed";
 
 interface InteractiveRunEntry {
   key: string;
@@ -128,7 +129,7 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
     },
     onRunnerFinish(event) {
       if (interactive && interactiveState !== undefined) {
-        setInteractiveRunStatus(interactiveState, createRunKey(event.testCase.id, event.runner.id), event.result.passed ? "passed" : "failed");
+        setInteractiveRunStatus(interactiveState, createRunKey(event.testCase.id, event.runner.id), event.result.status);
         if (!hasRunningEntries(interactiveState)) {
           stopSpinner(interactiveState);
         }
@@ -144,6 +145,7 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
           failureType: event.result.failureType,
           failureOrigin: event.result.failureOrigin,
           failureLogPath: event.result.failureLogPath,
+          status: event.result.status,
         });
       }
     },
@@ -192,6 +194,7 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
         formatSummaryCountLine("Runs", countPassedRuns(event.result.cases), countTotalRuns(event.result.cases), colors),
         stdout,
       );
+      writeLine(formatSummaryStatusLine(event.result.cases, colors), stdout);
       writeLine(formatSummaryDetailLine("Duration", formatDuration(event.result.durationMs), colors), stdout);
       writeLine(formatSummaryDetailLine("Tokens", formatTokenSummary(averageSuiteTokens(event.result), accent), colors), stdout);
       writeLine(formatSummaryDetailLine("Output", event.result.outputDir, colors), stdout);
@@ -235,11 +238,27 @@ function formatRunnerCaseRow(
   accent: (value: string) => string,
 ): string {
   const color = result.passed ? pc.green : pc.red;
+  const statusLabel = formatStatusLabel(result.status);
   return [
     color(padCell(`${result.passed ? symbols.pass : symbols.fail} ${caseId}`, RUNNER_CASE_WIDTH)),
     padCell(formatDuration(result.durationMs), RUNNER_TIME_WIDTH),
-    formatTokenSummary(result.report.usage, accent),
+    statusLabel === undefined
+      ? formatTokenSummary(result.report.usage, accent)
+      : `${formatTokenSummary(result.report.usage, accent)} ${pc.dim(statusLabel)}`,
   ].join("   ");
+}
+
+function formatStatusLabel(status: RunnerResult["status"]): string | undefined {
+  switch (status) {
+    case "passed":
+      return undefined;
+    case "failed":
+      return "unexpected failure";
+    case "expected-failed":
+      return "expected failure";
+    case "unexpected-passed":
+      return "unexpected pass";
+  }
 }
 
 function formatRunnerLegend(colors: ReturnType<typeof pc.createColors>): string {
@@ -251,6 +270,10 @@ function formatRunnerLegend(colors: ReturnType<typeof pc.createColors>): string 
 }
 
 function formatFailureMessage(failure: FailureEntry): string {
+  if (failure.status === "unexpected-passed") {
+    return "Expected failure passed unexpectedly.";
+  }
+
   if (failure.failureType === "assertion") {
     if (failure.error === undefined) {
       return "Assertion failed.";
@@ -353,6 +376,23 @@ function formatSummaryDetailLine(
   colors: ReturnType<typeof pc.createColors>,
 ): string {
   return `${colors.dim(padCell(label, SUMMARY_LABEL_WIDTH))} ${value}`;
+}
+
+function formatSummaryStatusLine(cases: CaseResult[], colors: ReturnType<typeof pc.createColors>): string {
+  const expectedFailures = countRunsByStatus(cases, "expected-failed");
+  const unexpectedPasses = countRunsByStatus(cases, "unexpected-passed");
+  const segments = [
+    colors.green(`${expectedFailures} expected failures`),
+    unexpectedPasses > 0 ? colors.red(`${unexpectedPasses} unexpected passes`) : colors.dim(`${unexpectedPasses} unexpected passes`),
+  ];
+
+  return `${colors.dim(padCell("Statuses", SUMMARY_LABEL_WIDTH))} ${segments.join(colors.dim(" | "))}`;
+}
+
+function countRunsByStatus(cases: CaseResult[], status: RunnerResult["status"]): number {
+  return cases.reduce((sum, caseResult) => {
+    return sum + caseResult.runnerResults.filter((result) => result.status === status).length;
+  }, 0);
 }
 
 
@@ -511,7 +551,8 @@ function formatInteractiveRunRow(
   caseWidth: number,
 ): string {
   const statusIcon = formatInteractiveStatusIcon(entry, state, colors, symbols, frames);
-  const row = `${statusIcon} ${padCell(entry.caseId, caseWidth)}  /  ${entry.runner.id}`;
+  const statusLabel = formatInteractiveStatusLabel(entry.status);
+  const row = `${statusIcon} ${padCell(entry.caseId, caseWidth)}  /  ${entry.runner.id}${statusLabel}`;
   const runnerMeta = ` ${formatRunnerAgentLabel(entry.runner)}`;
 
   switch (entry.status) {
@@ -520,9 +561,26 @@ function formatInteractiveRunRow(
     case "running":
       return `${row}${colors.dim(runnerMeta)}`;
     case "passed":
+    case "expected-failed":
       return `${colors.green(row)}${colors.dim(runnerMeta)}`;
     case "failed":
+    case "unexpected-passed":
       return `${colors.red(row)}${colors.dim(runnerMeta)}`;
+  }
+}
+
+function formatInteractiveStatusLabel(status: InteractiveRunStatus): string {
+  switch (status) {
+    case "expected-failed":
+      return " expected failure";
+    case "unexpected-passed":
+      return " unexpected pass";
+    case "failed":
+      return " unexpected failure";
+    case "queued":
+    case "running":
+    case "passed":
+      return "";
   }
 }
 
@@ -541,8 +599,10 @@ function formatInteractiveStatusIcon(
     case "running":
       return accent(frames[state.spinnerFrameIndex] ?? frames[0] ?? symbols.bullet);
     case "passed":
+    case "expected-failed":
       return symbols.pass;
     case "failed":
+    case "unexpected-passed":
       return symbols.fail;
   }
 }
