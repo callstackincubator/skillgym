@@ -2,7 +2,7 @@ import { appendFile } from "node:fs/promises";
 import process from "node:process";
 import type { CaseResult, RunnerResult, RunnerSummary, SuiteRunResult } from "../domain/result.js";
 import type { BenchmarkReporter } from "./contract.js";
-import { formatDuration } from "./format.js";
+import { formatDuration, formatTokens } from "./format.js";
 import { extractUserStackFrame } from "./stack-frame.js";
 
 const MAX_SUMMARY_FAILURES = 10;
@@ -102,11 +102,17 @@ function formatJobSummary(result: SuiteRunResult): string {
     `- Runs: ${passedRuns} passed, ${totalRuns - passedRuns} failed`,
     `- Duration: ${formatDuration(result.durationMs)}`,
     `- Output: \`${result.outputDir}\``,
-    "",
-    "| Runner | Cases | Avg duration | Avg billable tokens |",
-    "| --- | ---: | ---: | ---: |",
-    ...result.runners.map(formatRunnerSummaryRow),
   ];
+
+  for (const summary of result.runners) {
+    lines.push("", `### Runner: \`${summary.runner.id}\` ${formatRunnerAgentLabel(summary.runner)}`);
+    lines.push("");
+    lines.push("| Case | Duration | Input | Output | Reasoning | Cache | Billable |");
+    lines.push("| --- | ---: | ---: | ---: | ---: | ---: | ---: |");
+    for (const { caseId, runnerResult } of getRunnerCases(result, summary.runner.id)) {
+      lines.push(formatRunnerCaseRow(caseId, runnerResult));
+    }
+  }
 
   if (failures.length > 0) {
     lines.push("", "### Failures");
@@ -122,8 +128,25 @@ function formatJobSummary(result: SuiteRunResult): string {
   return lines.join("\n");
 }
 
-function formatRunnerSummaryRow(summary: RunnerSummary): string {
-  return `| \`${summary.runner.id}\` | ${summary.passedCases}/${summary.totalCases} | ${formatDuration(summary.averageDurationMs)} | ${summary.averageTotalTokens === undefined ? "-" : String(summary.averageTotalTokens)} |`;
+function formatRunnerAgentLabel(runner: RunnerSummary["runner"]): string {
+  const model = runner.agent.model === undefined ? "" : `, ${runner.agent.model}`;
+  return `(${runner.agent.type}${model})`;
+}
+
+function formatRunnerCaseRow(caseId: string, result: RunnerResult): string {
+  const status = result.passed ? "✅" : "❌";
+  const usage = result.report.usage;
+  return `| ${status} \`${caseId}\` | ${formatDuration(result.durationMs)} | ${formatTokens(usage.inputTokens)} | ${formatTokens(usage.outputTokens)} | ${formatTokens(usage.reasoningTokens)} | ${formatTokens(usage.cacheTokens)} | ${formatTokens(usage.totalTokens)} |`;
+}
+
+function getRunnerCases(
+  result: SuiteRunResult,
+  runnerId: string,
+): Array<{ caseId: string; runnerResult: RunnerResult }> {
+  return result.cases.flatMap((caseResult) => {
+    const runnerResult = caseResult.runnerResults.find((entry) => entry.runner.id === runnerId);
+    return runnerResult === undefined ? [] : [{ caseId: caseResult.caseId, runnerResult }];
+  });
 }
 
 function formatFailureSummaryItem(caseId: string, result: RunnerResult): string {
