@@ -1,4 +1,4 @@
-export const BUILT_IN_REPORTER_NAMES = ["standard", "json", "github-actions"] as const;
+export const BUILT_IN_REPORTER_NAMES = ["standard", "json", "json-summary", "github-actions"] as const;
 
 export type BuiltInReporterName = typeof BUILT_IN_REPORTER_NAMES[number];
 
