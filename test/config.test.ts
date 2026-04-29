@@ -291,6 +291,26 @@ describe("config", () => {
     });
   });
 
+  test("built-in reporter config values stay unresolved", async () => {
+    const configDir = path.join(tempDir, "bench");
+    const suitePath = path.join(configDir, "suite.ts");
+    const configPath = path.join(configDir, "skillgym.config.mjs");
+    await mkdir(configDir, { recursive: true });
+    await writeFile(suitePath, "export default []\n", "utf8");
+    await writeFile(
+      configPath,
+      "export default { run: { reporter: 'github-actions' }, runners: { open: { agent: { type: 'opencode', model: 'openai/gpt-5' } } } };\n",
+      "utf8",
+    );
+
+    const loaded = await loadConfig({ suitePath, configPath });
+
+    expect(resolveReporterOptions({}, loaded)).toEqual({
+      reporter: "github-actions",
+      cwd: configDir,
+    });
+  });
+
   test("executeSuite applies per-case timeout over config defaults and runs every case against selected runners", async () => {
     const workspaceDir = path.join(tempDir, "workspace");
     const outputDir = path.join(tempDir, "results");

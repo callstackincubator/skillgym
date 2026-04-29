@@ -1,6 +1,9 @@
 import path from "node:path";
 import type { BenchmarkReporter } from "./contract.js";
+import { createGitHubActionsReporter } from "./github-actions.js";
+import { createJsonReporter } from "./json.js";
 import { createStandardReporter } from "./standard.js";
+import { isBuiltInReporter } from "./builtins.js";
 import { importFromPath } from "../utils/import.js";
 
 const reporterHooks = new Set([
@@ -19,8 +22,19 @@ interface ImportedReporterModule {
 }
 
 export async function loadReporter(specifier: string | undefined, cwd: string): Promise<BenchmarkReporter> {
-  if (specifier === undefined || specifier === "standard") {
+  if (specifier === undefined) {
     return createStandardReporter();
+  }
+
+  if (isBuiltInReporter(specifier)) {
+    switch (specifier) {
+      case "standard":
+        return createStandardReporter();
+      case "json":
+        return createJsonReporter();
+      case "github-actions":
+        return createGitHubActionsReporter();
+    }
   }
 
   const resolvedPath = path.resolve(cwd, specifier);

@@ -8,12 +8,14 @@ Execution, aggregation, and `results.json` writing stay in the runner. Reporters
 
 ```bash
 skillgym run <suite.ts> --reporter standard
+skillgym run <suite.ts> --reporter json
+skillgym run <suite.ts> --reporter github-actions
 skillgym run <suite.ts> --reporter ./examples/custom-reporter.ts
 skillgym run <suite.ts> --schedule isolated-by-runner
 ```
 
 - Omitting `--reporter` uses the built-in `standard` reporter.
-- `standard` explicitly selects the built-in reporter.
+- Built-in reporters are `standard`, `json`, and `github-actions`.
 - Relative paths resolve from `process.cwd()`.
 
 ## Config
@@ -111,3 +113,20 @@ Reporter-visible token metrics on `RunnerSummary` include:
 - `averageTotalTokens`
 
 `averageTotalTokens` is shown as `billable` and uses normalized non-cached totals so different runner providers stay comparable.
+
+## JSON reporter
+
+The built-in `json` reporter only writes the final aggregated `SuiteRunResult` JSON to stdout.
+
+- It ignores live progress hooks.
+- It does not change the `results.json` artifact written by the runner.
+- It is useful for CI steps that want machine-readable stdout.
+
+## GitHub Actions reporter
+
+The built-in `github-actions` reporter is designed for GitHub CI.
+
+- Failed runs emit workflow command annotations.
+- When `GITHUB_STEP_SUMMARY` is set, the reporter appends a compact Markdown summary for the job.
+- When `GITHUB_STEP_SUMMARY` is missing, summary writing is skipped.
+- PR comments stay out of scope for the reporter itself; add those in a separate CI step if needed.

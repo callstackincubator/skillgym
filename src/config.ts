@@ -3,6 +3,7 @@ import path from "node:path";
 import type { RunnerConfig } from "./domain/runner.js";
 import type { SuiteWorkspaceConfig, WorkspaceBootstrapConfig } from "./domain/test-case.js";
 import { SCHEDULE_MODES, type ScheduleMode } from "./domain/schedule.js";
+import { isBuiltInReporter } from "./reporters/builtins.js";
 import { importFromPath } from "./utils/import.js";
 
 const CONFIG_FILENAMES = [
@@ -252,7 +253,7 @@ function resolvePathLikeValue(value: string, configDir: string): string {
 }
 
 function resolveReporterSpecifier(value: string, configDir: string): string {
-  if (value === "standard" || path.isAbsolute(value)) {
+  if (isBuiltInReporter(value) || path.isAbsolute(value)) {
     return value;
   }
 

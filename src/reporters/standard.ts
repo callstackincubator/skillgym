@@ -21,6 +21,7 @@ import {
   padCell,
   visibleWidth,
 } from "./format.js";
+import { extractUserStackFrame, formatStackFrameLocation } from "./stack-frame.js";
 
 interface FailureEntry {
   caseId: string;
@@ -289,54 +290,8 @@ function formatFailureBlock(
 }
 
 function formatErrorLocation(error: SerializedError): string | undefined {
-  if (error.stack === undefined) {
-    return undefined;
-  }
-
-  const frames = error.stack.split("\n").slice(1);
-  for (const frame of frames) {
-    const parsed = parseStackFrame(frame);
-    if (parsed === undefined) {
-      continue;
-    }
-
-    if (isInternalStackFrame(parsed.filePath)) {
-      continue;
-    }
-
-    return `${parsed.filePath}:${parsed.line}:${parsed.column}`;
-  }
-
-  return undefined;
-}
-
-function parseStackFrame(frame: string): { filePath: string; line: string; column: string } | undefined {
-  const trimmed = frame.trim().replace(/^at\s+/, "");
-  const match = /\(?(.+):(\d+):(\d+)\)?$/.exec(trimmed);
-  if (match === null) {
-    return undefined;
-  }
-
-  let [, filePath, line, column] = match;
-  if (filePath === undefined || line === undefined || column === undefined) {
-    return undefined;
-  }
-
-  const openParenIndex = filePath.lastIndexOf("(");
-  if (openParenIndex !== -1) {
-    filePath = filePath.slice(openParenIndex + 1);
-  }
-
-  return { filePath, line, column };
-}
-
-function isInternalStackFrame(filePath: string): boolean {
-  return filePath.startsWith("node:")
-    || filePath.includes("/node:internal/")
-    || filePath.includes("/src/assertions/")
-    || filePath.includes("/src/runner/")
-    || filePath.includes("/src/reporters/")
-    || filePath.includes("/node_modules/");
+  const location = extractUserStackFrame(error);
+  return location === undefined ? undefined : formatStackFrameLocation(location);
 }
 
 function formatCrashMessage(failure: FailureEntry): string {

@@ -18,7 +18,7 @@ ${theme.bold("Run Options:")}
   --schedule ${theme.accent("<mode>")}      Choose ${theme.light("serial")}, ${theme.light("parallel")}, or ${theme.light("isolated-by-runner")}
   --case ${theme.accent("<id>")}            Filter the configured suite to one case id
   --runner ${theme.accent("<runner-id>")}   Filter the configured runner set by runner id
-  --reporter ${theme.accent("<value>")}     Use ${theme.light("standard")} or override run.reporter from config
+  --reporter ${theme.accent("<value>")}     Use ${theme.light("standard")}, ${theme.light("json")}, ${theme.light("github-actions")}, or override run.reporter
   --snapshots ${theme.accent("<path>")}     Override the configured snapshot file path
   --update-snapshots       Refresh snapshot baselines for the executed runs
 
