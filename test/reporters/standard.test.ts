@@ -84,6 +84,8 @@ test("standard reporter prints runner-grouped results and failure artifacts", as
 
   const output = writes.join("");
 
+  expect(output).toContain("skillgym");
+  expect(output).toContain("Prove your agent skills work before you ship them.");
   expect(output).toContain("Suite     examples/basic-suite.ts");
   expect(output).toContain("Runners   2");
   expect(output).toContain("Runs      4");
