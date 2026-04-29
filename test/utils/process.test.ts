@@ -60,14 +60,10 @@ test("execFileCapture preserves UTF-8 characters split across stdout chunks", as
 });
 
 test("execFileCapture reports SIGKILL timeouts as timed out", async () => {
-  const result = await execFileCapture(
-    process.execPath,
-    ["-e", "setTimeout(() => {}, 10000)"],
-    {
-      cwd: process.cwd(),
-      timeoutMs: 50,
-    },
-  );
+  const result = await execFileCapture(process.execPath, ["-e", "setTimeout(() => {}, 10000)"], {
+    cwd: process.cwd(),
+    timeoutMs: 50,
+  });
 
   expect(result.exitCode).toBeNull();
   expect(result.signal).toBe("SIGKILL");
@@ -98,6 +94,8 @@ test("execFileCapture terminates when maxSteps is exceeded and preserves output"
 
   expect(result.timedOut).toBe(false);
   expect(result.terminatedByMonitor?.name).toBe("MaxStepsExceededError");
-  expect(result.terminatedByMonitor?.message).toContain("Exceeded maxSteps: observed 2 steps with limit 1");
+  expect(result.terminatedByMonitor?.message).toContain(
+    "Exceeded maxSteps: observed 2 steps with limit 1",
+  );
   expect(result.stdout).toContain('{"type":"step_finish"}');
 });

@@ -75,7 +75,10 @@ export function matchesToolCall(event: ToolCallEvent, matcher: ToolCallMatcher):
   return true;
 }
 
-export function firstToolCallMatchIndex(events: readonly ToolCallEvent[], matcher: ToolCallMatcher): number {
+export function firstToolCallMatchIndex(
+  events: readonly ToolCallEvent[],
+  matcher: ToolCallMatcher,
+): number {
   return events.findIndex((event) => matchesToolCall(event, matcher));
 }
 
@@ -83,7 +86,10 @@ export function countMatches(values: readonly string[], matcher: Matcher): numbe
   return values.filter((value) => matchesText(value, matcher)).length;
 }
 
-export function countToolCallMatches(events: readonly ToolCallEvent[], matcher: ToolCallMatcher): number {
+export function countToolCallMatches(
+  events: readonly ToolCallEvent[],
+  matcher: ToolCallMatcher,
+): number {
   return events.filter((event) => matchesToolCall(event, matcher)).length;
 }
 
@@ -220,7 +226,9 @@ export function assertOnly(
   matchers: readonly Matcher[],
   options?: AssertionOptions,
 ): void {
-  const unexpected = values.filter((value) => !matchers.some((matcher) => matchesText(value, matcher)));
+  const unexpected = values.filter(
+    (value) => !matchers.some((matcher) => matchesText(value, matcher)),
+  );
 
   assert.equal(
     unexpected.length,
@@ -398,7 +406,9 @@ export function assertToolCallSequence(
   let previousIndex = -1;
 
   for (const matcher of matchers) {
-    const nextIndex = events.findIndex((event, index) => index > previousIndex && matchesToolCall(event, matcher));
+    const nextIndex = events.findIndex(
+      (event, index) => index > previousIndex && matchesToolCall(event, matcher),
+    );
     assert.notEqual(
       nextIndex,
       -1,
@@ -417,7 +427,9 @@ export function assertToolCallOnly(
   matchers: readonly ToolCallMatcher[],
   options?: AssertionOptions,
 ): void {
-  const unexpected = events.filter((event) => !matchers.some((matcher) => matchesToolCall(event, matcher)));
+  const unexpected = events.filter(
+    (event) => !matchers.some((matcher) => matchesToolCall(event, matcher)),
+  );
 
   assert.equal(
     unexpected.length,
@@ -432,13 +444,19 @@ export function assertToolCallOnly(
 
 export function getCommands(report: SessionReport): string[] {
   return report.events
-    .filter((event): event is Extract<(typeof report.events)[number], { type: "command" }> => event.type === "command")
+    .filter(
+      (event): event is Extract<(typeof report.events)[number], { type: "command" }> =>
+        event.type === "command",
+    )
     .map((event) => event.command);
 }
 
 export function getFileReads(report: SessionReport): string[] {
   const fileReadEvents = report.events
-    .filter((event): event is Extract<(typeof report.events)[number], { type: "fileRead" }> => event.type === "fileRead")
+    .filter(
+      (event): event is Extract<(typeof report.events)[number], { type: "fileRead" }> =>
+        event.type === "fileRead",
+    )
     .map((event) => event.path);
 
   return fileReadEvents.length > 0 ? fileReadEvents : report.files.observedReads;

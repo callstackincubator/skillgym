@@ -15,7 +15,9 @@ function wrap(enabled: boolean, code: string, value: string): string {
   return enabled ? `${code}${value}${RESET}` : value;
 }
 
-export function createCliTheme(stdout: Pick<NodeJS.WriteStream, "isTTY"> = process.stdout): CliTheme {
+export function createCliTheme(
+  stdout: Pick<NodeJS.WriteStream, "isTTY"> = process.stdout,
+): CliTheme {
   const enabled = Boolean(stdout.isTTY);
 
   return {
@@ -34,10 +36,7 @@ export function createCliTheme(stdout: Pick<NodeJS.WriteStream, "isTTY"> = proce
   };
 }
 
-export function printBanner(options: {
-  kind: "compact" | "full";
-  stdout?: Writer;
-}): void {
+export function printBanner(options: { kind: "compact" | "full"; stdout?: Writer }): void {
   const stdout = options.stdout ?? process.stdout;
   const theme = createCliTheme(stdout);
 
@@ -47,7 +46,10 @@ export function printBanner(options: {
   writeLine("", stdout);
 
   if (options.kind === "full") {
-    writeLine(`  ${theme.dim("$")} ${theme.light("skillgym run")} ${theme.accent("<suite.ts>")}        ${theme.dim("Run a benchmark suite")}`, stdout);
+    writeLine(
+      `  ${theme.dim("$")} ${theme.light("skillgym run")} ${theme.accent("<suite.ts>")}        ${theme.dim("Run a benchmark suite")}`,
+      stdout,
+    );
     writeLine(
       `  ${theme.dim("$")} ${theme.light("skillgym run")} ${theme.accent("<suite.ts>")} ${theme.light("--runner")} ${theme.accent("<id>")}  ${theme.dim("Filter to one runner")}`,
       stdout,
@@ -56,7 +58,10 @@ export function printBanner(options: {
       `  ${theme.dim("$")} ${theme.light("skillgym run")} ${theme.accent("<suite.ts>")} ${theme.light("--case")} ${theme.accent("<id>")}    ${theme.dim("Filter to one case")}`,
       stdout,
     );
-    writeLine(`  ${theme.dim("$")} ${theme.light("skillgym help")}                   ${theme.dim("Show CLI help")}`, stdout);
+    writeLine(
+      `  ${theme.dim("$")} ${theme.light("skillgym help")}                   ${theme.dim("Show CLI help")}`,
+      stdout,
+    );
     writeLine("", stdout);
   }
 }

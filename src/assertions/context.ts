@@ -5,7 +5,9 @@ export function createAssertionContext(report: SessionReport): AssertionContext 
   return {
     getCommands() {
       return report.events
-        .filter((event): event is Extract<SessionEvent, { type: "command" }> => event.type === "command")
+        .filter(
+          (event): event is Extract<SessionEvent, { type: "command" }> => event.type === "command",
+        )
         .map((event) => event.command);
     },
     getToolCalls(tool?: string) {

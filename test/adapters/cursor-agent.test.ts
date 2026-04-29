@@ -8,11 +8,16 @@ import type { RawRunArtifacts, RunInput } from "../../src/domain/adapter.js";
 const tempDirs: string[] = [];
 
 afterEach(async () => {
-  await Promise.all(tempDirs.splice(0).map((tempDir) => rm(tempDir, { recursive: true, force: true })));
+  await Promise.all(
+    tempDirs.splice(0).map((tempDir) => rm(tempDir, { recursive: true, force: true })),
+  );
 });
 
 test("CursorAgentAdapter run uses stream-json headless mode", async () => {
-  const adapter = new RecordingRunCursorAgentAdapter({ type: "cursor-agent", model: "composer-2-fast" });
+  const adapter = new RecordingRunCursorAgentAdapter({
+    type: "cursor-agent",
+    model: "composer-2-fast",
+  });
   const input = createRunInput();
 
   await adapter.run(input);
@@ -42,7 +47,12 @@ test("CursorAgentAdapter collect saves stdout as session stream jsonl", async ()
   const stdoutPath = path.join(tempDir, "stdout.log");
   const stderrPath = path.join(tempDir, "stderr.log");
   const stdout = [
-    JSON.stringify({ type: "system", subtype: "init", session_id: "chat_123", cwd: "/tmp/workspace" }),
+    JSON.stringify({
+      type: "system",
+      subtype: "init",
+      session_id: "chat_123",
+      cwd: "/tmp/workspace",
+    }),
     JSON.stringify({ type: "result", subtype: "success", result: "done", session_id: "chat_123" }),
     "",
   ].join("\n");
@@ -159,18 +169,24 @@ test("CursorAgentAdapter normalize extracts commands, file reads, tool results, 
   expect(report.usage.outputTokens).toBe(50);
   expect(report.usage.cacheTokens).toBe(75);
   expect(report.usage.totalTokens).toBe(250);
-  expect(report.files.observedReads).toEqual([
-    "/tmp/workspace/skills/find-skills/SKILL.md",
-  ]);
-  expect(report.detectedSkills).toEqual(expect.arrayContaining([
-    expect.objectContaining({ skill: "find-skills" }),
-  ]));
-  expect(report.events).toEqual(expect.arrayContaining([
-    expect.objectContaining({ type: "command", command: "sed -n '1,200p' skills/find-skills/SKILL.md" }),
-    expect.objectContaining({ type: "fileRead", path: "/tmp/workspace/skills/find-skills/SKILL.md" }),
-    expect.objectContaining({ type: "toolCall", tool: "shell" }),
-    expect.objectContaining({ type: "toolResult", tool: "shell" }),
-  ]));
+  expect(report.files.observedReads).toEqual(["/tmp/workspace/skills/find-skills/SKILL.md"]);
+  expect(report.detectedSkills).toEqual(
+    expect.arrayContaining([expect.objectContaining({ skill: "find-skills" })]),
+  );
+  expect(report.events).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        type: "command",
+        command: "sed -n '1,200p' skills/find-skills/SKILL.md",
+      }),
+      expect.objectContaining({
+        type: "fileRead",
+        path: "/tmp/workspace/skills/find-skills/SKILL.md",
+      }),
+      expect.objectContaining({ type: "toolCall", tool: "shell" }),
+      expect.objectContaining({ type: "toolResult", tool: "shell" }),
+    ]),
+  );
 });
 
 test("CursorAgentAdapter normalize resolves shell reads against stored call workdir", async () => {
@@ -226,9 +242,14 @@ test("CursorAgentAdapter normalize resolves shell reads against stored call work
   expect(report.files.observedReads).toEqual([
     "/tmp/isolated-workspace/skills/find-skills/SKILL.md",
   ]);
-  expect(report.events).toEqual(expect.arrayContaining([
-    expect.objectContaining({ type: "fileRead", path: "/tmp/isolated-workspace/skills/find-skills/SKILL.md" }),
-  ]));
+  expect(report.events).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        type: "fileRead",
+        path: "/tmp/isolated-workspace/skills/find-skills/SKILL.md",
+      }),
+    ]),
+  );
 });
 
 test("CursorAgentAdapter normalize resolves read tool calls against stored call cwd", async () => {
@@ -272,15 +293,18 @@ test("CursorAgentAdapter normalize resolves read tool calls against stored call 
     ],
   });
 
-  expect(report.files.observedReads).toEqual([
-    "/tmp/turn-workspace/skills/find-skills/SKILL.md",
-  ]);
-  expect(report.detectedSkills).toEqual(expect.arrayContaining([
-    expect.objectContaining({ skill: "find-skills" }),
-  ]));
-  expect(report.events).toEqual(expect.arrayContaining([
-    expect.objectContaining({ type: "fileRead", path: "/tmp/turn-workspace/skills/find-skills/SKILL.md" }),
-  ]));
+  expect(report.files.observedReads).toEqual(["/tmp/turn-workspace/skills/find-skills/SKILL.md"]);
+  expect(report.detectedSkills).toEqual(
+    expect.arrayContaining([expect.objectContaining({ skill: "find-skills" })]),
+  );
+  expect(report.events).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        type: "fileRead",
+        path: "/tmp/turn-workspace/skills/find-skills/SKILL.md",
+      }),
+    ]),
+  );
 });
 
 function createRunInput(): RunInput {

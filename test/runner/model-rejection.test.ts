@@ -10,14 +10,17 @@ import { createSessionReport } from "../helpers/session-report.js";
 const tempDirs: string[] = [];
 
 afterEach(async () => {
-  await Promise.all(tempDirs.splice(0).map((tempDir) => rm(tempDir, { recursive: true, force: true })));
+  await Promise.all(
+    tempDirs.splice(0).map((tempDir) => rm(tempDir, { recursive: true, force: true })),
+  );
 });
 
 test("classifies OpenCode missing model output", async () => {
   const result = await createResultWithLogs({
     runnerId: "open",
     agent: { type: "opencode", model: "openai/gpt-5" },
-    stdout: '{"type":"error","timestamp":1777443880454,"sessionID":"ses","error":{"name":"UnknownError","data":{"message":"Model not found: skillgym-fake-model-do-not-use/."}}}\n',
+    stdout:
+      '{"type":"error","timestamp":1777443880454,"sessionID":"ses","error":{"name":"UnknownError","data":{"message":"Model not found: skillgym-fake-model-do-not-use/."}}}\n',
     stderr: "ProviderModelNotFoundError: ProviderModelNotFoundError\n",
   });
 
@@ -60,7 +63,8 @@ test("classifies Cursor Agent invalid model stderr", async () => {
     runnerId: "cursor",
     agent: { type: "cursor-agent", model: "composer-2-fast" },
     stdout: "",
-    stderr: "Cannot use this model: skillgym-fake-model-do-not-use. Available models: auto, composer-2-fast\n",
+    stderr:
+      "Cannot use this model: skillgym-fake-model-do-not-use. Available models: auto, composer-2-fast\n",
   });
 
   await expect(isModelRejectedResult(result)).resolves.toBe(true);

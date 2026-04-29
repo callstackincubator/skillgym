@@ -60,10 +60,12 @@ function parseStackFrame(frame: string): StackFrameLocation | undefined {
 }
 
 function isInternalStackFrame(filePath: string): boolean {
-  return filePath.startsWith("node:")
-    || filePath.includes("/node:internal/")
-    || filePath.includes("/src/assertions/")
-    || filePath.includes("/src/runner/")
-    || filePath.includes("/src/reporters/")
-    || filePath.includes("/node_modules/");
+  return (
+    filePath.startsWith("node:") ||
+    filePath.includes("/node:internal/") ||
+    filePath.includes("/src/assertions/") ||
+    filePath.includes("/src/runner/") ||
+    filePath.includes("/src/reporters/") ||
+    filePath.includes("/node_modules/")
+  );
 }

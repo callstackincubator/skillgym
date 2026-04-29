@@ -11,7 +11,11 @@ export const outputAssertions: OutputAssertions = {
     }
 
     throw new Error(
-      composeAssertionMessage("Expected final output not to be empty.", "Observed final output: (empty)", options?.message),
+      composeAssertionMessage(
+        "Expected final output not to be empty.",
+        "Observed final output: (empty)",
+        options?.message,
+      ),
     );
   },
 };

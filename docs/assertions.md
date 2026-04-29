@@ -235,8 +235,14 @@ assert.toolCalls.has(report, {
 
 assert.toolCalls.sequence(report, [
   { tool: "skill" },
-  { tool: "read", where: (args) => /mmkv\.md$/.test((args as { filePath?: string })?.filePath ?? "") },
-  { tool: "bash", where: (args) => /session create/.test((args as { command?: string })?.command ?? "") },
+  {
+    tool: "read",
+    where: (args) => /mmkv\.md$/.test((args as { filePath?: string })?.filePath ?? ""),
+  },
+  {
+    tool: "bash",
+    where: (args) => /session create/.test((args as { command?: string })?.command ?? ""),
+  },
 ]);
 ```
 

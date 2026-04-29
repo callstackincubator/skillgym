@@ -7,7 +7,12 @@ import type {
   Matcher,
   StructuredCommandMatcher,
 } from "./types.js";
-import { composeAssertionMessage, describeMatcher, formatObservedValues, matchesText } from "./matchers.js";
+import {
+  composeAssertionMessage,
+  describeMatcher,
+  formatObservedValues,
+  matchesText,
+} from "./matchers.js";
 
 type ParsedCommandValue = string | true;
 
@@ -84,9 +89,12 @@ export class CommandMatcherBuilder implements CommandMatcherBuilderLike {
     const options =
       this.optionMatchers.size === 0
         ? undefined
-        : (Object.fromEntries([...this.optionMatchers.entries()].map(([name, values]) => [name, values.length === 1 ? values[0] : [...values]])) as Readonly<
-            Record<string, CommandValueMatcher | readonly CommandValueMatcher[]>
-          >);
+        : (Object.fromEntries(
+            [...this.optionMatchers.entries()].map(([name, values]) => [
+              name,
+              values.length === 1 ? values[0] : [...values],
+            ]),
+          ) as Readonly<Record<string, CommandValueMatcher | readonly CommandValueMatcher[]>>);
 
     return {
       executable: this.executableMatcher,
@@ -146,7 +154,10 @@ export function describeCommandMatcher(matcher: CommandMatcher): string {
   if (normalized.options.size > 0) {
     parts.push(
       `options={${[...normalized.options.entries()]
-        .map(([name, values]) => `${name}: [${values.map((value) => (value === true ? "<flag>" : describeMatcher(value))).join(", ")}]`)
+        .map(
+          ([name, values]) =>
+            `${name}: [${values.map((value) => (value === true ? "<flag>" : describeMatcher(value))).join(", ")}]`,
+        )
         .join(", ")}}`,
     );
   }
@@ -168,7 +179,10 @@ export function matchesCommand(command: string, matcher: CommandMatcher): boolea
   return matchesParsedCommand(parseCommand(command), normalizeCommandMatcher(matcher));
 }
 
-export function firstCommandMatchIndex(commands: readonly string[], matcher: CommandMatcher): number {
+export function firstCommandMatchIndex(
+  commands: readonly string[],
+  matcher: CommandMatcher,
+): number {
   return commands.findIndex((command) => matchesCommand(command, matcher));
 }
 
@@ -176,7 +190,11 @@ export function countCommandMatches(commands: readonly string[], matcher: Comman
   return commands.filter((command) => matchesCommand(command, matcher)).length;
 }
 
-export function assertCommandIncludes(commands: readonly string[], matcher: CommandMatcher, options?: AssertionOptions): void {
+export function assertCommandIncludes(
+  commands: readonly string[],
+  matcher: CommandMatcher,
+  options?: AssertionOptions,
+): void {
   assert.ok(
     commands.some((command) => matchesCommand(command, matcher)),
     composeAssertionMessage(
@@ -187,7 +205,11 @@ export function assertCommandIncludes(commands: readonly string[], matcher: Comm
   );
 }
 
-export function assertCommandNotIncludes(commands: readonly string[], matcher: CommandMatcher, options?: AssertionOptions): void {
+export function assertCommandNotIncludes(
+  commands: readonly string[],
+  matcher: CommandMatcher,
+  options?: AssertionOptions,
+): void {
   assert.ok(
     commands.every((command) => !matchesCommand(command, matcher)),
     composeAssertionMessage(
@@ -198,7 +220,12 @@ export function assertCommandNotIncludes(commands: readonly string[], matcher: C
   );
 }
 
-export function assertCommandCount(commands: readonly string[], matcher: CommandMatcher, expected: number, options?: AssertionOptions): void {
+export function assertCommandCount(
+  commands: readonly string[],
+  matcher: CommandMatcher,
+  expected: number,
+  options?: AssertionOptions,
+): void {
   const actual = countCommandMatches(commands, matcher);
   assert.equal(
     actual,
@@ -211,7 +238,12 @@ export function assertCommandCount(commands: readonly string[], matcher: Command
   );
 }
 
-export function assertCommandAtLeast(commands: readonly string[], matcher: CommandMatcher, min: number, options?: AssertionOptions): void {
+export function assertCommandAtLeast(
+  commands: readonly string[],
+  matcher: CommandMatcher,
+  min: number,
+  options?: AssertionOptions,
+): void {
   const actual = countCommandMatches(commands, matcher);
   assert.ok(
     actual >= min,
@@ -223,7 +255,12 @@ export function assertCommandAtLeast(commands: readonly string[], matcher: Comma
   );
 }
 
-export function assertCommandAtMost(commands: readonly string[], matcher: CommandMatcher, max: number, options?: AssertionOptions): void {
+export function assertCommandAtMost(
+  commands: readonly string[],
+  matcher: CommandMatcher,
+  max: number,
+  options?: AssertionOptions,
+): void {
   const actual = countCommandMatches(commands, matcher);
   assert.ok(
     actual <= max,
@@ -274,8 +311,14 @@ export function assertCommandBefore(
   );
 }
 
-export function assertCommandOnly(commands: readonly string[], matchers: readonly CommandMatcher[], options?: AssertionOptions): void {
-  const unexpected = commands.filter((command) => !matchers.some((matcher) => matchesCommand(command, matcher)));
+export function assertCommandOnly(
+  commands: readonly string[],
+  matchers: readonly CommandMatcher[],
+  options?: AssertionOptions,
+): void {
+  const unexpected = commands.filter(
+    (command) => !matchers.some((matcher) => matchesCommand(command, matcher)),
+  );
 
   assert.equal(
     unexpected.length,
@@ -288,7 +331,11 @@ export function assertCommandOnly(commands: readonly string[], matchers: readonl
   );
 }
 
-export function assertCommandFirst(commands: readonly string[], matcher: CommandMatcher, options?: AssertionOptions): void {
+export function assertCommandFirst(
+  commands: readonly string[],
+  matcher: CommandMatcher,
+  options?: AssertionOptions,
+): void {
   const first = commands[0];
   assert.ok(
     first !== undefined && matchesCommand(first, matcher),
@@ -300,7 +347,11 @@ export function assertCommandFirst(commands: readonly string[], matcher: Command
   );
 }
 
-export function assertCommandLast(commands: readonly string[], matcher: CommandMatcher, options?: AssertionOptions): void {
+export function assertCommandLast(
+  commands: readonly string[],
+  matcher: CommandMatcher,
+  options?: AssertionOptions,
+): void {
   const last = commands.at(-1);
   assert.ok(
     last !== undefined && matchesCommand(last, matcher),
@@ -312,7 +363,9 @@ export function assertCommandLast(commands: readonly string[], matcher: CommandM
   );
 }
 
-function normalizeCommandMatcher(matcher: StructuredCommandMatcher | CommandMatcherBuilderLike): NormalizedCommandMatcher {
+function normalizeCommandMatcher(
+  matcher: StructuredCommandMatcher | CommandMatcherBuilderLike,
+): NormalizedCommandMatcher {
   const source = "build" in matcher ? matcher.build() : matcher;
   const options = new Map<string, CommandValueMatcher[]>();
 
@@ -349,7 +402,11 @@ function matchesParsedCommand(parsed: ParsedCommand, matcher: NormalizedCommandM
   return true;
 }
 
-function matchesPositionals(observed: readonly string[], expected: readonly Matcher[], strict: boolean): boolean {
+function matchesPositionals(
+  observed: readonly string[],
+  expected: readonly Matcher[],
+  strict: boolean,
+): boolean {
   if (expected.length === 0) {
     return strict ? observed.length === 0 : true;
   }
@@ -411,7 +468,11 @@ function matchesOptions(
   return true;
 }
 
-function matchesOptionValues(observed: readonly ParsedCommandValue[], expected: readonly CommandValueMatcher[], strict: boolean): boolean {
+function matchesOptionValues(
+  observed: readonly ParsedCommandValue[],
+  expected: readonly CommandValueMatcher[],
+  strict: boolean,
+): boolean {
   if (strict && observed.length !== expected.length) {
     return false;
   }
@@ -422,7 +483,10 @@ function matchesOptionValues(observed: readonly ParsedCommandValue[], expected: 
 
   const used = new Set<number>();
   for (const expectedValue of expected) {
-    const matchedIndex = observed.findIndex((observedValue, index) => !used.has(index) && matchesOptionValue(observedValue, expectedValue));
+    const matchedIndex = observed.findIndex(
+      (observedValue, index) =>
+        !used.has(index) && matchesOptionValue(observedValue, expectedValue),
+    );
     if (matchedIndex === -1) {
       return false;
     }
@@ -531,7 +595,9 @@ function basename(value: string): string {
   return parts[parts.length - 1] ?? value;
 }
 
-function parseCommandTokens(tokens: readonly string[]): Omit<ParsedCommand, "raw" | "normalizedFromShell"> {
+function parseCommandTokens(
+  tokens: readonly string[],
+): Omit<ParsedCommand, "raw" | "normalizedFromShell"> {
   const executable = tokens[0];
   const positionals: string[] = [];
   const options = new Map<string, ParsedCommandValue[]>();
@@ -605,7 +671,11 @@ function shouldTreatAsOptionValue(token: string | undefined): token is string {
   return token !== undefined && token !== "--" && !token.startsWith("-");
 }
 
-function pushOption(options: Map<string, ParsedCommandValue[]>, name: string, value: ParsedCommandValue): void {
+function pushOption(
+  options: Map<string, ParsedCommandValue[]>,
+  name: string,
+  value: ParsedCommandValue,
+): void {
   const values = options.get(name) ?? [];
   values.push(value);
   options.set(name, values);

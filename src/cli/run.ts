@@ -58,7 +58,9 @@ export async function runCommand(options: {
   });
 
   if (options.cwd !== undefined && effectiveWorkspace.mode === "isolated") {
-    throw new Error("CLI option --cwd is only supported when the effective workspace mode is shared.");
+    throw new Error(
+      "CLI option --cwd is only supported when the effective workspace mode is shared.",
+    );
   }
 
   const reporter = await loadReporter(reporterOptions.reporter, reporterOptions.cwd);
@@ -83,7 +85,11 @@ export async function runCommand(options: {
     reporter,
   });
 
-  if (result.cases.some((caseResult) => caseResult.runnerResults.some((runnerResult) => !runnerResult.passed))) {
+  if (
+    result.cases.some((caseResult) =>
+      caseResult.runnerResults.some((runnerResult) => !runnerResult.passed),
+    )
+  ) {
     throw new RunFailuresError();
   }
 }

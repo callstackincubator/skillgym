@@ -62,10 +62,22 @@ test("json-summary reporter omits session internals and prints summary on suite 
                 observedReads: ["/workspace/src/index.ts"],
                 observedSkillReads: ["/workspace/.claude/skills/my-skill.md"],
               },
-              detectedSkills: [{ skill: "my-skill", confidence: "explicit", evidence: ["loaded skill"] }],
+              detectedSkills: [
+                { skill: "my-skill", confidence: "explicit", evidence: ["loaded skill"] },
+              ],
               events: [
-                { type: "toolCall", tool: "Read", args: { file_path: "/workspace/src/index.ts" }, at: "2026-04-02T12:00:01.000Z" },
-                { type: "message", role: "assistant", text: "I'll read the file.", at: "2026-04-02T12:00:02.000Z" },
+                {
+                  type: "toolCall",
+                  tool: "Read",
+                  args: { file_path: "/workspace/src/index.ts" },
+                  at: "2026-04-02T12:00:01.000Z",
+                },
+                {
+                  type: "message",
+                  role: "assistant",
+                  text: "I'll read the file.",
+                  at: "2026-04-02T12:00:02.000Z",
+                },
               ],
               finalOutput: "Done.",
               startedAt: "2026-04-02T12:00:00.000Z",
@@ -107,7 +119,12 @@ test("json-summary reporter omits session internals and prints summary on suite 
     declaredTags: ["smoke", "gestures"],
   };
 
-  await reporter.onSuiteStart?.({ context, cases: [], runners: [runner], startedAt: result.startedAt });
+  await reporter.onSuiteStart?.({
+    context,
+    cases: [],
+    runners: [runner],
+    startedAt: result.startedAt,
+  });
   await reporter.onSuiteFinish?.({ context, result });
 
   expect(writes).toHaveLength(1);
@@ -192,8 +209,19 @@ test("json-summary reporter is silent until suite finishes", async () => {
     declaredTags: [],
   };
 
-  await reporter.onSuiteStart?.({ context, cases: [], runners: [runner], startedAt: "2026-04-02T12:00:00.000Z" });
-  await reporter.onRunnerStart?.({ context, testCase: { id: "c", prompt: "", assert() {} }, runner, caseIndex: 1, totalCases: 1 });
+  await reporter.onSuiteStart?.({
+    context,
+    cases: [],
+    runners: [runner],
+    startedAt: "2026-04-02T12:00:00.000Z",
+  });
+  await reporter.onRunnerStart?.({
+    context,
+    testCase: { id: "c", prompt: "", assert() {} },
+    runner,
+    caseIndex: 1,
+    totalCases: 1,
+  });
   await reporter.onRunnerFinish?.({
     context,
     testCase: { id: "c", prompt: "", assert() {} },
@@ -207,7 +235,12 @@ test("json-summary reporter is silent until suite finishes", async () => {
       report: {
         runner,
         prompt: "",
-        usage: { inputChars: 0, outputChars: 0, reasoningChars: 0, source: { input: "provider", output: "provider", reasoning: "provider" } },
+        usage: {
+          inputChars: 0,
+          outputChars: 0,
+          reasoningChars: 0,
+          source: { input: "provider", output: "provider", reasoning: "provider" },
+        },
         files: { observedReads: [], observedSkillReads: [] },
         detectedSkills: [],
         events: [],

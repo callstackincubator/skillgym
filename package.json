@@ -1,31 +1,37 @@
 {
   "name": "skillgym",
   "version": "0.5.0",
+  "private": false,
   "description": "Prove your agent skills work before you ship them.",
-  "author": "Szymon Chmal",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/callstackincubator/skillgym.git"
-  },
-  "bugs": {
-    "url": "https://github.com/callstackincubator/skillgym/issues"
-  },
-  "homepage": "https://github.com/callstackincubator/skillgym#readme",
   "keywords": [
-    "benchmark",
     "agents",
+    "benchmark",
     "cli",
     "codex",
     "opencode",
     "testing"
   ],
-  "engines": {
-    "node": ">=22.18.0"
+  "homepage": "https://github.com/callstackincubator/skillgym#readme",
+  "bugs": {
+    "url": "https://github.com/callstackincubator/skillgym/issues"
   },
+  "license": "MIT",
+  "author": "Szymon Chmal",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/callstackincubator/skillgym.git"
+  },
+  "bin": {
+    "skillgym": "./bin.js"
+  },
+  "files": [
+    "dist",
+    "bin.js"
+  ],
+  "type": "module",
   "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
   "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -33,19 +39,13 @@
     },
     "./cli": "./dist/cli.js"
   },
-  "bin": {
-    "skillgym": "./bin.js"
-  },
-  "type": "module",
-  "private": false,
-  "files": [
-    "dist",
-    "bin.js"
-  ],
   "scripts": {
     "build": "npm run build:runtime && npm run build:declarations",
     "build:declarations": "tsc -p ./tsconfig.build.json",
     "build:runtime": "esbuild ./src/index.ts ./src/cli.ts --bundle --platform=node --format=esm --target=node22 --outdir=./dist",
+    "fmt": "oxfmt .",
+    "fmt:check": "oxfmt --check .",
+    "prepare": "husky",
     "prepublish": "npm run build",
     "skillgym": "tsx ./index.ts",
     "skillgym:help": "tsx ./index.ts help",
@@ -66,9 +66,18 @@
     "@changesets/cli": "^2.30.0",
     "@types/node": "^25.6.0",
     "esbuild": "^0.25.3",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
+    "oxfmt": "^0.47.0",
     "tsx": "^4.19.4",
     "typescript": "^5.8.3",
     "vitest": "^3.1.2"
+  },
+  "lint-staged": {
+    "*": "oxfmt --no-error-on-unmatched-pattern"
+  },
+  "engines": {
+    "node": ">=22.18.0"
   },
   "packageManager": "pnpm@9.15.3+sha512.1f79bc245a66eb0b07c5d4d83131240774642caaa86ef7d0434ab47c0d16f66b04e21e0c086eb61e62c77efc4d7f7ec071afad3796af64892fae66509173893a"
 }

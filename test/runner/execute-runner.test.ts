@@ -3,7 +3,12 @@ import os from "node:os";
 import path from "node:path";
 import { AssertionError } from "node:assert";
 import { afterEach, expect, test } from "vitest";
-import type { RawRunArtifacts, RunHandle, RunInput, RunnerAdapter } from "../../src/domain/adapter.js";
+import type {
+  RawRunArtifacts,
+  RunHandle,
+  RunInput,
+  RunnerAdapter,
+} from "../../src/domain/adapter.js";
 import type { SnapshotRuntimeOptions } from "../../src/snapshots/store.js";
 import { executeRunner } from "../../src/runner/execute-runner.js";
 import { createRunnerInfo } from "../../src/runner/runner-info.js";
@@ -15,7 +20,9 @@ import { CommandTimeoutError } from "../../src/utils/process.js";
 const tempDirs: string[] = [];
 
 afterEach(async () => {
-  await Promise.all(tempDirs.splice(0).map((tempDir) => rm(tempDir, { recursive: true, force: true })));
+  await Promise.all(
+    tempDirs.splice(0).map((tempDir) => rm(tempDir, { recursive: true, force: true })),
+  );
 });
 
 test("executeRunner forwards showRunnerOutput to adapter runs", async () => {
@@ -328,7 +335,9 @@ test("executeRunner fails when snapshot metric is unavailable", async () => {
   expect(result.passed).toBe(false);
   expect(result.failureType).toBe("runner-crash");
   expect(result.failureOrigin).toBe("snapshot");
-  expect(result.error?.message).toContain("Snapshot check requires provider token metric totalTokens");
+  expect(result.error?.message).toContain(
+    "Snapshot check requires provider token metric totalTokens",
+  );
 });
 
 function createSuccessfulAdapter(

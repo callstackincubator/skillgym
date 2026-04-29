@@ -1,6 +1,12 @@
 import path from "node:path";
 import { readFile } from "node:fs/promises";
-import type { ClaudeCodeAgentConfig, RawRunArtifacts, RunHandle, RunInput, RunnerAdapter } from "../domain/adapter.js";
+import type {
+  ClaudeCodeAgentConfig,
+  RawRunArtifacts,
+  RunHandle,
+  RunInput,
+  RunnerAdapter,
+} from "../domain/adapter.js";
 import type { SessionEvent, SessionReport } from "../domain/session-report.js";
 import { resolveReportedPath } from "../normalize/reported-path.js";
 import { inferSkillsFromPaths } from "../normalize/skill-detection.js";
@@ -21,7 +27,12 @@ interface ClaudeCodeResultRecord {
 }
 
 export class ClaudeCodeAdapter extends BaseAdapter implements RunnerAdapter {
-  constructor(private readonly options: ClaudeCodeAgentConfig = { type: "claude-code", model: "claude-sonnet-4-6" }) {
+  constructor(
+    private readonly options: ClaudeCodeAgentConfig = {
+      type: "claude-code",
+      model: "claude-sonnet-4-6",
+    },
+  ) {
     super();
   }
 
@@ -133,10 +144,7 @@ export class ClaudeCodeAdapter extends BaseAdapter implements RunnerAdapter {
             }
 
             if (toolName === "Read" || toolName === "read") {
-              const filePath = resolveReportedPath(
-                readString(toolInput, "file_path"),
-                input.cwd,
-              );
+              const filePath = resolveReportedPath(readString(toolInput, "file_path"), input.cwd);
               if (filePath !== undefined) {
                 observedReads.push(filePath);
                 events.push({ type: "fileRead", path: filePath });

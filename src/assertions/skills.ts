@@ -34,7 +34,9 @@ export const skillAssertions: SkillAssertions = {
     );
   },
   includes(report, skills, options) {
-    const missing = skills.filter((skill) => getMatchingSkills(report, skill, options).length === 0);
+    const missing = skills.filter(
+      (skill) => getMatchingSkills(report, skill, options).length === 0,
+    );
 
     assert.equal(
       missing.length,
@@ -94,10 +96,15 @@ function getMatchingSkills(
   skill: string,
   options?: SkillAssertionOptions,
 ): SkillDetection[] {
-  return report.detectedSkills.filter((item) => item.skill === skill && meetsMinConfidence(item, options?.minConfidence));
+  return report.detectedSkills.filter(
+    (item) => item.skill === skill && meetsMinConfidence(item, options?.minConfidence),
+  );
 }
 
-function meetsMinConfidence(item: SkillDetection, minConfidence: SkillAssertionOptions["minConfidence"]): boolean {
+function meetsMinConfidence(
+  item: SkillDetection,
+  minConfidence: SkillAssertionOptions["minConfidence"],
+): boolean {
   if (minConfidence === undefined) {
     return true;
   }
@@ -106,7 +113,9 @@ function meetsMinConfidence(item: SkillDetection, minConfidence: SkillAssertionO
 }
 
 function formatMinConfidence(options?: SkillAssertionOptions): string {
-  return options?.minConfidence === undefined ? "" : ` with minimum confidence ${options.minConfidence}`;
+  return options?.minConfidence === undefined
+    ? ""
+    : ` with minimum confidence ${options.minConfidence}`;
 }
 
 function formatObservedSkills(skills: readonly SkillDetection[]): string {

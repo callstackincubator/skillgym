@@ -44,19 +44,21 @@ async function runWithConcurrencyLimit<TItem>(
   const workerCount = Math.min(maxParallel, items.length);
   let nextIndex = 0;
 
-  await Promise.all(Array.from({ length: workerCount }, async () => {
-    while (true) {
-      const index = nextIndex;
-      nextIndex += 1;
+  await Promise.all(
+    Array.from({ length: workerCount }, async () => {
+      while (true) {
+        const index = nextIndex;
+        nextIndex += 1;
 
-      const item = items[index];
-      if (item === undefined) {
-        return;
+        const item = items[index];
+        if (item === undefined) {
+          return;
+        }
+
+        await run(item);
       }
-
-      await run(item);
-    }
-  }));
+    }),
+  );
 }
 
 function groupByRunner<TItem>(executions: PlannedExecution<TItem>[]): PlannedExecution<TItem>[][] {

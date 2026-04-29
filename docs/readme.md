@@ -13,6 +13,7 @@ Workspace behavior is documented in `workspaces.md`, including shared runs, isol
 ## Current V1 scope
 
 Supported in V1:
+
 - OpenCode CLI
 - Codex CLI
 - Claude Code CLI

@@ -8,7 +8,9 @@ import type { RawRunArtifacts, RunHandle, RunInput } from "../../src/domain/adap
 const tempDirs: string[] = [];
 
 afterEach(async () => {
-  await Promise.all(tempDirs.splice(0).map((tempDir) => rm(tempDir, { recursive: true, force: true })));
+  await Promise.all(
+    tempDirs.splice(0).map((tempDir) => rm(tempDir, { recursive: true, force: true })),
+  );
 });
 
 test("CodexAdapter normalize uses cumulative total_token_usage metrics", async () => {
@@ -111,10 +113,12 @@ test("CodexAdapter normalize extracts separate file reads from chained shell com
     "/tmp/workspace/README.md",
     "/tmp/workspace/bootstrap-output.txt",
   ]);
-  expect(report.events).toEqual(expect.arrayContaining([
-    expect.objectContaining({ type: "fileRead", path: "/tmp/workspace/README.md" }),
-    expect.objectContaining({ type: "fileRead", path: "/tmp/workspace/bootstrap-output.txt" }),
-  ]));
+  expect(report.events).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ type: "fileRead", path: "/tmp/workspace/README.md" }),
+      expect.objectContaining({ type: "fileRead", path: "/tmp/workspace/bootstrap-output.txt" }),
+    ]),
+  );
 });
 
 test("CodexAdapter normalize resolves reads against function call workdir", async () => {
@@ -150,9 +154,11 @@ test("CodexAdapter normalize resolves reads against function call workdir", asyn
   });
 
   expect(report.files.observedReads).toEqual(["/tmp/isolated-workspace/README.md"]);
-  expect(report.events).toEqual(expect.arrayContaining([
-    expect.objectContaining({ type: "fileRead", path: "/tmp/isolated-workspace/README.md" }),
-  ]));
+  expect(report.events).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ type: "fileRead", path: "/tmp/isolated-workspace/README.md" }),
+    ]),
+  );
 });
 
 test("CodexAdapter normalize falls back to turn_context cwd when workdir is missing", async () => {
@@ -194,9 +200,11 @@ test("CodexAdapter normalize falls back to turn_context cwd when workdir is miss
   });
 
   expect(report.files.observedReads).toEqual(["/tmp/turn-workspace/README.md"]);
-  expect(report.events).toEqual(expect.arrayContaining([
-    expect.objectContaining({ type: "fileRead", path: "/tmp/turn-workspace/README.md" }),
-  ]));
+  expect(report.events).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ type: "fileRead", path: "/tmp/turn-workspace/README.md" }),
+    ]),
+  );
 });
 
 test("CodexAdapter collect reads isolated session from artifacts codex-home", async () => {
@@ -216,11 +224,16 @@ test("CodexAdapter collect reads isolated session from artifacts codex-home", as
     "03",
     "rollout-2026-04-03T10-00-01-thread-a.jsonl",
   );
-  const sessionText = '{"timestamp":"2026-04-03T10:00:01.000Z","type":"response_item","payload":{"type":"message","role":"assistant","text":"from isolated session"}}\n';
+  const sessionText =
+    '{"timestamp":"2026-04-03T10:00:01.000Z","type":"response_item","payload":{"type":"message","role":"assistant","text":"from isolated session"}}\n';
 
   await mkdir(path.dirname(sessionPath), { recursive: true });
   await writeFile(sessionPath, sessionText, "utf8");
-  await utimes(sessionPath, new Date("2026-04-03T10:00:01.000Z"), new Date("2026-04-03T10:00:01.000Z"));
+  await utimes(
+    sessionPath,
+    new Date("2026-04-03T10:00:01.000Z"),
+    new Date("2026-04-03T10:00:01.000Z"),
+  );
 
   const artifacts = await adapter.collect(handle, input);
 
@@ -246,10 +259,22 @@ test("CodexAdapter collect keeps runs isolated by artifactsDir", async () => {
   const secondArtifactsDir = await createTempDir();
   const firstInput = createRunInput({ artifactsDir: firstArtifactsDir });
   const secondInput = createRunInput({ artifactsDir: secondArtifactsDir });
-  const firstHandle = await writeHandleLogs(firstArtifactsDir, { startedAt: "2026-04-03T10:00:00.000Z" });
-  const secondHandle = await writeHandleLogs(secondArtifactsDir, { startedAt: "2026-04-03T10:00:00.000Z" });
-  const firstSessionPath = await writeSessionFile(firstArtifactsDir, "first-thread", "first session");
-  const secondSessionPath = await writeSessionFile(secondArtifactsDir, "second-thread", "second session");
+  const firstHandle = await writeHandleLogs(firstArtifactsDir, {
+    startedAt: "2026-04-03T10:00:00.000Z",
+  });
+  const secondHandle = await writeHandleLogs(secondArtifactsDir, {
+    startedAt: "2026-04-03T10:00:00.000Z",
+  });
+  const firstSessionPath = await writeSessionFile(
+    firstArtifactsDir,
+    "first-thread",
+    "first session",
+  );
+  const secondSessionPath = await writeSessionFile(
+    secondArtifactsDir,
+    "second-thread",
+    "second session",
+  );
 
   const [firstArtifacts, secondArtifacts] = await Promise.all([
     adapter.collect(firstHandle, firstInput),
@@ -279,9 +304,15 @@ test("CodexAdapter run seeds isolated CODEX_HOME from user codex state", async (
     const adapter = new RecordingCodexAdapter({ type: "codex", model: "gpt-5" });
     await adapter.run(createRunInput({ artifactsDir }));
 
-    expect(await readFile(path.join(artifactsDir, "codex-home", "config.toml"), "utf8")).toContain("model");
-    expect(await readFile(path.join(artifactsDir, "codex-home", "AGENTS.md"), "utf8")).toContain("agent notes");
-    expect(await readFile(path.join(artifactsDir, "codex-home", ".codex-global-state.json"), "utf8")).toContain("{}");
+    expect(await readFile(path.join(artifactsDir, "codex-home", "config.toml"), "utf8")).toContain(
+      "model",
+    );
+    expect(await readFile(path.join(artifactsDir, "codex-home", "AGENTS.md"), "utf8")).toContain(
+      "agent notes",
+    );
+    expect(
+      await readFile(path.join(artifactsDir, "codex-home", ".codex-global-state.json"), "utf8"),
+    ).toContain("{}");
     expect((await stat(path.join(artifactsDir, "codex-home", "sqlite"))).isDirectory()).toBe(true);
   } finally {
     process.env.HOME = previousHome;
@@ -291,13 +322,13 @@ test("CodexAdapter run seeds isolated CODEX_HOME from user codex state", async (
 function createRunInput(overrides: Partial<RunInput> = {}): RunInput {
   return {
     runner: {
-        id: "codex-main",
-        pathKey: "codex-main",
-        agent: {
-          type: "codex",
-          model: "gpt-5",
-        },
+      id: "codex-main",
+      pathKey: "codex-main",
+      agent: {
+        type: "codex",
+        model: "gpt-5",
       },
+    },
     prompt: "solve it",
     cwd: "/tmp/workspace",
     timeoutMs: 5_000,
@@ -346,7 +377,11 @@ async function writeHandleLogs(
   };
 }
 
-async function writeSessionFile(artifactsDir: string, threadId: string, text: string): Promise<string> {
+async function writeSessionFile(
+  artifactsDir: string,
+  threadId: string,
+  text: string,
+): Promise<string> {
   const sessionPath = path.join(
     artifactsDir,
     "codex-home",
@@ -362,7 +397,11 @@ async function writeSessionFile(artifactsDir: string, threadId: string, text: st
     `{"timestamp":"2026-04-03T10:00:01.000Z","type":"response_item","payload":{"type":"message","role":"assistant","text":"${text}"}}\n`,
     "utf8",
   );
-  await utimes(sessionPath, new Date("2026-04-03T10:00:01.000Z"), new Date("2026-04-03T10:00:01.000Z"));
+  await utimes(
+    sessionPath,
+    new Date("2026-04-03T10:00:01.000Z"),
+    new Date("2026-04-03T10:00:01.000Z"),
+  );
   return sessionPath;
 }
 

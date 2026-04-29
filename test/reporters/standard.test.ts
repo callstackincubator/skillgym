@@ -1,5 +1,11 @@
 import { afterEach, expect, test, vi } from "vitest";
-import type { CaseResult, RunnerInfo, RunnerResult, RunnerSummary, SuiteRunResult } from "../../src/index.js";
+import type {
+  CaseResult,
+  RunnerInfo,
+  RunnerResult,
+  RunnerSummary,
+  SuiteRunResult,
+} from "../../src/index.js";
 import { createStandardReporter } from "../../src/reporters/standard.js";
 import { createRunnerInfo } from "../../src/runner/runner-info.js";
 import { createSessionReport } from "../helpers/session-report.js";
@@ -51,7 +57,12 @@ test("standard reporter prints runner-grouped results and failure artifacts", as
       createCaseResult({
         caseId: "case-a",
         runnerResults: [
-          createRunnerResult({ runner: openRunner, passed: true, artifactDir: "x", totalTokens: 16_604 }),
+          createRunnerResult({
+            runner: openRunner,
+            passed: true,
+            artifactDir: "x",
+            totalTokens: 16_604,
+          }),
           createRunnerResult({
             runner: codeRunner,
             passed: false,
@@ -63,18 +74,45 @@ test("standard reporter prints runner-grouped results and failure artifacts", as
       createCaseResult({
         caseId: "case-b",
         runnerResults: [
-          createRunnerResult({ runner: openRunner, passed: true, artifactDir: "y", totalTokens: 17_200 }),
-          createRunnerResult({ runner: codeRunner, passed: true, artifactDir: "z", totalTokens: 15_000 }),
+          createRunnerResult({
+            runner: openRunner,
+            passed: true,
+            artifactDir: "y",
+            totalTokens: 17_200,
+          }),
+          createRunnerResult({
+            runner: codeRunner,
+            passed: true,
+            artifactDir: "z",
+            totalTokens: 15_000,
+          }),
         ],
       }),
     ],
     runners: [
-      createRunnerSummary({ runner: openRunner, passedCases: 2, totalCases: 2, averageDurationMs: 18_200, averageTotalTokens: 16_902 }),
-      createRunnerSummary({ runner: codeRunner, passedCases: 1, totalCases: 2, averageDurationMs: 19_300, averageTotalTokens: 13_500 }),
+      createRunnerSummary({
+        runner: openRunner,
+        passedCases: 2,
+        totalCases: 2,
+        averageDurationMs: 18_200,
+        averageTotalTokens: 16_902,
+      }),
+      createRunnerSummary({
+        runner: codeRunner,
+        passedCases: 1,
+        totalCases: 2,
+        averageDurationMs: 19_300,
+        averageTotalTokens: 13_500,
+      }),
     ],
   };
 
-  await reporter.onSuiteStart?.({ context, cases: [], runners: [openRunner, codeRunner], startedAt: suiteResult.startedAt });
+  await reporter.onSuiteStart?.({
+    context,
+    cases: [],
+    runners: [openRunner, codeRunner],
+    startedAt: suiteResult.startedAt,
+  });
   await reporter.onRunnerFinish?.({
     context,
     testCase: { id: "case-a", prompt: "", assert() {} },
@@ -83,8 +121,20 @@ test("standard reporter prints runner-grouped results and failure artifacts", as
     caseIndex: 1,
     totalCases: 2,
   });
-  await reporter.onCaseFinish?.({ context, testCase: { id: "case-a", prompt: "", assert() {} }, result: suiteResult.cases[0]!, caseIndex: 1, totalCases: 2 });
-  await reporter.onCaseFinish?.({ context, testCase: { id: "case-b", prompt: "", assert() {} }, result: suiteResult.cases[1]!, caseIndex: 2, totalCases: 2 });
+  await reporter.onCaseFinish?.({
+    context,
+    testCase: { id: "case-a", prompt: "", assert() {} },
+    result: suiteResult.cases[0]!,
+    caseIndex: 1,
+    totalCases: 2,
+  });
+  await reporter.onCaseFinish?.({
+    context,
+    testCase: { id: "case-b", prompt: "", assert() {} },
+    result: suiteResult.cases[1]!,
+    caseIndex: 2,
+    totalCases: 2,
+  });
   await reporter.onSuiteFinish?.({ context, result: suiteResult });
 
   const output = writes.join("");
@@ -98,7 +148,9 @@ test("standard reporter prints runner-grouped results and failure artifacts", as
   expect(output).toContain("Parallel  1");
   expect(output).toContain("Runner: open-main");
   expect(output).toContain("Runner: code-main");
-  expect(output).toContain("case                       time           tokens in / out / reason / cache / billable");
+  expect(output).toContain(
+    "case                       time           tokens in / out / reason / cache / billable",
+  );
   expect(output).toContain("✓ case-a");
   expect(output).toContain("✗ case-a");
   expect(output).toContain("Cases       1 failed | 1 passed (2)");
@@ -163,10 +215,18 @@ test("standard reporter interactive mode renders queued, running, and finished r
 
   const queuedOutput = writes.join("");
 
-  expect(queuedOutput).toContain("\u001b[2m• skill-selection  /  open-main (opencode, openai/gpt-5)\u001b[22m");
-  expect(queuedOutput).toContain("\u001b[2m• skill-selection  /  code-main (codex, gpt-5)\u001b[22m");
-  expect(queuedOutput).toContain("\u001b[2m• snapshot-reuse   /  open-main (opencode, openai/gpt-5)\u001b[22m");
-  expect(queuedOutput).toContain("\u001b[2m• snapshot-reuse   /  code-main (codex, gpt-5)\u001b[22m");
+  expect(queuedOutput).toContain(
+    "\u001b[2m• skill-selection  /  open-main (opencode, openai/gpt-5)\u001b[22m",
+  );
+  expect(queuedOutput).toContain(
+    "\u001b[2m• skill-selection  /  code-main (codex, gpt-5)\u001b[22m",
+  );
+  expect(queuedOutput).toContain(
+    "\u001b[2m• snapshot-reuse   /  open-main (opencode, openai/gpt-5)\u001b[22m",
+  );
+  expect(queuedOutput).toContain(
+    "\u001b[2m• snapshot-reuse   /  code-main (codex, gpt-5)\u001b[22m",
+  );
 
   await reporter.onRunnerStart?.({
     context,
@@ -186,21 +246,35 @@ test("standard reporter interactive mode renders queued, running, and finished r
 
   const firstFrameOutput = writes.join("");
 
-  expect(firstFrameOutput).toContain("\u001b[38;5;141m⠋\u001b[0m skill-selection  /  open-main\u001b[2m (opencode, openai/gpt-5)\u001b[22m");
-  expect(firstFrameOutput).toContain("\u001b[38;5;141m⠋\u001b[0m snapshot-reuse   /  code-main\u001b[2m (codex, gpt-5)\u001b[22m");
+  expect(firstFrameOutput).toContain(
+    "\u001b[38;5;141m⠋\u001b[0m skill-selection  /  open-main\u001b[2m (opencode, openai/gpt-5)\u001b[22m",
+  );
+  expect(firstFrameOutput).toContain(
+    "\u001b[38;5;141m⠋\u001b[0m snapshot-reuse   /  code-main\u001b[2m (codex, gpt-5)\u001b[22m",
+  );
 
   await vi.advanceTimersByTimeAsync(80);
 
   const animatedOutput = writes.join("");
 
-  expect(animatedOutput).toContain("\u001b[38;5;141m⠙\u001b[0m skill-selection  /  open-main\u001b[2m (opencode, openai/gpt-5)\u001b[22m");
-  expect(animatedOutput).toContain("\u001b[38;5;141m⠙\u001b[0m snapshot-reuse   /  code-main\u001b[2m (codex, gpt-5)\u001b[22m");
+  expect(animatedOutput).toContain(
+    "\u001b[38;5;141m⠙\u001b[0m skill-selection  /  open-main\u001b[2m (opencode, openai/gpt-5)\u001b[22m",
+  );
+  expect(animatedOutput).toContain(
+    "\u001b[38;5;141m⠙\u001b[0m snapshot-reuse   /  code-main\u001b[2m (codex, gpt-5)\u001b[22m",
+  );
 
   await reporter.onRunnerFinish?.({
     context,
     testCase: { id: "skill-selection", prompt: "", assert() {} },
     runner: openRunner,
-    result: createRunnerResult({ runner: openRunner, passed: true, status: "expected-failed", artifactDir: "x", totalTokens: 10_000 }),
+    result: createRunnerResult({
+      runner: openRunner,
+      passed: true,
+      status: "expected-failed",
+      artifactDir: "x",
+      totalTokens: 10_000,
+    }),
     caseIndex: 1,
     totalCases: 2,
   });
@@ -209,15 +283,25 @@ test("standard reporter interactive mode renders queued, running, and finished r
     context,
     testCase: { id: "snapshot-reuse", prompt: "", assert() {} },
     runner: codeRunner,
-    result: createRunnerResult({ runner: codeRunner, passed: false, status: "unexpected-passed", artifactDir: "y", totalTokens: 10_000 }),
+    result: createRunnerResult({
+      runner: codeRunner,
+      passed: false,
+      status: "unexpected-passed",
+      artifactDir: "y",
+      totalTokens: 10_000,
+    }),
     caseIndex: 2,
     totalCases: 2,
   });
 
   const finishedOutput = writes.join("");
 
-  expect(finishedOutput).toContain("\u001b[32m✓ skill-selection  /  open-main expected failure\u001b[39m\u001b[2m (opencode, openai/gpt-5)\u001b[22m");
-  expect(finishedOutput).toContain("\u001b[31m✗ snapshot-reuse   /  code-main unexpected pass\u001b[39m\u001b[2m (codex, gpt-5)\u001b[22m");
+  expect(finishedOutput).toContain(
+    "\u001b[32m✓ skill-selection  /  open-main expected failure\u001b[39m\u001b[2m (opencode, openai/gpt-5)\u001b[22m",
+  );
+  expect(finishedOutput).toContain(
+    "\u001b[31m✗ snapshot-reuse   /  code-main unexpected pass\u001b[39m\u001b[2m (codex, gpt-5)\u001b[22m",
+  );
   expect(finishedOutput).toContain("\u001b[2K");
 });
 
@@ -260,17 +344,46 @@ test("standard reporter labels expected failures and unexpected passes", async (
     cases: [
       createCaseResult({
         caseId: "known-gap",
-        runnerResults: [createRunnerResult({ runner, passed: true, status: "expected-failed", artifactDir: "x", totalTokens: 12_000 })],
+        runnerResults: [
+          createRunnerResult({
+            runner,
+            passed: true,
+            status: "expected-failed",
+            artifactDir: "x",
+            totalTokens: 12_000,
+          }),
+        ],
       }),
       createCaseResult({
         caseId: "stale-gap",
-        runnerResults: [createRunnerResult({ runner, passed: false, status: "unexpected-passed", artifactDir: "y", totalTokens: 12_000 })],
+        runnerResults: [
+          createRunnerResult({
+            runner,
+            passed: false,
+            status: "unexpected-passed",
+            artifactDir: "y",
+            totalTokens: 12_000,
+          }),
+        ],
       }),
     ],
-    runners: [createRunnerSummary({ runner, passedCases: 1, totalCases: 2, averageDurationMs: 24_800, averageTotalTokens: 12_000 })],
+    runners: [
+      createRunnerSummary({
+        runner,
+        passedCases: 1,
+        totalCases: 2,
+        averageDurationMs: 24_800,
+        averageTotalTokens: 12_000,
+      }),
+    ],
   };
 
-  await reporter.onSuiteStart?.({ context, cases: [], runners: [runner], startedAt: suiteResult.startedAt });
+  await reporter.onSuiteStart?.({
+    context,
+    cases: [],
+    runners: [runner],
+    startedAt: suiteResult.startedAt,
+  });
   await reporter.onRunnerFinish?.({
     context,
     testCase: { id: "stale-gap", prompt: "", assert() {} },
@@ -279,8 +392,20 @@ test("standard reporter labels expected failures and unexpected passes", async (
     caseIndex: 2,
     totalCases: 2,
   });
-  await reporter.onCaseFinish?.({ context, testCase: { id: "known-gap", prompt: "", assert() {} }, result: suiteResult.cases[0]!, caseIndex: 1, totalCases: 2 });
-  await reporter.onCaseFinish?.({ context, testCase: { id: "stale-gap", prompt: "", assert() {} }, result: suiteResult.cases[1]!, caseIndex: 2, totalCases: 2 });
+  await reporter.onCaseFinish?.({
+    context,
+    testCase: { id: "known-gap", prompt: "", assert() {} },
+    result: suiteResult.cases[0]!,
+    caseIndex: 1,
+    totalCases: 2,
+  });
+  await reporter.onCaseFinish?.({
+    context,
+    testCase: { id: "stale-gap", prompt: "", assert() {} },
+    result: suiteResult.cases[1]!,
+    caseIndex: 2,
+    totalCases: 2,
+  });
   await reporter.onSuiteFinish?.({ context, result: suiteResult });
 
   const output = writes.join("");
@@ -358,7 +483,9 @@ test("standard reporter prints warning line for overlapping shared-workspace sch
     startedAt: "2026-04-02T12:00:00.000Z",
   });
 
-  expect(parallelWrites.join("")).toContain("! Concurrent schedule: parallel runs may overlap in the same workspace.");
+  expect(parallelWrites.join("")).toContain(
+    "! Concurrent schedule: parallel runs may overlap in the same workspace.",
+  );
   expect(serialWrites.join("")).not.toContain("Concurrent schedule");
 });
 
@@ -403,26 +530,37 @@ test("standard reporter prints friendly runner crash message with log path", asy
       createCaseResult({
         caseId: "case-a",
         runnerResults: [
-           {
-             ...createRunnerResult({
-               runner,
-               passed: false,
-               artifactDir: ".skillgym-results/run-1/case-a/code-main",
-               totalTokens: 12_000,
-             }),
-             failureType: "runner-crash",
-             failureOrigin: "runner",
-             failureLogPath: ".skillgym-results/run-1/case-a/code-main/stderr.log",
-           },
-         ],
-       }),
+          {
+            ...createRunnerResult({
+              runner,
+              passed: false,
+              artifactDir: ".skillgym-results/run-1/case-a/code-main",
+              totalTokens: 12_000,
+            }),
+            failureType: "runner-crash",
+            failureOrigin: "runner",
+            failureLogPath: ".skillgym-results/run-1/case-a/code-main/stderr.log",
+          },
+        ],
+      }),
     ],
     runners: [
-      createRunnerSummary({ runner, passedCases: 0, totalCases: 1, averageDurationMs: 19_300, averageTotalTokens: 13_500 }),
+      createRunnerSummary({
+        runner,
+        passedCases: 0,
+        totalCases: 1,
+        averageDurationMs: 19_300,
+        averageTotalTokens: 13_500,
+      }),
     ],
   };
 
-  await reporter.onSuiteStart?.({ context, cases: [], runners: [runner], startedAt: suiteResult.startedAt });
+  await reporter.onSuiteStart?.({
+    context,
+    cases: [],
+    runners: [runner],
+    startedAt: suiteResult.startedAt,
+  });
   await reporter.onRunnerFinish?.({
     context,
     testCase: { id: "case-a", prompt: "", assert() {} },
@@ -431,7 +569,13 @@ test("standard reporter prints friendly runner crash message with log path", asy
     caseIndex: 1,
     totalCases: 1,
   });
-  await reporter.onCaseFinish?.({ context, testCase: { id: "case-a", prompt: "", assert() {} }, result: suiteResult.cases[0]!, caseIndex: 1, totalCases: 1 });
+  await reporter.onCaseFinish?.({
+    context,
+    testCase: { id: "case-a", prompt: "", assert() {} },
+    result: suiteResult.cases[0]!,
+    caseIndex: 1,
+    totalCases: 1,
+  });
   await reporter.onSuiteFinish?.({ context, result: suiteResult });
 
   const output = writes.join("");
@@ -503,11 +647,22 @@ test("standard reporter points workspace bootstrap failures to bootstrap logs", 
       }),
     ],
     runners: [
-      createRunnerSummary({ runner, passedCases: 0, totalCases: 1, averageDurationMs: 19_300, averageTotalTokens: 13_500 }),
+      createRunnerSummary({
+        runner,
+        passedCases: 0,
+        totalCases: 1,
+        averageDurationMs: 19_300,
+        averageTotalTokens: 13_500,
+      }),
     ],
   };
 
-  await reporter.onSuiteStart?.({ context, cases: [], runners: [runner], startedAt: suiteResult.startedAt });
+  await reporter.onSuiteStart?.({
+    context,
+    cases: [],
+    runners: [runner],
+    startedAt: suiteResult.startedAt,
+  });
   await reporter.onRunnerFinish?.({
     context,
     testCase: { id: "case-a", prompt: "", assert() {} },
@@ -516,7 +671,13 @@ test("standard reporter points workspace bootstrap failures to bootstrap logs", 
     caseIndex: 1,
     totalCases: 1,
   });
-  await reporter.onCaseFinish?.({ context, testCase: { id: "case-a", prompt: "", assert() {} }, result: suiteResult.cases[0]!, caseIndex: 1, totalCases: 1 });
+  await reporter.onCaseFinish?.({
+    context,
+    testCase: { id: "case-a", prompt: "", assert() {} },
+    result: suiteResult.cases[0]!,
+    caseIndex: 1,
+    totalCases: 1,
+  });
   await reporter.onSuiteFinish?.({ context, result: suiteResult });
 
   const output = writes.join("");
@@ -578,7 +739,8 @@ test("standard reporter renders max-steps failures with a clear message", async 
             }),
             error: {
               name: "MaxStepsExceededError",
-              message: "Exceeded maxSteps: observed 2 steps with limit 1 for runner \"open-main\" (opencode). Agent terminated by skillgym. Raw output preserved.",
+              message:
+                'Exceeded maxSteps: observed 2 steps with limit 1 for runner "open-main" (opencode). Agent terminated by skillgym. Raw output preserved.',
             },
             failureType: "runner-crash",
             failureOrigin: "max-steps",
@@ -588,11 +750,22 @@ test("standard reporter renders max-steps failures with a clear message", async 
       }),
     ],
     runners: [
-      createRunnerSummary({ runner, passedCases: 0, totalCases: 1, averageDurationMs: 19_300, averageTotalTokens: 13_500 }),
+      createRunnerSummary({
+        runner,
+        passedCases: 0,
+        totalCases: 1,
+        averageDurationMs: 19_300,
+        averageTotalTokens: 13_500,
+      }),
     ],
   };
 
-  await reporter.onSuiteStart?.({ context, cases: [], runners: [runner], startedAt: suiteResult.startedAt });
+  await reporter.onSuiteStart?.({
+    context,
+    cases: [],
+    runners: [runner],
+    startedAt: suiteResult.startedAt,
+  });
   await reporter.onRunnerFinish?.({
     context,
     testCase: { id: "case-a", prompt: "", assert() {} },
@@ -601,13 +774,23 @@ test("standard reporter renders max-steps failures with a clear message", async 
     caseIndex: 1,
     totalCases: 1,
   });
-  await reporter.onCaseFinish?.({ context, testCase: { id: "case-a", prompt: "", assert() {} }, result: suiteResult.cases[0]!, caseIndex: 1, totalCases: 1 });
+  await reporter.onCaseFinish?.({
+    context,
+    testCase: { id: "case-a", prompt: "", assert() {} },
+    result: suiteResult.cases[0]!,
+    caseIndex: 1,
+    totalCases: 1,
+  });
   await reporter.onSuiteFinish?.({ context, result: suiteResult });
 
   const output = writes.join("");
 
-  expect(output).toContain("Run stopped: exceeded maxSteps (best-effort). Raw output was preserved in the run artifacts for debugging.");
-  expect(output).toContain("MaxStepsExceededError: Exceeded maxSteps: observed 2 steps with limit 1");
+  expect(output).toContain(
+    "Run stopped: exceeded maxSteps (best-effort). Raw output was preserved in the run artifacts for debugging.",
+  );
+  expect(output).toContain(
+    "MaxStepsExceededError: Exceeded maxSteps: observed 2 steps with limit 1",
+  );
 });
 
 test("standard reporter suppresses shared-workspace warning for isolated mode", async () => {
@@ -685,18 +868,38 @@ test("standard reporter formats model-rejected failures as runner crashes with s
     outputDir: context.outputDir,
     declaredTags: [],
     selectedTags: [],
-    cases: [{
-      caseId: "case-a",
-      tags: [],
-      passed: false,
-      runnerResults: [{
-        ...createRunnerResult({ runner, passed: false, artifactDir: ".skillgym-results/run-1/case-a/code-main", totalTokens: 12_000 }),
-        error: { name: "Error", message: "Runner rejected configured model \"gpt-5\" during initial execution." },
-        failureType: "runner-crash",
-        failureOrigin: "model-rejected",
-      }],
-    }],
-    runners: [createRunnerSummary({ runner, passedCases: 0, totalCases: 1, averageDurationMs: 24_800, averageTotalTokens: 12_000 })],
+    cases: [
+      {
+        caseId: "case-a",
+        tags: [],
+        passed: false,
+        runnerResults: [
+          {
+            ...createRunnerResult({
+              runner,
+              passed: false,
+              artifactDir: ".skillgym-results/run-1/case-a/code-main",
+              totalTokens: 12_000,
+            }),
+            error: {
+              name: "Error",
+              message: 'Runner rejected configured model "gpt-5" during initial execution.',
+            },
+            failureType: "runner-crash",
+            failureOrigin: "model-rejected",
+          },
+        ],
+      },
+    ],
+    runners: [
+      createRunnerSummary({
+        runner,
+        passedCases: 0,
+        totalCases: 1,
+        averageDurationMs: 24_800,
+        averageTotalTokens: 12_000,
+      }),
+    ],
   };
 
   await reporter.onRunnerFinish?.({
@@ -711,13 +914,12 @@ test("standard reporter formats model-rejected failures as runner crashes with s
 
   const output = writes.join("");
   expect(output).toContain("Runner rejected the configured model.");
-  expect(output).toContain('Error: Runner rejected configured model "gpt-5" during initial execution.');
+  expect(output).toContain(
+    'Error: Runner rejected configured model "gpt-5" during initial execution.',
+  );
 });
 
-function createCaseResult(options: {
-  caseId: string;
-  runnerResults: RunnerResult[];
-}): CaseResult {
+function createCaseResult(options: { caseId: string; runnerResults: RunnerResult[] }): CaseResult {
   return {
     caseId: options.caseId,
     tags: [],
@@ -739,20 +941,22 @@ function createRunnerResult(options: {
     status: options.status ?? (options.passed ? "passed" : "failed"),
     durationMs: 24_800,
     artifactDir: options.artifactDir,
-    error: options.passed || options.status === "unexpected-passed"
+    error:
+      options.passed || options.status === "unexpected-passed"
         ? undefined
         : {
-          name: "AssertionError",
-          message: "expected skill to be loaded before command execution",
-          stack: [
-            "AssertionError: expected skill to be loaded before command execution",
-            "    at assert (/workspace/src/assertions/output.ts:88:10)",
-            "    at Object.assert (/workspace/examples/basic-suite.ts:14:15)",
-            "    at executeRunner (/workspace/src/runner/execute-runner.ts:91:7)",
-          ].join("\n"),
-        },
+            name: "AssertionError",
+            message: "expected skill to be loaded before command execution",
+            stack: [
+              "AssertionError: expected skill to be loaded before command execution",
+              "    at assert (/workspace/src/assertions/output.ts:88:10)",
+              "    at Object.assert (/workspace/examples/basic-suite.ts:14:15)",
+              "    at executeRunner (/workspace/src/runner/execute-runner.ts:91:7)",
+            ].join("\n"),
+          },
     failureType: options.passed || options.status === "unexpected-passed" ? undefined : "assertion",
-    failureOrigin: options.passed || options.status === "unexpected-passed" ? undefined : "assertion",
+    failureOrigin:
+      options.passed || options.status === "unexpected-passed" ? undefined : "assertion",
     report: createSessionReport({
       runner: options.runner,
       usage: {

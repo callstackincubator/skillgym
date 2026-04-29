@@ -47,7 +47,9 @@ export class SnapshotStore {
     private readonly config: SnapshotConfig,
   ) {}
 
-  static async load(options: SnapshotRuntimeOptions | undefined): Promise<SnapshotStore | undefined> {
+  static async load(
+    options: SnapshotRuntimeOptions | undefined,
+  ): Promise<SnapshotStore | undefined> {
     if (options === undefined || !options.enabled) {
       return undefined;
     }
@@ -67,7 +69,9 @@ export class SnapshotStore {
     } catch (error) {
       const nodeError = error as NodeJS.ErrnoException;
       if (nodeError?.code !== "ENOENT") {
-        throw new Error(`Failed to load snapshots from ${options.path}: ${error instanceof Error ? error.message : String(error)}`);
+        throw new Error(
+          `Failed to load snapshots from ${options.path}: ${error instanceof Error ? error.message : String(error)}`,
+        );
       }
     }
 
@@ -81,7 +85,9 @@ export class SnapshotStore {
 
     const payload: SnapshotFile = {
       version: 1,
-      entries: Object.fromEntries([...this.entries.entries()].sort(([left], [right]) => left.localeCompare(right))),
+      entries: Object.fromEntries(
+        [...this.entries.entries()].sort(([left], [right]) => left.localeCompare(right)),
+      ),
     };
 
     await writeJson(this.filePath, payload);
@@ -93,13 +99,29 @@ export class SnapshotStore {
     const existing = this.entries.get(key);
 
     if (existing === undefined) {
-      this.entries.set(key, createSnapshotEntry(input.caseId, input.runner, this.config.metric ?? "totalTokens", input.actual));
+      this.entries.set(
+        key,
+        createSnapshotEntry(
+          input.caseId,
+          input.runner,
+          this.config.metric ?? "totalTokens",
+          input.actual,
+        ),
+      );
       this.dirty = true;
       return { created: true, updated: false };
     }
 
     if (options.updateSnapshots) {
-      this.entries.set(key, createSnapshotEntry(input.caseId, input.runner, this.config.metric ?? "totalTokens", input.actual));
+      this.entries.set(
+        key,
+        createSnapshotEntry(
+          input.caseId,
+          input.runner,
+          this.config.metric ?? "totalTokens",
+          input.actual,
+        ),
+      );
       this.dirty = true;
       return { created: false, updated: true };
     }
@@ -123,9 +145,13 @@ export function createSnapshotRuntimeOptions(options: {
     return undefined;
   }
 
-  const filePath = options.snapshotPath
-    ?? options.snapshotConfig.path
-    ?? path.resolve(options.configPath === undefined ? process.cwd() : path.dirname(options.configPath), "skillgym.snapshots.json");
+  const filePath =
+    options.snapshotPath ??
+    options.snapshotConfig.path ??
+    path.resolve(
+      options.configPath === undefined ? process.cwd() : path.dirname(options.configPath),
+      "skillgym.snapshots.json",
+    );
 
   return {
     enabled: true,
@@ -168,8 +194,10 @@ function assertWithinTolerance(
   actual: number,
   tolerance: SnapshotConfig["tolerance"],
 ): void {
-  const absoluteLimit = tolerance.absolute === undefined ? undefined : baseline.value + tolerance.absolute;
-  const percentLimit = tolerance.percent === undefined ? undefined : baseline.value * (1 + tolerance.percent / 100);
+  const absoluteLimit =
+    tolerance.absolute === undefined ? undefined : baseline.value + tolerance.absolute;
+  const percentLimit =
+    tolerance.percent === undefined ? undefined : baseline.value * (1 + tolerance.percent / 100);
 
   if (absoluteLimit !== undefined && actual > absoluteLimit) {
     throw createSnapshotError(baseline, actual, absoluteLimit);

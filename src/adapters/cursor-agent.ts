@@ -1,6 +1,12 @@
 import path from "node:path";
 import { readFile } from "node:fs/promises";
-import type { CursorAgentConfig, RawRunArtifacts, RunHandle, RunInput, RunnerAdapter } from "../domain/adapter.js";
+import type {
+  CursorAgentConfig,
+  RawRunArtifacts,
+  RunHandle,
+  RunInput,
+  RunnerAdapter,
+} from "../domain/adapter.js";
 import type { SessionEvent, SessionReport } from "../domain/session-report.js";
 import { resolveReportedPath } from "../normalize/reported-path.js";
 import { inferSkillsFromPaths } from "../normalize/skill-detection.js";
@@ -8,7 +14,12 @@ import { writeText } from "../utils/fs.js";
 import { BaseAdapter } from "./base.js";
 
 export class CursorAgentAdapter extends BaseAdapter implements RunnerAdapter {
-  constructor(private readonly options: CursorAgentConfig = { type: "cursor-agent", model: "composer-2-fast" }) {
+  constructor(
+    private readonly options: CursorAgentConfig = {
+      type: "cursor-agent",
+      model: "composer-2-fast",
+    },
+  ) {
     super();
   }
 
@@ -102,9 +113,10 @@ export class CursorAgentAdapter extends BaseAdapter implements RunnerAdapter {
         const callId = readString(record, "call_id");
         const isCompleted = readString(record, "subtype") === "completed";
         const hasEmittedCall = callId !== undefined && seenToolCalls.has(callId);
-        const baseDir = callId === undefined
-          ? resolveToolBaseDir(toolCall.args, sessionCwd)
-          : resolveCursorCallBaseDir(callId, toolCall.args, sessionCwd, callBaseDirs);
+        const baseDir =
+          callId === undefined
+            ? resolveToolBaseDir(toolCall.args, sessionCwd)
+            : resolveCursorCallBaseDir(callId, toolCall.args, sessionCwd, callBaseDirs);
 
         if (!hasEmittedCall) {
           events.push({
@@ -161,13 +173,17 @@ export class CursorAgentAdapter extends BaseAdapter implements RunnerAdapter {
       if (type === "result") {
         resultText = readString(record, "result") ?? resultText;
         const usage = isRecord(record.usage) ? record.usage : undefined;
-        const providerInputTokens = usage === undefined ? undefined : readNumber(usage, "inputTokens");
-        const providerOutputTokens = usage === undefined ? undefined : readNumber(usage, "outputTokens");
-        const providerCacheReadTokens = usage === undefined ? undefined : readNumber(usage, "cacheReadTokens");
+        const providerInputTokens =
+          usage === undefined ? undefined : readNumber(usage, "inputTokens");
+        const providerOutputTokens =
+          usage === undefined ? undefined : readNumber(usage, "outputTokens");
+        const providerCacheReadTokens =
+          usage === undefined ? undefined : readNumber(usage, "cacheReadTokens");
 
-        inputTokens = providerInputTokens === undefined
-          ? inputTokens
-          : providerInputTokens + (providerCacheReadTokens ?? 0);
+        inputTokens =
+          providerInputTokens === undefined
+            ? inputTokens
+            : providerInputTokens + (providerCacheReadTokens ?? 0);
         outputTokens = providerOutputTokens ?? outputTokens;
         cacheTokens = providerCacheReadTokens ?? cacheTokens;
       }
@@ -182,9 +198,15 @@ export class CursorAgentAdapter extends BaseAdapter implements RunnerAdapter {
         evidence: ["Loaded via skill tool"],
       })),
     );
-    const finalOutput = resultText ?? [...events]
-      .reverse()
-      .find((event): event is Extract<SessionEvent, { type: "message" }> => event.type === "message" && event.role === "assistant")?.text ?? artifacts.stdout;
+    const finalOutput =
+      resultText ??
+      [...events]
+        .reverse()
+        .find(
+          (event): event is Extract<SessionEvent, { type: "message" }> =>
+            event.type === "message" && event.role === "assistant",
+        )?.text ??
+      artifacts.stdout;
     const totalTokens =
       inputTokens !== undefined && outputTokens !== undefined
         ? inputTokens + outputTokens - (cacheTokens ?? 0)
@@ -293,7 +315,9 @@ function extractMessageText(message: Record<string, unknown>): string {
     .join("\n");
 }
 
-function extractToolCall(value: unknown): { tool: string; args: unknown; result: unknown } | undefined {
+function extractToolCall(
+  value: unknown,
+): { tool: string; args: unknown; result: unknown } | undefined {
   if (!isRecord(value)) {
     return undefined;
   }
@@ -314,9 +338,7 @@ function extractToolCall(value: unknown): { tool: string; args: unknown; result:
 }
 
 function normalizeToolName(value: string): string {
-  return value
-    .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
-    .toLowerCase();
+  return value.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
 }
 
 function extractCommand(tool: string, args: unknown): string | undefined {
@@ -332,9 +354,7 @@ function extractReadPath(tool: string, args: unknown): string | undefined {
     return undefined;
   }
 
-  return readString(args, "filePath")
-    ?? readString(args, "file_path")
-    ?? readString(args, "path");
+  return readString(args, "filePath") ?? readString(args, "file_path") ?? readString(args, "path");
 }
 
 function extractSkillName(tool: string, args: unknown): string | undefined {
@@ -350,9 +370,7 @@ function resolveToolBaseDir(args: unknown, fallbackDir: string): string {
     return fallbackDir;
   }
 
-  return readString(args, "workingDirectory")
-    ?? readString(args, "cwd")
-    ?? fallbackDir;
+  return readString(args, "workingDirectory") ?? readString(args, "cwd") ?? fallbackDir;
 }
 
 function resolveCursorCallBaseDir(
@@ -457,7 +475,10 @@ function mergeDetectedSkills(
   return [...merged.values()];
 }
 
-function compareConfidence(a: SessionReport["detectedSkills"][number]["confidence"], b: SessionReport["detectedSkills"][number]["confidence"]): number {
+function compareConfidence(
+  a: SessionReport["detectedSkills"][number]["confidence"],
+  b: SessionReport["detectedSkills"][number]["confidence"],
+): number {
   const order = ["explicit", "strong", "medium", "weak"];
   return order.indexOf(a) - order.indexOf(b);
 }

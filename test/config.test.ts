@@ -3,7 +3,12 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import type { RunnerResult, TestCase } from "../src/index.js";
-import { loadConfig, parseConfig, resolveReporterOptions, resolveRunOptions } from "../src/config.js";
+import {
+  loadConfig,
+  parseConfig,
+  resolveReporterOptions,
+  resolveRunOptions,
+} from "../src/config.js";
 import { executeSuite } from "../src/runner/execute-suite.js";
 import { createRunnerInfo } from "../src/runner/runner-info.js";
 import { createSessionReport } from "./helpers/session-report.js";
@@ -25,16 +30,16 @@ describe("config", () => {
     await writeFile(path.join(suiteDir, "suite.ts"), "export default []\n", "utf8");
     await writeFile(
       path.join(tempDir, "bench", "skillgym.config.mjs"),
-        [
-          "export default {",
-          "  run: { cwd: './workspace', outputDir: './results', reporter: './reporters/custom.ts', schedule: 'serial', maxParallel: 3, tags: ['smoke'], workspace: { mode: 'isolated', templateDir: './fixtures/base', bootstrap: { command: './scripts/bootstrap.sh', args: ['--flag'], timeoutMs: 5000 } } },",
-          "  defaults: { timeoutMs: 45000 },",
-          "  runners: {",
-          "    codexMain: { agent: { type: 'codex', command: './bin/codex', commandArgs: ['./scripts/wrapper.ts'], model: 'gpt-5' } }",
-          "  }",
-          "};",
-          "",
-        ].join("\n"),
+      [
+        "export default {",
+        "  run: { cwd: './workspace', outputDir: './results', reporter: './reporters/custom.ts', schedule: 'serial', maxParallel: 3, tags: ['smoke'], workspace: { mode: 'isolated', templateDir: './fixtures/base', bootstrap: { command: './scripts/bootstrap.sh', args: ['--flag'], timeoutMs: 5000 } } },",
+        "  defaults: { timeoutMs: 45000 },",
+        "  runners: {",
+        "    codexMain: { agent: { type: 'codex', command: './bin/codex', commandArgs: ['./scripts/wrapper.ts'], model: 'gpt-5' } }",
+        "  }",
+        "};",
+        "",
+      ].join("\n"),
       "utf8",
     );
 
@@ -147,46 +152,81 @@ describe("config", () => {
   });
 
   test("rejects unknown keys with full path", () => {
-    expect(() => parseConfig({ runners: { codexMain: { agent: { type: "codex", model: "gpt-5", sessionPath: "/tmp/x" } } } })).toThrow(
-      "Unknown config key: runners.codexMain.agent.sessionPath",
-    );
+    expect(() =>
+      parseConfig({
+        runners: { codexMain: { agent: { type: "codex", model: "gpt-5", sessionPath: "/tmp/x" } } },
+      }),
+    ).toThrow("Unknown config key: runners.codexMain.agent.sessionPath");
   });
 
   test("rejects invalid schema values with full path", () => {
     expect(() => parseConfig({ runners: {} })).toThrow(
       "Invalid config at runners: expected non-empty object",
     );
-    expect(() => parseConfig({ runners: { codexMain: { agent: { type: "codex", model: "gpt-5", commandArgs: [""] } } } })).toThrow(
+    expect(() =>
+      parseConfig({
+        runners: { codexMain: { agent: { type: "codex", model: "gpt-5", commandArgs: [""] } } },
+      }),
+    ).toThrow(
       "Invalid config at runners.codexMain.agent.commandArgs[0]: expected non-empty string",
     );
     expect(() => parseConfig({ runners: { openMain: { agent: { type: "opencode" } } } })).toThrow(
       "Invalid config at runners.openMain.agent.model: expected non-empty string",
     );
-    expect(() => parseConfig({ runners: { openMain: { agent: { type: "opencode", model: "" } } } })).toThrow(
-      "Invalid config at runners.openMain.agent.model: expected non-empty string",
+    expect(() =>
+      parseConfig({ runners: { openMain: { agent: { type: "opencode", model: "" } } } }),
+    ).toThrow("Invalid config at runners.openMain.agent.model: expected non-empty string");
+    expect(() =>
+      parseConfig({
+        run: { workspace: { mode: "shared", templateDir: "./fixture" } },
+        runners: { openMain: { agent: { type: "opencode", model: "openai/gpt-5" } } },
+      }),
+    ).toThrow(
+      'Invalid config at run.workspace.templateDir: expected this key to be omitted when workspace mode is "shared"',
     );
-    expect(() => parseConfig({
-      run: { workspace: { mode: "shared", templateDir: "./fixture" } },
-      runners: { openMain: { agent: { type: "opencode", model: "openai/gpt-5" } } },
-    })).toThrow('Invalid config at run.workspace.templateDir: expected this key to be omitted when workspace mode is "shared"');
-    expect(() => parseConfig({
-      snapshots: { tolerance: {} },
-      runners: { openMain: { agent: { type: "opencode", model: "openai/gpt-5" } } },
-    })).toThrow("Invalid config at snapshots.tolerance: expected at least one of absolute or percent");
-    expect(() => parseConfig({
-      run: { schedule: "fanout" },
-      runners: { openMain: { agent: { type: "opencode", model: "openai/gpt-5" } } },
-    })).toThrow("Invalid config at run.schedule: expected one of: serial, parallel, isolated-by-runner");
-    expect(() => parseConfig({
-      run: { tags: [""] },
-      runners: { openMain: { agent: { type: "opencode", model: "openai/gpt-5" } } },
-    })).toThrow("Invalid config at run.tags[0]: expected non-empty string");
+    expect(() =>
+      parseConfig({
+        snapshots: { tolerance: {} },
+        runners: { openMain: { agent: { type: "opencode", model: "openai/gpt-5" } } },
+      }),
+    ).toThrow(
+      "Invalid config at snapshots.tolerance: expected at least one of absolute or percent",
+    );
+    expect(() =>
+      parseConfig({
+        run: { schedule: "fanout" },
+        runners: { openMain: { agent: { type: "opencode", model: "openai/gpt-5" } } },
+      }),
+    ).toThrow(
+      "Invalid config at run.schedule: expected one of: serial, parallel, isolated-by-runner",
+    );
+    expect(() =>
+      parseConfig({
+        run: { tags: [""] },
+        runners: { openMain: { agent: { type: "opencode", model: "openai/gpt-5" } } },
+      }),
+    ).toThrow("Invalid config at run.tags[0]: expected non-empty string");
   });
 
   test("parses valid schedule values", () => {
-    expect(parseConfig({ run: { schedule: "serial" }, runners: { open: { agent: { type: "opencode", model: "openai/gpt-5" } } } }).run?.schedule).toBe("serial");
-    expect(parseConfig({ run: { schedule: "parallel" }, runners: { open: { agent: { type: "opencode", model: "openai/gpt-5" } } } }).run?.schedule).toBe("parallel");
-    expect(parseConfig({ run: { schedule: "isolated-by-runner" }, runners: { open: { agent: { type: "opencode", model: "openai/gpt-5" } } } }).run?.schedule).toBe("isolated-by-runner");
+    expect(
+      parseConfig({
+        run: { schedule: "serial" },
+        runners: { open: { agent: { type: "opencode", model: "openai/gpt-5" } } },
+      }).run?.schedule,
+    ).toBe("serial");
+    expect(
+      parseConfig({
+        run: { schedule: "parallel" },
+        runners: { open: { agent: { type: "opencode", model: "openai/gpt-5" } } },
+      }).run?.schedule,
+    ).toBe("parallel");
+    expect(
+      parseConfig({
+        run: { schedule: "isolated-by-runner" },
+        runners: { open: { agent: { type: "opencode", model: "openai/gpt-5" } } },
+      }).run?.schedule,
+    ).toBe("isolated-by-runner");
   });
 
   test("parses run maxSteps", () => {
@@ -233,8 +273,16 @@ describe("config", () => {
     const suiteDir = path.join(tempDir, "bench");
     await mkdir(suiteDir, { recursive: true });
     await writeFile(path.join(suiteDir, "suite.ts"), "export default []\n", "utf8");
-    await writeFile(path.join(suiteDir, "skillgym.config.mjs"), "export default { runners: { open: { agent: { type: 'opencode', model: 'openai/gpt-5' } } } };\n", "utf8");
-    await writeFile(path.join(suiteDir, "skillgym.config.cjs"), "module.exports = { runners: { open: { agent: { type: 'opencode', model: 'openai/gpt-5' } } } };\n", "utf8");
+    await writeFile(
+      path.join(suiteDir, "skillgym.config.mjs"),
+      "export default { runners: { open: { agent: { type: 'opencode', model: 'openai/gpt-5' } } } };\n",
+      "utf8",
+    );
+    await writeFile(
+      path.join(suiteDir, "skillgym.config.cjs"),
+      "module.exports = { runners: { open: { agent: { type: 'opencode', model: 'openai/gpt-5' } } } };\n",
+      "utf8",
+    );
 
     await expect(loadConfig({ suitePath: path.join(suiteDir, "suite.ts") })).rejects.toThrow(
       new RegExp(`Multiple config files found in ${escapeRegex(suiteDir)}`),
@@ -269,44 +317,73 @@ describe("config", () => {
   });
 
   test("run options let CLI maxParallel override config", () => {
-    expect(resolveRunOptions(
-      { maxParallel: "4" },
-      { run: { maxParallel: 2 }, runners: { open: { agent: { type: "opencode", model: "openai/gpt-5" } } } },
-    )).toMatchObject({ maxParallel: 4 });
+    expect(
+      resolveRunOptions(
+        { maxParallel: "4" },
+        {
+          run: { maxParallel: 2 },
+          runners: { open: { agent: { type: "opencode", model: "openai/gpt-5" } } },
+        },
+      ),
+    ).toMatchObject({ maxParallel: 4 });
 
-    expect(() => resolveRunOptions(
-      { maxParallel: "0" },
-      { runners: { open: { agent: { type: "opencode", model: "openai/gpt-5" } } } },
-    )).toThrow("Invalid config at CLI option --max-parallel: expected integer >= 1");
+    expect(() =>
+      resolveRunOptions(
+        { maxParallel: "0" },
+        { runners: { open: { agent: { type: "opencode", model: "openai/gpt-5" } } } },
+      ),
+    ).toThrow("Invalid config at CLI option --max-parallel: expected integer >= 1");
   });
 
   test("run options support config tags and let CLI tags override config", () => {
-    expect(resolveRunOptions(
-      {},
-      { run: { tags: ["smoke"] }, runners: { open: { agent: { type: "opencode", model: "openai/gpt-5" } } } },
-    )).toMatchObject({ tags: ["smoke"] });
+    expect(
+      resolveRunOptions(
+        {},
+        {
+          run: { tags: ["smoke"] },
+          runners: { open: { agent: { type: "opencode", model: "openai/gpt-5" } } },
+        },
+      ),
+    ).toMatchObject({ tags: ["smoke"] });
 
-    expect(resolveRunOptions(
-      { tags: ["gestures"] },
-      { run: { tags: ["smoke"] }, runners: { open: { agent: { type: "opencode", model: "openai/gpt-5" } } } },
-    )).toMatchObject({ tags: ["gestures"] });
+    expect(
+      resolveRunOptions(
+        { tags: ["gestures"] },
+        {
+          run: { tags: ["smoke"] },
+          runners: { open: { agent: { type: "opencode", model: "openai/gpt-5" } } },
+        },
+      ),
+    ).toMatchObject({ tags: ["gestures"] });
   });
 
   test("run options let CLI schedule override config and default to serial", () => {
-    expect(resolveRunOptions(
-      { schedule: "isolated-by-runner" },
-      { run: { schedule: "parallel" }, runners: { open: { agent: { type: "opencode", model: "openai/gpt-5" } } } },
-    )).toMatchObject({ schedule: "isolated-by-runner" });
+    expect(
+      resolveRunOptions(
+        { schedule: "isolated-by-runner" },
+        {
+          run: { schedule: "parallel" },
+          runners: { open: { agent: { type: "opencode", model: "openai/gpt-5" } } },
+        },
+      ),
+    ).toMatchObject({ schedule: "isolated-by-runner" });
 
-    expect(resolveRunOptions(
-      {},
-      { run: { schedule: "parallel" }, runners: { open: { agent: { type: "opencode", model: "openai/gpt-5" } } } },
-    )).toMatchObject({ schedule: "parallel" });
+    expect(
+      resolveRunOptions(
+        {},
+        {
+          run: { schedule: "parallel" },
+          runners: { open: { agent: { type: "opencode", model: "openai/gpt-5" } } },
+        },
+      ),
+    ).toMatchObject({ schedule: "parallel" });
 
-    expect(resolveRunOptions(
-      {},
-      { runners: { open: { agent: { type: "opencode", model: "openai/gpt-5" } } } },
-    )).toMatchObject({ schedule: "serial" });
+    expect(
+      resolveRunOptions(
+        {},
+        { runners: { open: { agent: { type: "opencode", model: "openai/gpt-5" } } } },
+      ),
+    ).toMatchObject({ schedule: "serial" });
   });
 
   test("reporter options prefer CLI over config and config over built-ins", async () => {
@@ -323,10 +400,12 @@ describe("config", () => {
 
     const loaded = await loadConfig({ suitePath, configPath });
 
-    expect(resolveReporterOptions({ reporter: "./cli-reporter.ts", cwd: tempDir }, loaded)).toEqual({
-      reporter: "./cli-reporter.ts",
-      cwd: tempDir,
-    });
+    expect(resolveReporterOptions({ reporter: "./cli-reporter.ts", cwd: tempDir }, loaded)).toEqual(
+      {
+        reporter: "./cli-reporter.ts",
+        cwd: tempDir,
+      },
+    );
     expect(resolveReporterOptions({}, loaded)).toEqual({
       reporter: path.join(configDir, "reporters", "config-reporter.ts"),
       cwd: configDir,

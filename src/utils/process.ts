@@ -28,12 +28,14 @@ function spawn(command: string, args: string[], options: Options): Subprocess {
     process.on("SIGINT", sigintHandler);
     process.on("SIGTERM", sigtermHandler);
 
-    void subprocess.finally(() => {
-      process.off("SIGINT", sigintHandler);
-      process.off("SIGTERM", sigtermHandler);
-    }).catch(() => {
-      // The subprocess promise may reject on non-zero exit; cleanup still needs to run without leaking an unhandled rejection.
-    });
+    void subprocess
+      .finally(() => {
+        process.off("SIGINT", sigintHandler);
+        process.off("SIGTERM", sigtermHandler);
+      })
+      .catch(() => {
+        // The subprocess promise may reject on non-zero exit; cleanup still needs to run without leaking an unhandled rejection.
+      });
   });
 
   return subprocess;
@@ -82,9 +84,9 @@ export async function execFileCapture(
   },
 ): Promise<ExecResult> {
   if (
-    options.mirror?.stdout !== undefined
-    || options.mirror?.stderr !== undefined
-    || options.maxSteps !== undefined
+    options.mirror?.stdout !== undefined ||
+    options.mirror?.stderr !== undefined ||
+    options.maxSteps !== undefined
   ) {
     return execFileCaptureWithMirror(command, args, options);
   }
@@ -201,13 +203,14 @@ async function execFileCaptureWithMirror(
   let terminatedByMonitor: MaxStepsExceededError | undefined;
   const stdoutDecoder = new StringDecoder("utf8");
   const stderrDecoder = new StringDecoder("utf8");
-  const maxStepsMonitor = options.maxSteps === undefined
-    ? undefined
-    : createMaxStepsMonitor({
-        agentType: options.maxSteps.agentType,
-        runnerId: options.maxSteps.runnerId,
-        maxSteps: options.maxSteps.limit,
-      });
+  const maxStepsMonitor =
+    options.maxSteps === undefined
+      ? undefined
+      : createMaxStepsMonitor({
+          agentType: options.maxSteps.agentType,
+          runnerId: options.maxSteps.runnerId,
+          maxSteps: options.maxSteps.limit,
+        });
   let stdoutLineBuffer = "";
 
   child.stdout?.on("data", (chunk: string | Buffer) => {
@@ -314,7 +317,9 @@ function finalizeBufferedOutput(options: {
   }
 
   if (options.maxStepsMonitor !== undefined && terminatedByMonitor === undefined) {
-    const result = consumeJsonLines(stdoutLineBuffer, (line) => options.maxStepsMonitor?.observeLine(line));
+    const result = consumeJsonLines(stdoutLineBuffer, (line) =>
+      options.maxStepsMonitor?.observeLine(line),
+    );
     stdoutLineBuffer = result.remainder;
     if (result.value !== undefined) {
       terminatedByMonitor = new MaxStepsExceededError(result.value);
@@ -360,9 +365,7 @@ function isTimedOutSubprocessError(error: SubprocessError): boolean {
   return error.signalName === "SIGKILL" && error.exitCode === undefined;
 }
 
-async function waitForStreamEnd(
-  stream: NodeJS.ReadableStream | null | undefined,
-): Promise<void> {
+async function waitForStreamEnd(stream: NodeJS.ReadableStream | null | undefined): Promise<void> {
   if (stream === null || stream === undefined) {
     return;
   }

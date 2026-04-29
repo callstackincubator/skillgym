@@ -12,7 +12,10 @@ test("toolCalls match by tool name and args predicate", () => {
     { type: "toolCall", tool: "bash", args: { command: "agent session stop" }, at: "4" },
   ]);
 
-  assert.toolCalls.has(report, { tool: "skill", where: (args) => (args as { name?: string })?.name === "rozenite-agent" });
+  assert.toolCalls.has(report, {
+    tool: "skill",
+    where: (args) => (args as { name?: string })?.name === "rozenite-agent",
+  });
   assert.toolCalls.count(report, { tool: "bash" }, 2);
   assert.toolCalls.atLeast(report, { tool: "bash" }, 2);
   assert.toolCalls.atMost(report, { tool: "skill" }, 1);
@@ -23,15 +26,29 @@ test("toolCalls before and sequence validate ordered tool usage", () => {
     { type: "toolCall", tool: "skill", args: { name: "rozenite-agent" }, at: "1" },
     { type: "toolCall", tool: "read", args: { filePath: "/tmp/mmkv.md" }, at: "2" },
     { type: "toolCall", tool: "bash", args: { command: "agent session create" }, at: "3" },
-    { type: "toolCall", tool: "bash", args: { command: "agent at-rozenite__mmkv-plugin call --tool list-storages" }, at: "4" },
+    {
+      type: "toolCall",
+      tool: "bash",
+      args: { command: "agent at-rozenite__mmkv-plugin call --tool list-storages" },
+      at: "4",
+    },
   ]);
 
   assert.toolCalls.before(report, { tool: "skill" }, { tool: "read" });
   assert.toolCalls.sequence(report, [
     { tool: "skill" },
-    { tool: "read", where: (args) => /mmkv\.md$/.test(((args as { filePath?: string })?.filePath ?? "")) },
-    { tool: "bash", where: (args) => /session create/.test(((args as { command?: string })?.command ?? "")) },
-    { tool: "bash", where: (args) => /list-storages/.test(((args as { command?: string })?.command ?? "")) },
+    {
+      tool: "read",
+      where: (args) => /mmkv\.md$/.test((args as { filePath?: string })?.filePath ?? ""),
+    },
+    {
+      tool: "bash",
+      where: (args) => /session create/.test((args as { command?: string })?.command ?? ""),
+    },
+    {
+      tool: "bash",
+      where: (args) => /list-storages/.test((args as { command?: string })?.command ?? ""),
+    },
   ]);
 
   nodeAssert.throws(() => {

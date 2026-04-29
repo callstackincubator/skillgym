@@ -3,7 +3,8 @@ import { createRunnerInfo } from "../../src/runner/runner-info.js";
 
 export function createSessionReport(overrides: Partial<SessionReport> = {}): SessionReport {
   return {
-    runner: overrides.runner ?? createRunnerInfo("opencode", { type: "opencode", model: "openai/gpt-5" }),
+    runner:
+      overrides.runner ?? createRunnerInfo("opencode", { type: "opencode", model: "openai/gpt-5" }),
     prompt: "test prompt",
     usage: {
       inputTokens: undefined,

@@ -16,7 +16,16 @@ const CONFIG_FILENAMES = [
 ] as const;
 
 const TOP_LEVEL_KEYS = ["run", "defaults", "runners", "snapshots"] as const;
-const RUN_KEYS = ["cwd", "outputDir", "reporter", "schedule", "workspace", "maxSteps", "maxParallel", "tags"] as const;
+const RUN_KEYS = [
+  "cwd",
+  "outputDir",
+  "reporter",
+  "schedule",
+  "workspace",
+  "maxSteps",
+  "maxParallel",
+  "tags",
+] as const;
 const DEFAULT_KEYS = ["timeoutMs"] as const;
 const RUNNER_KEYS = ["agent"] as const;
 const COMMON_AGENT_KEYS = ["type", "command", "commandArgs", "env", "model"] as const;
@@ -33,7 +42,7 @@ export const SNAPSHOT_METRICS = [
   "cacheTokens",
 ] as const;
 
-export type SnapshotMetric = typeof SNAPSHOT_METRICS[number];
+export type SnapshotMetric = (typeof SNAPSHOT_METRICS)[number];
 
 export interface SnapshotToleranceConfig {
   absolute?: number;
@@ -73,12 +82,15 @@ export async function loadConfig(options: {
   suitePath: string;
   configPath?: string;
 }): Promise<LoadedSkillGymConfig> {
-  const filePath = options.configPath !== undefined
-    ? path.resolve(options.configPath)
-    : await discoverConfigPath(path.dirname(path.resolve(options.suitePath)));
+  const filePath =
+    options.configPath !== undefined
+      ? path.resolve(options.configPath)
+      : await discoverConfigPath(path.dirname(path.resolve(options.suitePath)));
 
   if (filePath === undefined) {
-    throw new Error("No skillgym config found. Create skillgym.config.ts with a non-empty runners map.");
+    throw new Error(
+      "No skillgym config found. Create skillgym.config.ts with a non-empty runners map.",
+    );
   }
 
   const imported = await importFromPath<unknown>(filePath);
@@ -119,16 +131,24 @@ export function resolveRunOptions(
   maxParallel?: number;
   tags: string[];
 } {
-  const maxParallel = cliOptions.maxParallel !== undefined
-    ? parseIntegerString(cliOptions.maxParallel, "CLI option --max-parallel", 1)
-    : config.run?.maxParallel;
+  const maxParallel =
+    cliOptions.maxParallel !== undefined
+      ? parseIntegerString(cliOptions.maxParallel, "CLI option --max-parallel", 1)
+      : config.run?.maxParallel;
 
   return {
-    cwd: cliOptions.cwd !== undefined ? path.resolve(cliOptions.cwd) : config.run?.cwd ?? process.cwd(),
-    outputDir: cliOptions.outputDir !== undefined ? path.resolve(cliOptions.outputDir) : config.run?.outputDir,
-    schedule: cliOptions.schedule !== undefined
-      ? parseScheduleMode(cliOptions.schedule, "CLI option --schedule")
-      : config.run?.schedule ?? "serial",
+    cwd:
+      cliOptions.cwd !== undefined
+        ? path.resolve(cliOptions.cwd)
+        : (config.run?.cwd ?? process.cwd()),
+    outputDir:
+      cliOptions.outputDir !== undefined
+        ? path.resolve(cliOptions.outputDir)
+        : config.run?.outputDir,
+    schedule:
+      cliOptions.schedule !== undefined
+        ? parseScheduleMode(cliOptions.schedule, "CLI option --schedule")
+        : (config.run?.schedule ?? "serial"),
     ...(maxParallel === undefined ? {} : { maxParallel }),
     tags: cliOptions.tags ?? config.run?.tags ?? [],
   };
@@ -174,7 +194,11 @@ async function discoverConfigPath(startDir: string): Promise<string | undefined>
   while (true) {
     const entries = await readdir(currentDir, { withFileTypes: true });
     const matches = entries
-      .filter((entry) => entry.isFile() && CONFIG_FILENAMES.includes(entry.name as typeof CONFIG_FILENAMES[number]))
+      .filter(
+        (entry) =>
+          entry.isFile() &&
+          CONFIG_FILENAMES.includes(entry.name as (typeof CONFIG_FILENAMES)[number]),
+      )
       .map((entry) => entry.name)
       .sort((left, right) => left.localeCompare(right));
 
@@ -210,30 +234,56 @@ function readConfigModule(imported: unknown): unknown {
 
 function resolveConfigPaths(config: SkillGymConfig, configDir: string): SkillGymConfig {
   return {
-    run: config.run === undefined ? undefined : {
-      cwd: config.run.cwd === undefined ? undefined : path.resolve(configDir, config.run.cwd),
-      outputDir: config.run.outputDir === undefined ? undefined : path.resolve(configDir, config.run.outputDir),
-      reporter: config.run.reporter === undefined ? undefined : resolveReporterSpecifier(config.run.reporter, configDir),
-      schedule: config.run.schedule,
-      workspace: config.run.workspace === undefined ? undefined : resolveWorkspaceConfigPaths(config.run.workspace, configDir),
-      ...(config.run.maxSteps === undefined ? {} : { maxSteps: config.run.maxSteps }),
-      ...(config.run.maxParallel === undefined ? {} : { maxParallel: config.run.maxParallel }),
-      ...(config.run.tags === undefined ? {} : { tags: config.run.tags }),
-    },
-    defaults: config.defaults === undefined ? undefined : {
-      timeoutMs: config.defaults.timeoutMs,
-    },
+    run:
+      config.run === undefined
+        ? undefined
+        : {
+            cwd: config.run.cwd === undefined ? undefined : path.resolve(configDir, config.run.cwd),
+            outputDir:
+              config.run.outputDir === undefined
+                ? undefined
+                : path.resolve(configDir, config.run.outputDir),
+            reporter:
+              config.run.reporter === undefined
+                ? undefined
+                : resolveReporterSpecifier(config.run.reporter, configDir),
+            schedule: config.run.schedule,
+            workspace:
+              config.run.workspace === undefined
+                ? undefined
+                : resolveWorkspaceConfigPaths(config.run.workspace, configDir),
+            ...(config.run.maxSteps === undefined ? {} : { maxSteps: config.run.maxSteps }),
+            ...(config.run.maxParallel === undefined
+              ? {}
+              : { maxParallel: config.run.maxParallel }),
+            ...(config.run.tags === undefined ? {} : { tags: config.run.tags }),
+          },
+    defaults:
+      config.defaults === undefined
+        ? undefined
+        : {
+            timeoutMs: config.defaults.timeoutMs,
+          },
     runners: Object.fromEntries(
-      Object.entries(config.runners).map(([id, runner]) => [id, resolveRunnerConfigPaths(runner, configDir)]),
+      Object.entries(config.runners).map(([id, runner]) => [
+        id,
+        resolveRunnerConfigPaths(runner, configDir),
+      ]),
     ),
-    snapshots: config.snapshots === undefined ? undefined : {
-      path: config.snapshots.path === undefined ? undefined : path.resolve(configDir, config.snapshots.path),
-      metric: config.snapshots.metric,
-      tolerance: {
-        absolute: config.snapshots.tolerance.absolute,
-        percent: config.snapshots.tolerance.percent,
-      },
-    },
+    snapshots:
+      config.snapshots === undefined
+        ? undefined
+        : {
+            path:
+              config.snapshots.path === undefined
+                ? undefined
+                : path.resolve(configDir, config.snapshots.path),
+            metric: config.snapshots.metric,
+            tolerance: {
+              absolute: config.snapshots.tolerance.absolute,
+              percent: config.snapshots.tolerance.percent,
+            },
+          },
   };
 }
 
@@ -251,7 +301,8 @@ function resolveCommonAgentPaths(
   configDir: string,
 ): Omit<RunnerConfig["agent"], "type"> {
   return {
-    command: config.command === undefined ? undefined : resolvePathLikeValue(config.command, configDir),
+    command:
+      config.command === undefined ? undefined : resolvePathLikeValue(config.command, configDir),
     commandArgs: config.commandArgs?.map((arg) => resolvePathLikeValue(arg, configDir)),
     env: config.env === undefined ? undefined : { ...config.env },
     model: config.model,
@@ -275,12 +326,14 @@ function resolveReporterSpecifier(value: string, configDir: string): string {
 }
 
 function looksPathLike(value: string): boolean {
-  return value === "."
-    || value === ".."
-    || value.startsWith("./")
-    || value.startsWith("../")
-    || value.startsWith(".\\")
-    || value.startsWith("..\\");
+  return (
+    value === "." ||
+    value === ".." ||
+    value.startsWith("./") ||
+    value.startsWith("../") ||
+    value.startsWith(".\\") ||
+    value.startsWith("..\\")
+  );
 }
 
 function parseRunConfig(value: unknown, configPath: string): SkillGymConfig["run"] | undefined {
@@ -306,7 +359,10 @@ function parseRunConfig(value: unknown, configPath: string): SkillGymConfig["run
   };
 }
 
-function parseOptionalWorkspaceConfig(value: unknown, configPath: string): SuiteWorkspaceConfig | undefined {
+function parseOptionalWorkspaceConfig(
+  value: unknown,
+  configPath: string,
+): SuiteWorkspaceConfig | undefined {
   if (value === undefined) {
     return undefined;
   }
@@ -325,11 +381,17 @@ function parseWorkspaceConfig(value: unknown, configPath: string): SuiteWorkspac
 
   if (mode === "shared") {
     if (templateDir !== undefined) {
-      throw invalidConfig(`${configPath}.templateDir`, 'expected this key to be omitted when workspace mode is "shared"');
+      throw invalidConfig(
+        `${configPath}.templateDir`,
+        'expected this key to be omitted when workspace mode is "shared"',
+      );
     }
 
     if (bootstrap !== undefined) {
-      throw invalidConfig(`${configPath}.bootstrap`, 'expected this key to be omitted when workspace mode is "shared"');
+      throw invalidConfig(
+        `${configPath}.bootstrap`,
+        'expected this key to be omitted when workspace mode is "shared"',
+      );
     }
 
     return {
@@ -339,7 +401,10 @@ function parseWorkspaceConfig(value: unknown, configPath: string): SuiteWorkspac
   }
 
   if (cwd !== undefined) {
-    throw invalidConfig(`${configPath}.cwd`, 'expected this key to be omitted when workspace mode is "isolated"');
+    throw invalidConfig(
+      `${configPath}.cwd`,
+      'expected this key to be omitted when workspace mode is "isolated"',
+    );
   }
 
   return {
@@ -357,7 +422,10 @@ function parseWorkspaceMode(value: unknown, configPath: string): SuiteWorkspaceC
   return value;
 }
 
-function parseOptionalBootstrapConfig(value: unknown, configPath: string): WorkspaceBootstrapConfig | undefined {
+function parseOptionalBootstrapConfig(
+  value: unknown,
+  configPath: string,
+): WorkspaceBootstrapConfig | undefined {
   if (value === undefined) {
     return undefined;
   }
@@ -368,7 +436,9 @@ function parseOptionalBootstrapConfig(value: unknown, configPath: string): Works
   return {
     command: parseRequiredNonEmptyString(record.command, `${configPath}.command`),
     args: parseOptionalStringArray(record.args, `${configPath}.args`),
-    timeoutMs: parseOptionalInteger(record.timeoutMs, `${configPath}.timeoutMs`, 1, { inclusive: false }),
+    timeoutMs: parseOptionalInteger(record.timeoutMs, `${configPath}.timeoutMs`, 1, {
+      inclusive: false,
+    }),
     env: parseOptionalEnv(record.env, `${configPath}.env`),
   };
 }
@@ -389,7 +459,10 @@ function parseScheduleMode(value: unknown, configPath: string): ScheduleMode {
   return value as ScheduleMode;
 }
 
-function parseDefaultsConfig(value: unknown, configPath: string): SkillGymConfig["defaults"] | undefined {
+function parseDefaultsConfig(
+  value: unknown,
+  configPath: string,
+): SkillGymConfig["defaults"] | undefined {
   if (value === undefined) {
     return undefined;
   }
@@ -398,11 +471,16 @@ function parseDefaultsConfig(value: unknown, configPath: string): SkillGymConfig
   ensureKnownKeys(record, DEFAULT_KEYS, configPath);
 
   return {
-    timeoutMs: parseOptionalInteger(record.timeoutMs, `${configPath}.timeoutMs`, 1, { inclusive: false }),
+    timeoutMs: parseOptionalInteger(record.timeoutMs, `${configPath}.timeoutMs`, 1, {
+      inclusive: false,
+    }),
   };
 }
 
-function parseSnapshotConfig(value: unknown, configPath: string): SkillGymConfig["snapshots"] | undefined {
+function parseSnapshotConfig(
+  value: unknown,
+  configPath: string,
+): SkillGymConfig["snapshots"] | undefined {
   if (value === undefined) {
     return undefined;
   }
@@ -427,7 +505,10 @@ function parseRunnersConfig(value: unknown, configPath: string): SkillGymConfig[
   }
 
   return Object.fromEntries(
-    Object.entries(record).map(([runnerId, runnerValue]) => [runnerId, parseRunnerConfig(runnerValue, `${configPath}.${runnerId}`)]),
+    Object.entries(record).map(([runnerId, runnerValue]) => [
+      runnerId,
+      parseRunnerConfig(runnerValue, `${configPath}.${runnerId}`),
+    ]),
   );
 }
 
@@ -455,9 +536,20 @@ function parseAgentConfig(value: unknown, configPath: string): RunnerConfig["age
   };
 }
 
-function parseRequiredAgentType(value: unknown, configPath: string): "codex" | "opencode" | "claude-code" | "cursor-agent" {
-  if (value !== "codex" && value !== "opencode" && value !== "claude-code" && value !== "cursor-agent") {
-    throw invalidConfig(configPath, 'expected "codex", "opencode", "claude-code", or "cursor-agent"');
+function parseRequiredAgentType(
+  value: unknown,
+  configPath: string,
+): "codex" | "opencode" | "claude-code" | "cursor-agent" {
+  if (
+    value !== "codex" &&
+    value !== "opencode" &&
+    value !== "claude-code" &&
+    value !== "cursor-agent"
+  ) {
+    throw invalidConfig(
+      configPath,
+      'expected "codex", "opencode", "claude-code", or "cursor-agent"',
+    );
   }
 
   return value;
@@ -485,7 +577,10 @@ function parseRequiredNonEmptyString(value: unknown, configPath: string): string
   return parsed;
 }
 
-function resolveWorkspaceConfigPaths(config: SuiteWorkspaceConfig, configDir: string): SuiteWorkspaceConfig {
+function resolveWorkspaceConfigPaths(
+  config: SuiteWorkspaceConfig,
+  configDir: string,
+): SuiteWorkspaceConfig {
   if (config.mode === "shared") {
     return {
       mode: "shared",
@@ -495,12 +590,19 @@ function resolveWorkspaceConfigPaths(config: SuiteWorkspaceConfig, configDir: st
 
   return {
     mode: "isolated",
-    templateDir: config.templateDir === undefined ? undefined : path.resolve(configDir, config.templateDir),
-    bootstrap: config.bootstrap === undefined ? undefined : resolveBootstrapConfigPaths(config.bootstrap, configDir),
+    templateDir:
+      config.templateDir === undefined ? undefined : path.resolve(configDir, config.templateDir),
+    bootstrap:
+      config.bootstrap === undefined
+        ? undefined
+        : resolveBootstrapConfigPaths(config.bootstrap, configDir),
   };
 }
 
-function resolveBootstrapConfigPaths(config: WorkspaceBootstrapConfig, configDir: string): WorkspaceBootstrapConfig {
+function resolveBootstrapConfigPaths(
+  config: WorkspaceBootstrapConfig,
+  configDir: string,
+): WorkspaceBootstrapConfig {
   return {
     command: resolvePathLikeValue(config.command, configDir),
     args: config.args?.map((arg) => resolvePathLikeValue(arg, configDir)),
@@ -557,15 +659,21 @@ function parseOptionalInteger(
   }
 
   if (typeof value !== "number" || !Number.isInteger(value)) {
-    throw invalidConfig(configPath, options.inclusive
-      ? `expected integer >= ${String(minimum)}`
-      : `expected integer > ${String(minimum)}`);
+    throw invalidConfig(
+      configPath,
+      options.inclusive
+        ? `expected integer >= ${String(minimum)}`
+        : `expected integer > ${String(minimum)}`,
+    );
   }
 
   if (options.inclusive ? value < minimum : value <= minimum) {
-    throw invalidConfig(configPath, options.inclusive
-      ? `expected integer >= ${String(minimum)}`
-      : `expected integer > ${String(minimum)}`);
+    throw invalidConfig(
+      configPath,
+      options.inclusive
+        ? `expected integer >= ${String(minimum)}`
+        : `expected integer > ${String(minimum)}`,
+    );
   }
 
   return value;
@@ -581,7 +689,10 @@ function parseIntegerString(value: string, configPath: string, minimum: number):
   return parsed;
 }
 
-function parseOptionalSnapshotMetric(value: unknown, configPath: string): SnapshotMetric | undefined {
+function parseOptionalSnapshotMetric(
+  value: unknown,
+  configPath: string,
+): SnapshotMetric | undefined {
   if (value === undefined) {
     return undefined;
   }
@@ -607,7 +718,11 @@ function parseSnapshotTolerance(value: unknown, configPath: string): SnapshotTol
   return { absolute, percent };
 }
 
-function parseOptionalNumber(value: unknown, configPath: string, minimum: number): number | undefined {
+function parseOptionalNumber(
+  value: unknown,
+  configPath: string,
+  minimum: number,
+): number | undefined {
   if (value === undefined) {
     return undefined;
   }
@@ -645,7 +760,9 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 }
 
 function invalidConfig(configPath: string | undefined, message: string): Error {
-  return new Error(configPath === undefined
-    ? `Invalid config: ${message}`
-    : `Invalid config at ${configPath}: ${message}`);
+  return new Error(
+    configPath === undefined
+      ? `Invalid config: ${message}`
+      : `Invalid config at ${configPath}: ${message}`,
+  );
 }

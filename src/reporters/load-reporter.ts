@@ -22,7 +22,10 @@ interface ImportedReporterModule {
   reporter?: unknown;
 }
 
-export async function loadReporter(specifier: string | undefined, cwd: string): Promise<BenchmarkReporter> {
+export async function loadReporter(
+  specifier: string | undefined,
+  cwd: string,
+): Promise<BenchmarkReporter> {
   if (specifier === undefined) {
     return createStandardReporter();
   }

@@ -6,7 +6,9 @@ import type { SessionEvent, SessionReport } from "../../src/domain/session-repor
 import { createRunnerInfo } from "../../src/runner/runner-info.js";
 
 test("parseCommand normalizes flags, values, repeats, quotes, and end-of-options", () => {
-  const parsed = parseCommand('pnpm test --flag -f -abc -p80 --name=value --name two --tag beta --tag latest -- "two words" --literal');
+  const parsed = parseCommand(
+    'pnpm test --flag -f -abc -p80 --name=value --name two --tag beta --tag latest -- "two words" --literal',
+  );
 
   nodeAssert.equal(parsed.executable, "pnpm");
   nodeAssert.deepEqual(parsed.positionals, ["test", "two words", "--literal"]);
@@ -24,9 +26,14 @@ test("parseCommand normalizes flags, values, repeats, quotes, and end-of-options
 });
 
 test("structured command matcher ignores option order by default", () => {
-  const report = createReport([{ type: "command", command: "pnpm --reporter dot test --filter unit", at: "1" }]);
+  const report = createReport([
+    { type: "command", command: "pnpm --reporter dot test --filter unit", at: "1" },
+  ]);
 
-  assert.commands.includes(report, commandMatcher("pnpm").arg("test").option("--filter", "unit").option("--reporter", "dot"));
+  assert.commands.includes(
+    report,
+    commandMatcher("pnpm").arg("test").option("--filter", "unit").option("--reporter", "dot"),
+  );
 });
 
 test("structured command matcher preserves positional order", () => {
@@ -50,15 +57,29 @@ test("structured command matcher strict mode disallows extra options and positio
 });
 
 test("structured command matcher supports repeated options and shell-wrapped commands", () => {
-  const report = createReport([{ type: "command", command: 'bash -lc "pnpm publish --tag beta --tag latest -- dry run"', at: "1" }]);
+  const report = createReport([
+    {
+      type: "command",
+      command: 'bash -lc "pnpm publish --tag beta --tag latest -- dry run"',
+      at: "1",
+    },
+  ]);
 
   assert.commands.includes(
     report,
-    commandMatcher("pnpm").arg("publish").option("--tag", "beta").option("--tag", "latest").endOfOptions().args("dry", "run"),
+    commandMatcher("pnpm")
+      .arg("publish")
+      .option("--tag", "beta")
+      .option("--tag", "latest")
+      .endOfOptions()
+      .args("dry", "run"),
   );
 
   nodeAssert.throws(() => {
-    assert.commands.includes(report, commandMatcher("pnpm").arg("publish").option("--tag", "stable"));
+    assert.commands.includes(
+      report,
+      commandMatcher("pnpm").arg("publish").option("--tag", "stable"),
+    );
   }, /normalized from shell wrapper/);
 });
 
