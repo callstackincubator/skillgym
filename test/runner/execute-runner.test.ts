@@ -209,7 +209,9 @@ test("executeRunner flushes collected soft assertion failures after assert hook 
   expect(result.passed).toBe(false);
   expect(result.failureType).toBe("assertion");
   expect(result.failureOrigin).toBe("assertion");
-  expect(result.error?.message).toContain("2 assertion failures collected during test case execution");
+  expect(result.error?.message).toContain(
+    "2 assertion failures collected during test case execution",
+  );
   expect(result.error?.message).toContain("expected output");
   expect(result.error?.message).toContain("expected command");
 });
@@ -239,7 +241,9 @@ test("executeRunner merges soft failures with a later hard AssertionError", asyn
 
   expect(result.passed).toBe(false);
   expect(result.failureType).toBe("assertion");
-  expect(result.error?.message).toContain("2 assertion failures collected during test case execution");
+  expect(result.error?.message).toContain(
+    "2 assertion failures collected during test case execution",
+  );
   expect(result.error?.message).toContain("soft failure");
   expect(result.error?.message).toContain("hard failure");
 });

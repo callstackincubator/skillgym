@@ -13,10 +13,7 @@ test("assert.soft collects multiple Node assertion failures", async () => {
       }),
     (error) => {
       nodeAssert.ok(error instanceof AssertionError);
-      nodeAssert.match(
-        error.message,
-        /2 assertion failures collected during test case execution:/,
-      );
+      nodeAssert.match(error.message, /2 assertion failures collected during test case execution:/);
       nodeAssert.match(error.message, /1\. first soft failure/);
       nodeAssert.match(error.message, /2\. second soft failure/);
       return true;

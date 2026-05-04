@@ -40,7 +40,10 @@ const softAssertionGroups = {
   output: OutputAssertions;
 };
 
-export const softAssert: SkillGymSoftAssert = Object.assign(createSoftNodeAssert(), softAssertionGroups);
+export const softAssert: SkillGymSoftAssert = Object.assign(
+  createSoftNodeAssert(),
+  softAssertionGroups,
+);
 
 export async function runWithSoftAssertions<T>(callback: () => Promise<T> | T): Promise<T> {
   return await softAssertionStorage.run({ failures: [] }, async () => {
@@ -75,9 +78,14 @@ function createSoftNodeAssert(): typeof nodeAssert {
     if ("value" in descriptor) {
       if (key === "strict") {
         descriptor.value = wrapped;
-      } else if (typeof descriptor.value === "function" && key !== "rejects" && key !== "doesNotReject") {
+      } else if (
+        typeof descriptor.value === "function" &&
+        key !== "rejects" &&
+        key !== "doesNotReject"
+      ) {
         const method = descriptor.value;
-        descriptor.value = (...args: unknown[]) => captureSoftAssertion(() => method.apply(nodeAssert, args));
+        descriptor.value = (...args: unknown[]) =>
+          captureSoftAssertion(() => method.apply(nodeAssert, args));
       }
     }
 
