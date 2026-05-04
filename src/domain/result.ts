@@ -11,7 +11,13 @@ export interface RunnerResult {
   error?: SerializedError;
   failureType?: RunnerFailureType;
   failureOrigin?: RunnerFailureOrigin;
+  failureClass?: FailureClass;
   failureLogPath?: string;
+}
+
+export interface FailureClass {
+  id: string;
+  label?: string;
 }
 
 export type RunnerResultStatus = "passed" | "failed" | "expected-failed" | "unexpected-passed";

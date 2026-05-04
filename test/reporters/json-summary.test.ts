@@ -37,6 +37,10 @@ test("json-summary reporter omits session internals and prints summary on suite 
             artifactDir: ".skillgym-results/run-1/case-a/open-main",
             failureType: "assertion",
             failureOrigin: "assertion",
+            failureClass: {
+              id: "missing-flag",
+              label: "Missing required flag",
+            },
             failureLogPath: ".skillgym-results/run-1/case-a/open-main/stderr.log",
             error: {
               name: "AssertionError",
@@ -156,6 +160,10 @@ test("json-summary reporter omits session internals and prints summary on suite 
   expect(runnerResult.artifactDir).toBe(".skillgym-results/run-1/case-a/open-main");
   expect(runnerResult.failureType).toBe("assertion");
   expect(runnerResult.failureOrigin).toBe("assertion");
+  expect(runnerResult.failureClass).toEqual({
+    id: "missing-flag",
+    label: "Missing required flag",
+  });
 
   // error: name and message preserved, stack omitted
   expect(runnerResult.error.name).toBe("AssertionError");

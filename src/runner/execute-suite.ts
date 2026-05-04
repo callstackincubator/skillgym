@@ -7,6 +7,7 @@ import type { ResolvedRunner, RunnerConfig, RunnerInfo } from "../domain/runner.
 import type { ScheduleMode } from "../domain/schedule.js";
 import type { SuiteWorkspaceConfig, TestCase } from "../domain/test-case.js";
 import { getAdapter } from "../adapters/index.js";
+import { normalizeFailureClass } from "../failure-classification.js";
 import type { BenchmarkReporter, ReporterContext } from "../reporters/contract.js";
 import { SnapshotStore, type SnapshotRuntimeOptions } from "../snapshots/store.js";
 import { ensureDir, writeJson } from "../utils/fs.js";
@@ -248,32 +249,57 @@ export async function executeSuite(
 }
 
 export function classifyExpectedFailure(testCase: TestCase, result: RunnerResult): RunnerResult {
+  const classifiedResult = applyTestCaseFailureClass(testCase, result);
+
   if (testCase.expectedFail !== true) {
     return {
-      ...result,
-      status: result.passed ? "passed" : "failed",
+      ...classifiedResult,
+      status: classifiedResult.passed ? "passed" : "failed",
     };
   }
 
-  if (result.passed) {
+  if (classifiedResult.passed) {
     return {
-      ...result,
+      ...classifiedResult,
       passed: false,
       status: "unexpected-passed",
+      failureClass: classifiedResult.failureClass ?? {
+        id: "unexpected-passed",
+        label: "Unexpected pass",
+      },
     };
   }
 
-  if (result.failureType === "assertion" && result.failureOrigin === "assertion") {
+  if (
+    classifiedResult.failureType === "assertion" &&
+    classifiedResult.failureOrigin === "assertion"
+  ) {
     return {
-      ...result,
+      ...classifiedResult,
       passed: true,
       status: "expected-failed",
     };
   }
 
   return {
-    ...result,
+    ...classifiedResult,
     status: "failed",
+  };
+}
+
+function applyTestCaseFailureClass(testCase: TestCase, result: RunnerResult): RunnerResult {
+  if (result.passed) {
+    return result;
+  }
+
+  const failureClass = testCase.classifyFailure?.(result);
+  if (failureClass === undefined) {
+    return result;
+  }
+
+  return {
+    ...result,
+    failureClass: normalizeFailureClass(failureClass),
   };
 }
 

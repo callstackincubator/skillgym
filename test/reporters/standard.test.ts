@@ -162,6 +162,9 @@ test("standard reporter prints runner-grouped results and failure artifacts", as
   expect(output).toContain("Tokens      9,830 / 1,104 / 0 / 7,233 / 15,201");
   expect(output).toContain("Output      .skillgym-results/run-1");
   expect(output).toContain("Failures");
+  expect(output).toContain("Failure Classes");
+  expect(output).toContain("Assertion failure [assertion] (1)");
+  expect(output).toContain("- case-a > code-main: .skillgym-results/run-1/case-a/code-main");
   expect(output).toContain("✗ case-a > code-main (codex, gpt-5.4)");
   expect(output).toContain("AssertionError: expected skill to be loaded before command execution");
   expect(output).toContain("at /workspace/examples/basic-suite.ts:14:15");
@@ -919,6 +922,102 @@ test("standard reporter formats model-rejected failures as runner crashes with s
   );
 });
 
+test("standard reporter groups failures by custom failure class", async () => {
+  const writes: string[] = [];
+  const reporter = createStandardReporter({
+    stdout: {
+      isTTY: false,
+      columns: 120,
+      write(chunk: string) {
+        writes.push(chunk);
+        return true;
+      },
+    },
+    isInteractive: false,
+    isUnicode: true,
+  });
+
+  const runner = createRunnerInfo("open-main", { type: "opencode", model: "openai/gpt-5" });
+  const context = {
+    isInteractive: false,
+    cwd: "/workspace",
+    workspaceMode: "shared" as const,
+    suitePath: "examples/basic-suite.ts",
+    outputDir: ".skillgym-results/run-1",
+    selectedCaseCount: 2,
+    selectedRunnerCount: 1,
+    selectedExecutionCount: 2,
+    scheduleMode: "serial" as const,
+    maxParallel: 1,
+    declaredTags: [],
+  };
+  const suiteResult: SuiteRunResult = {
+    suitePath: context.suitePath,
+    startedAt: "2026-04-02T12:00:00.000Z",
+    endedAt: "2026-04-02T12:01:42.000Z",
+    durationMs: 102_000,
+    outputDir: context.outputDir,
+    declaredTags: [],
+    selectedTags: [],
+    cases: [
+      createCaseResult({
+        caseId: "case-a",
+        runnerResults: [
+          {
+            ...createRunnerResult({
+              runner,
+              passed: false,
+              artifactDir: ".skillgym-results/run-1/case-a/open-main",
+              totalTokens: 12_000,
+            }),
+            failureClass: { id: "wrong-cli-alias", label: "Wrong CLI alias" },
+          },
+        ],
+      }),
+      createCaseResult({
+        caseId: "case-b",
+        runnerResults: [
+          {
+            ...createRunnerResult({
+              runner,
+              passed: false,
+              artifactDir: ".skillgym-results/run-1/case-b/open-main",
+              totalTokens: 12_000,
+            }),
+            failureClass: { id: "wrong-cli-alias", label: "Wrong CLI alias" },
+          },
+        ],
+      }),
+    ],
+    runners: [
+      createRunnerSummary({
+        runner,
+        passedCases: 0,
+        totalCases: 2,
+        averageDurationMs: 24_800,
+        averageTotalTokens: 12_000,
+      }),
+    ],
+  };
+
+  for (const caseResult of suiteResult.cases) {
+    await reporter.onRunnerFinish?.({
+      context,
+      testCase: { id: caseResult.caseId, prompt: "", assert() {} },
+      runner,
+      result: caseResult.runnerResults[0]!,
+      caseIndex: 1,
+      totalCases: 2,
+    });
+  }
+  await reporter.onSuiteFinish?.({ context, result: suiteResult });
+
+  const output = writes.join("");
+  expect(output).toContain("Wrong CLI alias [wrong-cli-alias] (2)");
+  expect(output).toContain("- case-a > open-main: .skillgym-results/run-1/case-a/open-main");
+  expect(output).toContain("- case-b > open-main: .skillgym-results/run-1/case-b/open-main");
+});
+
 function createCaseResult(options: { caseId: string; runnerResults: RunnerResult[] }): CaseResult {
   return {
     caseId: options.caseId,
@@ -934,6 +1033,7 @@ function createRunnerResult(options: {
   status?: RunnerResult["status"];
   artifactDir: string;
   totalTokens: number;
+  failureClass?: RunnerResult["failureClass"];
 }): RunnerResult {
   return {
     runner: options.runner,
@@ -957,6 +1057,10 @@ function createRunnerResult(options: {
     failureType: options.passed || options.status === "unexpected-passed" ? undefined : "assertion",
     failureOrigin:
       options.passed || options.status === "unexpected-passed" ? undefined : "assertion",
+    failureClass:
+      options.passed || options.status === "unexpected-passed"
+        ? undefined
+        : (options.failureClass ?? { id: "assertion", label: "Assertion failure" }),
     report: createSessionReport({
       runner: options.runner,
       usage: {

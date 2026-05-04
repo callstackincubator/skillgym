@@ -5,6 +5,7 @@ import { printBanner } from "../cli/branding.js";
 import pc from "picocolors";
 import type {
   CaseResult,
+  FailureClass,
   RunnerFailureOrigin,
   RunnerFailureType,
   RunnerResult,
@@ -31,8 +32,14 @@ interface FailureEntry {
   error?: SerializedError;
   failureType?: RunnerFailureType;
   failureOrigin?: RunnerFailureOrigin;
+  failureClass?: FailureClass;
   failureLogPath?: string;
   status: RunnerResult["status"];
+}
+
+interface FailureGroup {
+  failureClass: FailureClass;
+  failures: FailureEntry[];
 }
 
 interface StandardReporterOptions {
@@ -167,6 +174,7 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
           error: event.result.error,
           failureType: event.result.failureType,
           failureOrigin: event.result.failureOrigin,
+          failureClass: event.result.failureClass,
           failureLogPath: event.result.failureLogPath,
           status: event.result.status,
         });
@@ -200,6 +208,15 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
       }
 
       if (failures.length > 0) {
+        writeLine("", stdout);
+        writeLine(colors.bold("Failure Classes"), stdout);
+        writeLine("", stdout);
+
+        for (const group of groupFailures(failures)) {
+          writeLine(formatFailureGroup(group, colors), stdout);
+          writeLine("", stdout);
+        }
+
         writeLine("", stdout);
         writeLine(colors.bold("Failures"), stdout);
         writeLine("", stdout);
@@ -366,6 +383,52 @@ function formatFailureBlock(
 
   lines.push(colors.dim(`Artifacts: ${failure.artifactDir}`));
   return lines.join("\n");
+}
+
+function formatFailureGroup(
+  group: FailureGroup,
+  colors: ReturnType<typeof pc.createColors>,
+): string {
+  const lines = [
+    `${colors.bold(formatFailureClassLabel(group.failureClass))}${colors.dim(` (${group.failures.length})`)}`,
+  ];
+
+  for (const failure of group.failures) {
+    lines.push(colors.dim(`- ${failure.caseId} > ${failure.runner.id}: ${failure.artifactDir}`));
+  }
+
+  return lines.join("\n");
+}
+
+function groupFailures(failures: FailureEntry[]): FailureGroup[] {
+  const groups = new Map<string, FailureGroup>();
+
+  for (const failure of failures) {
+    const failureClass =
+      failure.failureClass ??
+      (failure.status === "unexpected-passed"
+        ? { id: "unexpected-passed", label: "Unexpected pass" }
+        : { id: "unknown", label: "Unclassified" });
+    const key = failureClass.id;
+    const existing = groups.get(key);
+
+    if (existing === undefined) {
+      groups.set(key, { failureClass, failures: [failure] });
+      continue;
+    }
+
+    existing.failures.push(failure);
+  }
+
+  return Array.from(groups.values());
+}
+
+function formatFailureClassLabel(failureClass: FailureClass): string {
+  if (failureClass.label === undefined || failureClass.label === failureClass.id) {
+    return failureClass.id;
+  }
+
+  return `${failureClass.label} [${failureClass.id}]`;
 }
 
 function formatErrorLocation(error: SerializedError): string | undefined {

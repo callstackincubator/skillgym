@@ -1,4 +1,5 @@
 import type nodeAssert from "node:assert/strict";
+import type { FailureClass } from "../domain/result.js";
 import type { SessionReport, ToolCallEvent } from "../domain/session-report.js";
 
 export type Matcher = string | RegExp;
@@ -154,10 +155,15 @@ export interface OutputAssertions {
   notEmpty(report: SessionReport, options?: AssertionOptions): void;
 }
 
+export interface AssertionClassifier {
+  <T>(failureClass: string | FailureClass, callback: () => T): T;
+}
+
 export type SkillGymAssert = typeof nodeAssert & {
   skills: SkillAssertions;
   commands: CommandAssertions;
   fileReads: FileReadAssertions;
   toolCalls: ToolCallAssertions;
   output: OutputAssertions;
+  classify: AssertionClassifier;
 };

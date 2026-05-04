@@ -16,6 +16,7 @@ export type {
   WorkspaceBootstrapConfig,
 } from "./domain/test-case.js";
 export type {
+  FailureClass,
   RunnerFailureOrigin,
   RunnerFailureType,
   RunnerResult,

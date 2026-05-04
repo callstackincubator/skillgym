@@ -1,3 +1,4 @@
+import type { FailureClass, RunnerResult } from "./result.js";
 import type { SessionEvent, SessionReport, SkillDetection } from "./session-report.js";
 
 export interface WorkspaceBootstrapConfig {
@@ -27,6 +28,7 @@ export interface TestCase {
   tags?: string[];
   timeoutMs?: number;
   expectedFail?: boolean;
+  classifyFailure?(result: RunnerResult): FailureClass | string | undefined;
   assert(report: SessionReport, ctx: AssertionContext): void | Promise<void>;
 }
 
