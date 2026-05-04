@@ -4,6 +4,7 @@
 
 - Node's `node:assert/strict` API
 - grouped helpers for normalized session reports
+- `assert.soft.*` for Jest/Vitest-style sync soft assertions
 
 ```ts
 import { assert } from "skillgym";
@@ -11,15 +12,34 @@ import { assert } from "skillgym";
 assert.ok(true);
 assert.equal(1, 1);
 assert.match("skillgym ready", /ready/);
+assert.soft.match("skillgym ready", /ready/);
 ```
 
 ## Report helper groups
 
+- `assert.soft.*`
 - `assert.skills.*`
 - `assert.commands.*`
 - `assert.fileReads.*`
 - `assert.toolCalls.*`
 - `assert.output.*`
+
+## Soft assertions
+
+`assert.soft` mirrors the sync assertion methods on the root `assert` export and the grouped SkillGym helpers.
+
+- soft failures are collected in execution order
+- the runner throws a single `AssertionError` after `testCase.assert(report, ctx)` completes
+- if a hard `AssertionError` is thrown after soft failures were collected, the final failure includes both
+- `assert.soft.rejects(...)` and `assert.soft.doesNotReject(...)` remain hard assertions in the first implementation
+
+Example:
+
+```ts
+assert.soft.match(report.finalOutput, /ready/i);
+assert.soft.commands.includes(report, "pnpm test");
+assert.soft.output.notEmpty(report);
+```
 
 ## Shared matcher types
 

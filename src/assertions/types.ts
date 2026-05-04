@@ -154,7 +154,16 @@ export interface OutputAssertions {
   notEmpty(report: SessionReport, options?: AssertionOptions): void;
 }
 
+export type SkillGymSoftAssert = typeof nodeAssert & {
+  skills: SkillAssertions;
+  commands: CommandAssertions;
+  fileReads: FileReadAssertions;
+  toolCalls: ToolCallAssertions;
+  output: OutputAssertions;
+};
+
 export type SkillGymAssert = typeof nodeAssert & {
+  soft: SkillGymSoftAssert;
   skills: SkillAssertions;
   commands: CommandAssertions;
   fileReads: FileReadAssertions;
