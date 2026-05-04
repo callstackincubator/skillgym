@@ -54,6 +54,10 @@ function formatAnnotationMessage(result: RunnerResult): string {
     lines.push(`failure origin: ${result.failureOrigin}`);
   }
 
+  if (result.failureClass !== undefined) {
+    lines.push(`failure class: ${result.failureClass.id}`);
+  }
+
   if (result.error !== undefined) {
     lines.push(`error: ${result.error.name}: ${result.error.message}`);
   }
@@ -162,6 +166,10 @@ function formatFailureSummaryItem(caseId: string, result: RunnerResult): string 
     `${result.failureType ?? "unknown"}`,
     `artifacts: \`${result.artifactDir}\``,
   ];
+
+  if (result.failureClass !== undefined) {
+    segments.splice(2, 0, `class: \`${result.failureClass.id}\``);
+  }
 
   if (result.failureLogPath !== undefined) {
     segments.push(`log: \`${result.failureLogPath}\``);

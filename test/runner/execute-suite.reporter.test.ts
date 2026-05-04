@@ -626,6 +626,41 @@ test("classifyExpectedFailure maps raw outcomes to expectation-aware statuses", 
   ).toMatchObject({ passed: false, status: "failed" });
 });
 
+test("classifyExpectedFailure applies custom failure classification hooks", async () => {
+  const outputDir = await createTempDir();
+  const runner = createRunnerInfo("open", { type: "opencode", model: "openai/gpt-5" });
+  const testCase: TestCase = {
+    id: "expected",
+    prompt: "a",
+    classifyFailure(result) {
+      return result.error?.message.includes("alias")
+        ? { id: "wrong-cli-alias", label: "Wrong CLI alias" }
+        : undefined;
+    },
+    assert() {},
+  };
+
+  const result = classifyExpectedFailure(testCase, {
+    ...createRunnerResult({
+      caseId: "expected",
+      runner,
+      passed: false,
+      durationMs: 10,
+      artifactDir: path.join(outputDir, "expected", runner.pathKey),
+      totalTokens: 100,
+      outputTokens: 20,
+      observedReads: 1,
+    }),
+    error: {
+      name: "AssertionError",
+      message: "wrong cli alias used",
+    },
+  });
+
+  expect(result.failureClass).toEqual({ id: "wrong-cli-alias", label: "Wrong CLI alias" });
+  expect(result.status).toBe("failed");
+});
+
 test("executeSuite aggregates runner summaries from case-centric results", async () => {
   const outputDir = await createTempDir();
   let suiteResult: SuiteRunResult | undefined;
@@ -1025,6 +1060,7 @@ function createRunnerResult(options: {
   observedReads: number;
   failureType?: RunnerResult["failureType"];
   failureOrigin?: RunnerResult["failureOrigin"];
+  failureClass?: RunnerResult["failureClass"];
 }): RunnerResult {
   const inputTokens =
     options.totalTokens === undefined
@@ -1045,6 +1081,9 @@ function createRunnerResult(options: {
         },
     failureType: options.passed ? undefined : (options.failureType ?? "assertion"),
     failureOrigin: options.passed ? undefined : (options.failureOrigin ?? "assertion"),
+    failureClass: options.passed
+      ? undefined
+      : (options.failureClass ?? { id: "assertion", label: "Assertion failure" }),
     report: createSessionReport({
       runner: options.runner,
       usage: {

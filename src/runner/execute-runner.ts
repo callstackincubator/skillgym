@@ -6,6 +6,7 @@ import type { RunnerInfo } from "../domain/runner.js";
 import type { SessionReport } from "../domain/session-report.js";
 import type { TestCase } from "../domain/test-case.js";
 import { createAssertionContext } from "../assertions/context.js";
+import { getAttachedFailureClass } from "../failure-classification.js";
 import { runWithSoftAssertions } from "../assertions/soft.js";
 import type { SnapshotRuntimeOptions, SnapshotStore } from "../snapshots/store.js";
 import { ensureDir, writeJson } from "../utils/fs.js";
@@ -107,6 +108,7 @@ export async function executeRunner(
         durationMs: Date.now() - startedMs,
         failureType: isAssertionFailure ? "assertion" : "runner-crash",
         failureOrigin: isAssertionFailure ? "assertion" : "assert-hook",
+        failureClass: getAttachedFailureClass(error),
         report,
       });
     }
@@ -173,6 +175,7 @@ async function writeAndReturnFailure(
     durationMs: number;
     failureType?: RunnerResult["failureType"];
     failureOrigin?: RunnerFailureOrigin;
+    failureClass?: RunnerResult["failureClass"];
     failureLogPath?: string;
     report?: SessionReport;
   },

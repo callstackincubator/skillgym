@@ -52,6 +52,7 @@ export interface TestCase {
   tags?: string[];
   timeoutMs?: number;
   expectedFail?: boolean;
+  classifyFailure?(result: RunnerResult): FailureClass | string | undefined;
   assert(report: SessionReport, ctx: AssertionContext): void | Promise<void>;
 }
 ```
@@ -63,6 +64,7 @@ Field meanings:
 - `tags`: optional labels for selecting cases with `--tag`; multiple selected tags use OR matching
 - `timeoutMs`: optional per-case timeout override
 - `expectedFail`: mark assertion failures as expected benchmark signal, not suite-health failures
+- `classifyFailure(result)`: optional post-processing hook for assigning or overriding structured failure classes
 - `assert(report, ctx)`: pass or fail logic for that execution
 
 `TestCase` does not include runner selection. Each case runs against the selected configured runners.
@@ -123,6 +125,49 @@ const suite: TestCase[] = [
 ```
 
 See `assertions.md` for the full assertion reference.
+
+## Failure classification hooks
+
+Use failure classification when you want to group multiple failing runs under one shared cause, such as a pseudo command, wrong CLI alias, missing required flag, or wrong command family.
+
+There are two integration points:
+
+- `assert.classify(...)` attaches a failure class directly where an assertion is made
+- `classifyFailure(result)` lets the test case assign or override the final class after the run result is available
+
+Example:
+
+```ts
+import { assert, type TestCase } from "skillgym";
+
+const suite: TestCase[] = [
+  {
+    id: "cursor-alias-check",
+    prompt: 'Say you would run: cursr agent "open README.md".',
+    classifyFailure(result) {
+      return result.error?.message.includes("wrong Cursor CLI alias")
+        ? { id: "wrong-cli-alias", label: "Wrong CLI alias" }
+        : undefined;
+    },
+    assert(_report, ctx) {
+      assert.classify({ id: "wrong-cli-alias", label: "Wrong CLI alias" }, () => {
+        assert.doesNotMatch(
+          ctx.finalOutput(),
+          /\bcursr\s+agent\b/i,
+          "wrong Cursor CLI alias in final output",
+        );
+      });
+    },
+  },
+];
+```
+
+Notes:
+
+- `assert.classify(...)` is the smallest way to tag a single assertion failure
+- `classifyFailure(result)` is useful when several different assertion messages should collapse into one shared class
+- if both are used, `classifyFailure(result)` runs later and can override the attached class
+- built-in infrastructure failures still receive default classes such as `Assertion failure`, `Timeout`, `Runner crash`, or `Max steps exceeded`
 
 ## Expected failures
 

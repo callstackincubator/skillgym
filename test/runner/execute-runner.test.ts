@@ -150,8 +150,42 @@ test("executeRunner marks AssertionError failures separately from runner crashes
   expect(result.passed).toBe(false);
   expect(result.failureType).toBe("assertion");
   expect(result.failureOrigin).toBe("assertion");
+  expect(result.failureClass).toEqual({ id: "assertion", label: "Assertion failure" });
   expect(result.error?.message).toBe("expected a skill read");
   expect(result.report.usage.totalTokens).toBe(120);
+});
+
+test("executeRunner preserves assertion failure classes attached with assert.classify", async () => {
+  const outputDir = await createTempDir();
+  const runner = createRunnerInfo("open-main", { type: "opencode", model: "openai/gpt-5" });
+  const adapter = createSuccessfulAdapter(runner, { totalTokens: 120 });
+
+  const result = await executeRunner(
+    {
+      id: "alpha",
+      prompt: "prompt",
+      assert(report) {
+        skillgymAssert.classify({ id: "missing-flag", label: "Missing required flag" }, () => {
+          skillgymAssert.output.includes(report, /--json/, {
+            message: "expected the agent to pass --json",
+          });
+        });
+      },
+    },
+    runner,
+    adapter,
+    {
+      cwd: outputDir,
+      artifactDir: path.join(outputDir, "alpha", runner.pathKey),
+      timeoutMs: 5_000,
+    },
+  );
+
+  expect(result.passed).toBe(false);
+  expect(result.failureType).toBe("assertion");
+  expect(result.failureOrigin).toBe("assertion");
+  expect(result.failureClass).toEqual({ id: "missing-flag", label: "Missing required flag" });
+  expect(result.error?.message).toContain("expected the agent to pass --json");
 });
 
 test("executeRunner treats non-AssertionError exceptions from assert as run failures", async () => {

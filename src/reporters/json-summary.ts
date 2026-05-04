@@ -1,5 +1,5 @@
 import process from "node:process";
-import type { CaseResult, RunnerResult, SuiteRunResult } from "../domain/result.js";
+import type { CaseResult, FailureClass, RunnerResult, SuiteRunResult } from "../domain/result.js";
 import type { BenchmarkReporter } from "./contract.js";
 
 interface JsonSummaryReporterOptions {
@@ -20,6 +20,7 @@ interface SummaryRunnerResult {
   error?: SummaryError;
   failureType?: RunnerResult["failureType"];
   failureOrigin?: RunnerResult["failureOrigin"];
+  failureClass?: FailureClass;
 }
 
 interface SummaryCaseResult {
@@ -60,6 +61,10 @@ function summarizeRunnerResult(result: RunnerResult): SummaryRunnerResult {
 
   if (result.failureOrigin !== undefined) {
     summary.failureOrigin = result.failureOrigin;
+  }
+
+  if (result.failureClass !== undefined) {
+    summary.failureClass = result.failureClass;
   }
 
   return summary;

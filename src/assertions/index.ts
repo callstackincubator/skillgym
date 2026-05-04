@@ -2,6 +2,7 @@ export { assert } from "./assert.js";
 export { runWithSoftAssertions } from "./soft.js";
 export { CommandMatcherBuilder, commandMatcher } from "./command-matcher.js";
 export type {
+  AssertionClassifier,
   AssertionOptions,
   CommandMatcher,
   CommandMatcherBuilderLike,

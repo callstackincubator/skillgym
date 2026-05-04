@@ -8,6 +8,7 @@ import type {
   TestCase,
   WorkspaceBootstrapConfig,
 } from "../domain/test-case.js";
+import { resolveFailureClass, type FailureClassInput } from "../failure-classification.js";
 import { serializeError } from "../utils/error.js";
 import {
   copyDir,
@@ -235,6 +236,7 @@ export function createExecutionFailureResult(
     durationMs: number;
     failureType?: RunnerFailureType;
     failureOrigin?: RunnerFailureOrigin;
+    failureClass?: FailureClassInput;
     failureLogPath?: string;
     report?: SessionReport;
   },
@@ -278,6 +280,11 @@ export function createExecutionFailureResult(
     error: serializedError,
     failureType: options.failureType ?? "runner-crash",
     failureOrigin: options.failureOrigin,
+    failureClass: resolveFailureClass({
+      failureClass: options.failureClass,
+      failureType: options.failureType ?? "runner-crash",
+      failureOrigin: options.failureOrigin,
+    }),
     failureLogPath: options.failureLogPath,
   };
 }

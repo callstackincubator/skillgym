@@ -107,6 +107,7 @@ The built-in `standard` reporter is optimized for polished CLI output.
 - Expected failures count as passed suite health, are labeled `expected failure`, and are excluded from the failure details section.
 - Unexpected passes count as failures and are labeled `unexpected pass` because the benchmark expectation may be stale.
 - Summary output includes expected-failure and unexpected-pass counts in addition to pass/fail totals.
+- Failure summaries are grouped by structured `failureClass` when available, with grouped counts and per-run artifact paths.
 - Full stack traces are not shown by default.
 
 Reporter-visible token metrics on `RunnerSummary` include:
@@ -133,6 +134,7 @@ The built-in `json-summary` reporter writes a trimmed JSON summary to stdout —
 
 - It ignores live progress hooks.
 - The output includes per-case and per-runner results with token usage, pass/fail status, artifact paths, and error details, but omits the full session events and raw artifacts.
+- Per-runner results include `failureClass` when present so downstream tooling can keep grouped-failure semantics.
 - It is useful for post-run analysis steps or feeding results to an LLM.
 
 ## GitHub Actions reporter
@@ -140,9 +142,10 @@ The built-in `json-summary` reporter writes a trimmed JSON summary to stdout —
 The built-in `github-actions` reporter is designed for GitHub CI.
 
 - Failed runs emit `::error` workflow command annotations, including file and line when a stack frame is available.
+- GitHub annotations and job summaries include `failureClass.id` when present.
 - When `GITHUB_STEP_SUMMARY` is set, the reporter appends a Markdown job summary containing:
   - Suite metadata (path, case/run counts, duration, output dir)
   - A per-runner section with a table of all cases (pass/fail status, duration, and token columns: input, output, reasoning, cache, billable)
-  - A failures section listing up to 10 failures with error name/message, artifact dir, and log path
+  - A failures section listing up to 10 failures with error name/message, failure class, artifact dir, and log path
 - When `GITHUB_STEP_SUMMARY` is missing, summary writing is skipped.
 - PR comments stay out of scope for the reporter itself; add those in a separate CI step if needed.

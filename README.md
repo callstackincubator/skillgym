@@ -261,6 +261,12 @@ The [workspace isolation suite](examples/workspace-isolation-suite.ts) demonstra
 npx skillgym run ./examples/workspace-isolation-suite.ts
 ```
 
+The [failure classification suite](examples/failure-classification-suite.ts) demonstrates `assert.classify(...)` and `classifyFailure(...)` so reporters can group related failures under one class:
+
+```bash
+npx skillgym run ./examples/failure-classification-suite.ts
+```
+
 ## Docs
 
 The documentation site is at [incubator.callstack.com/skillgym](https://incubator.callstack.com/skillgym/). Repository docs:
