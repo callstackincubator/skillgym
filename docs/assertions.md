@@ -4,6 +4,7 @@
 
 - Node's `node:assert/strict` API
 - grouped helpers for normalized session reports
+- `assert.classify(...)` for attaching structured failure classes to assertion failures
 
 ```ts
 import { assert } from "skillgym";
@@ -11,7 +12,28 @@ import { assert } from "skillgym";
 assert.ok(true);
 assert.equal(1, 1);
 assert.match("skillgym ready", /ready/);
+assert.classify("missing-flag", () => {
+  assert.match("--json", /--yaml/);
+});
 ```
+
+## Failure classification
+
+Use `assert.classify(...)` when you want an assertion failure to carry a stable structured class that reporters can group across runs.
+
+```ts
+assert.classify({ id: "wrong-cli-alias", label: "Wrong CLI alias" }, () => {
+  assert.doesNotMatch(ctx.finalOutput(), /\bcursr\b/i, "wrong Cursor CLI alias in final output");
+});
+```
+
+Rules:
+
+- `id` is the stable machine-readable key used for grouping
+- `label` is optional and gives reporters a human-friendly display name
+- passing a string such as `assert.classify("wrong-cli-alias", ...)` sets only the `id`
+- if the callback does not throw, no failure class is recorded
+- if the callback throws, the thrown error keeps the attached failure class through the runner and reporter pipeline
 
 ## Report helper groups
 
