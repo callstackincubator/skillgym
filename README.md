@@ -201,8 +201,11 @@ See [Workspaces](docs/workspaces.md) for the full workspace reference.
 
 `assert` extends Node's `node:assert/strict` helpers, so standard methods like `assert.ok`, `assert.equal`, and `assert.match` still work.
 
+`assert.soft.*` mirrors the same sync assertion surface and collects failures until the current test case finishes, so one run can report multiple assertion mismatches together.
+
 Built-in grouped assertions cover:
 
+- `assert.soft.*`
 - `assert.skills.*`
 - `assert.commands.*`
 - `assert.fileReads.*`
@@ -214,6 +217,8 @@ Example:
 ```ts
 import { assert, commandMatcher } from "skillgym";
 
+assert.soft.match(report.finalOutput, /ready/i);
+assert.soft.commands.includes(report, "pnpm test");
 assert.skills.has(report, "find-skills");
 assert.skills.notHas(report, "upgrading-expo");
 assert.commands.includes(report, "npx skills find");
@@ -227,6 +232,8 @@ assert.toolCalls.has(report, {
 });
 assert.output.notEmpty(report);
 ```
+
+`assert.soft.rejects(...)` and `assert.soft.doesNotReject(...)` are still hard assertions in the first implementation.
 
 See the [assertion reference](docs/assertions.md).
 

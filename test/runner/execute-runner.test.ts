@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { AssertionError } from "node:assert";
 import { afterEach, expect, test } from "vitest";
-import { assert } from "../../src/assertions/assert.js";
+import { assert as skillgymAssert } from "../../src/assertions/index.js";
 import type {
   RawRunArtifacts,
   RunHandle,
@@ -165,8 +165,8 @@ test("executeRunner preserves assertion failure classes attached with assert.cla
       id: "alpha",
       prompt: "prompt",
       assert(report) {
-        assert.classify({ id: "missing-flag", label: "Missing required flag" }, () => {
-          assert.output.includes(report, /--json/, {
+        skillgymAssert.classify({ id: "missing-flag", label: "Missing required flag" }, () => {
+          skillgymAssert.output.includes(report, /--json/, {
             message: "expected the agent to pass --json",
           });
         });
@@ -215,6 +215,112 @@ test("executeRunner treats non-AssertionError exceptions from assert as run fail
   expect(result.failureOrigin).toBe("assert-hook");
   expect(result.error?.message).toBe("assert hook crashed intentionally");
   expect(result.report.usage.totalTokens).toBe(120);
+});
+
+test("executeRunner flushes collected soft assertion failures after assert hook completes", async () => {
+  const outputDir = await createTempDir();
+  const runner = createRunnerInfo("open-main", { type: "opencode", model: "openai/gpt-5" });
+  const adapter = createSuccessfulAdapter(runner, { totalTokens: 120 });
+
+  const result = await executeRunner(
+    {
+      id: "alpha",
+      prompt: "prompt",
+      assert(report) {
+        skillgymAssert.soft.output.notEmpty(report, { message: "expected output" });
+        skillgymAssert.soft.commands.includes(report, "pnpm test", { message: "expected command" });
+      },
+    },
+    runner,
+    adapter,
+    {
+      cwd: outputDir,
+      artifactDir: path.join(outputDir, "alpha", runner.pathKey),
+      timeoutMs: 5_000,
+    },
+  );
+
+  expect(result.passed).toBe(false);
+  expect(result.failureType).toBe("assertion");
+  expect(result.failureOrigin).toBe("assertion");
+  expect(result.error?.message).toContain(
+    "2 assertion failures collected during test case execution",
+  );
+  expect(result.error?.message).toContain("expected output");
+  expect(result.error?.message).toContain("expected command");
+});
+
+test("executeRunner merges soft failures with a later hard AssertionError", async () => {
+  const outputDir = await createTempDir();
+  const runner = createRunnerInfo("open-main", { type: "opencode", model: "openai/gpt-5" });
+  const adapter = createSuccessfulAdapter(runner, { totalTokens: 120 });
+
+  const result = await executeRunner(
+    {
+      id: "alpha",
+      prompt: "prompt",
+      assert(report) {
+        skillgymAssert.soft.output.notEmpty(report, { message: "soft failure" });
+        throw new AssertionError({ message: "hard failure" });
+      },
+    },
+    runner,
+    adapter,
+    {
+      cwd: outputDir,
+      artifactDir: path.join(outputDir, "alpha", runner.pathKey),
+      timeoutMs: 5_000,
+    },
+  );
+
+  expect(result.passed).toBe(false);
+  expect(result.failureType).toBe("assertion");
+  expect(result.error?.message).toContain(
+    "2 assertion failures collected during test case execution",
+  );
+  expect(result.error?.message).toContain("soft failure");
+  expect(result.error?.message).toContain("hard failure");
+});
+
+test("executeRunner clears soft assertion state between runs", async () => {
+  const outputDir = await createTempDir();
+  const runner = createRunnerInfo("open-main", { type: "opencode", model: "openai/gpt-5" });
+  const adapter = createSuccessfulAdapter(runner, { totalTokens: 120 });
+
+  const failed = await executeRunner(
+    {
+      id: "alpha",
+      prompt: "prompt",
+      assert(report) {
+        skillgymAssert.soft.output.notEmpty(report, { message: "soft failure" });
+      },
+    },
+    runner,
+    adapter,
+    {
+      cwd: outputDir,
+      artifactDir: path.join(outputDir, "alpha", runner.pathKey),
+      timeoutMs: 5_000,
+    },
+  );
+
+  const passed = await executeRunner(
+    {
+      id: "beta",
+      prompt: "prompt",
+      assert() {},
+    },
+    runner,
+    adapter,
+    {
+      cwd: outputDir,
+      artifactDir: path.join(outputDir, "beta", runner.pathKey),
+      timeoutMs: 5_000,
+    },
+  );
+
+  expect(failed.passed).toBe(false);
+  expect(passed.passed).toBe(true);
 });
 
 test("executeRunner marks timeout failures separately from runner crashes", async () => {

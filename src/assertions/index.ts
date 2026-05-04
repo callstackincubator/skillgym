@@ -1,4 +1,5 @@
 export { assert } from "./assert.js";
+export { runWithSoftAssertions } from "./soft.js";
 export { CommandMatcherBuilder, commandMatcher } from "./command-matcher.js";
 export type {
   AssertionClassifier,
@@ -13,6 +14,7 @@ export type {
   SkillAssertionOptions,
   SkillAssertions,
   SkillGymAssert,
+  SkillGymSoftAssert,
   SkillConfidence,
   StructuredCommandMatcher,
   ToolCallAssertions,

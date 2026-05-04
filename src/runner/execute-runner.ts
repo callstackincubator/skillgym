@@ -7,6 +7,7 @@ import type { SessionReport } from "../domain/session-report.js";
 import type { TestCase } from "../domain/test-case.js";
 import { createAssertionContext } from "../assertions/context.js";
 import { getAttachedFailureClass } from "../failure-classification.js";
+import { runWithSoftAssertions } from "../assertions/soft.js";
 import type { SnapshotRuntimeOptions, SnapshotStore } from "../snapshots/store.js";
 import { ensureDir, writeJson } from "../utils/fs.js";
 import { isCommandTimeoutError, isMaxStepsExceededError } from "../utils/process.js";
@@ -97,7 +98,7 @@ export async function executeRunner(
     const ctx = createAssertionContext(report);
 
     try {
-      await testCase.assert(report, ctx);
+      await runWithSoftAssertions(() => testCase.assert(report, ctx));
     } catch (error) {
       const isAssertionFailure = error instanceof AssertionError;
       return await writeAndReturnFailure(error, {
