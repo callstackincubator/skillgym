@@ -57,6 +57,7 @@ export type {
   SkillAssertionOptions,
   SkillAssertions,
   SkillGymAssert,
+  SkillGymSoftAssert,
   SkillConfidence,
   StructuredCommandMatcher,
   ToolCallAssertions,
