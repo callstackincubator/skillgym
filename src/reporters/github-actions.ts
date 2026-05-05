@@ -49,9 +49,10 @@ function formatAnnotationCommand(caseId: string, result: RunnerResult): string {
 
 function formatAnnotationMessage(result: RunnerResult): string {
   const lines = [`failure type: ${result.failureType ?? "unknown"}`];
+  const retryCount = countRetries(result);
 
-  if (result.attempts !== undefined && result.attempts.length > 1) {
-    lines.push(`attempts: ${String(result.attempts.length)}`);
+  if (retryCount > 0) {
+    lines.push(`retries: ${String(retryCount)}`);
   }
 
   if (result.failureOrigin !== undefined) {
@@ -172,8 +173,10 @@ function formatFailureSummaryItem(caseId: string, result: RunnerResult): string 
     `artifacts: \`${result.artifactDir}\``,
   ];
 
-  if (result.attempts !== undefined && result.attempts.length > 1) {
-    segments.splice(2, 0, `attempts: ${String(result.attempts.length)}`);
+  const retryCount = countRetries(result);
+
+  if (retryCount > 0) {
+    segments.splice(2, 0, `retries: ${String(retryCount)}`);
   }
 
   if (result.failureClass !== undefined) {
@@ -192,13 +195,16 @@ function formatFailureSummaryItem(caseId: string, result: RunnerResult): string 
 }
 
 function formatRetryLabel(result: RunnerResult): string | undefined {
-  if (result.attempts === undefined || result.attempts.length <= 1) {
+  const retryCount = countRetries(result);
+  if (retryCount === 0) {
     return undefined;
   }
 
-  return result.passed
-    ? `(passed on retry ${String(result.attempt ?? result.attempts.length)}/${String(result.attempts.length)})`
-    : `(failed after ${String(result.attempts.length)} attempts)`;
+  return `(${retryCount === 1 ? "1 retry" : `${String(retryCount)} retries`})`;
+}
+
+function countRetries(result: RunnerResult): number {
+  return Math.max(0, (result.attempts?.length ?? 1) - 1);
 }
 
 function listFailures(result: SuiteRunResult): Array<{ caseId: string; result: RunnerResult }> {

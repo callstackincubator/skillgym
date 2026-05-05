@@ -42,7 +42,7 @@ test("github-actions reporter formats escaped annotations for failed runs", asyn
     "::error title=case%2Ca > code%3Amain,file=/workspace/examples/basic-suite.ts,line=14,col=15::",
   );
   expect(writes.join("")).toContain(
-    "failure type: assertion%0Aattempts: 2%0Afailure origin: assertion%0Aerror: AssertionError: boom,%0A100%25",
+    "failure type: assertion%0Aretries: 1%0Afailure origin: assertion%0Aerror: AssertionError: boom,%0A100%25",
   );
   expect(writes.join("")).toContain("artifacts: .skillgym-results/run-1/case,a/code-main");
 });
@@ -94,11 +94,9 @@ test("github-actions reporter writes a job summary when GITHUB_STEP_SUMMARY is s
   expect(summary).toContain("- Runs: 0 passed, 1 failed");
   expect(summary).toContain("### Runner: `open-main` (opencode, openai/gpt-5)");
   expect(summary).toContain("| Case | Duration | Input | Output | Reasoning | Cache | Billable |");
+  expect(summary).toContain("| ❌ `case-a` (1 retry) | 24s | 9,830 | 1,104 | 0 | 0 | 12,000 |");
   expect(summary).toContain(
-    "| ❌ `case-a` (failed after 2 attempts) | 24s | 9,830 | 1,104 | 0 | 0 | 12,000 |",
-  );
-  expect(summary).toContain(
-    "- `case-a > open-main`; assertion; AssertionError: expected skill to be loaded before command execution; attempts: 2; artifacts: `.skillgym-results/run-1/case-a/open-main`; log: `.skillgym-results/run-1/case-a/open-main/stderr.log`",
+    "- `case-a > open-main`; assertion; AssertionError: expected skill to be loaded before command execution; retries: 1; artifacts: `.skillgym-results/run-1/case-a/open-main`; log: `.skillgym-results/run-1/case-a/open-main/stderr.log`",
   );
 });
 

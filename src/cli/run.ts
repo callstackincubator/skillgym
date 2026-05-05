@@ -39,6 +39,7 @@ export async function runCommand(options: {
       outputDir: options.outputDir,
       schedule: options.schedule,
       maxParallel: options.maxParallel,
+      retryFailed: options.retryFailed,
       tags: options.tags,
     },
     loadedConfig.config,

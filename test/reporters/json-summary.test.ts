@@ -271,6 +271,7 @@ test("json-summary reporter omits session internals and prints summary on suite 
   expect(runnerResult.passed).toBe(false);
   expect(runnerResult.status).toBe("failed");
   expect(runnerResult.attempt).toBe(2);
+  expect(runnerResult.retryCount).toBe(1);
   expect(runnerResult.durationMs).toBe(18_200);
   expect(runnerResult.artifactDir).toBe(".skillgym-results/run-1/case-a/open-main");
   expect(runnerResult.failureType).toBe("assertion");

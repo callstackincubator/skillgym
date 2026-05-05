@@ -155,7 +155,6 @@ test("standard reporter prints runner-grouped results and failure artifacts", as
   );
   expect(output).toContain("✓ case-a");
   expect(output).toContain("✗ case-a");
-  expect(output).toContain("failed after 2 attempts");
   expect(output).toContain("Cases       1 failed | 1 passed (2)");
   expect(output).toContain("Runs        1 failed | 3 passed (4)");
   expect(output).toContain("Statuses    0 expected failures | 0 unexpected passes");
@@ -422,6 +421,152 @@ test("standard reporter labels expected failures and unexpected passes", async (
   expect(output).toContain("Failures");
   expect(output).toContain("✗ stale-gap > open-main");
   expect(output).not.toContain("known-gap > open-main");
+});
+
+test("standard reporter shows recovered retries inline without failure blocks", async () => {
+  const writes: string[] = [];
+  const reporter = createStandardReporter({
+    stdout: {
+      isTTY: true,
+      columns: 120,
+      write(chunk: string) {
+        writes.push(chunk);
+        return true;
+      },
+    },
+    isInteractive: false,
+    isUnicode: true,
+  });
+  const runner = createRunnerInfo("cursor-main", { type: "cursor-agent", model: "auto" });
+  const context = {
+    isInteractive: false,
+    cwd: "/workspace",
+    workspaceMode: "shared" as const,
+    suitePath: "examples/flaky-retry-suite.ts",
+    outputDir: ".skillgym-results/run-1",
+    selectedCaseCount: 1,
+    selectedRunnerCount: 1,
+    selectedExecutionCount: 1,
+    scheduleMode: "serial" as const,
+    maxParallel: 1,
+    declaredTags: [],
+  };
+  const suiteResult: SuiteRunResult = {
+    suitePath: context.suitePath,
+    startedAt: "2026-04-02T12:00:00.000Z",
+    endedAt: "2026-04-02T12:00:12.000Z",
+    durationMs: 12_000,
+    outputDir: context.outputDir,
+    declaredTags: [],
+    selectedTags: [],
+    cases: [
+      createCaseResult({
+        caseId: "retry-once",
+        runnerResults: [
+          createRunnerResult({
+            runner,
+            passed: true,
+            artifactDir: ".skillgym-results/run-1/retry-once/cursor-main/attempt-2",
+            totalTokens: 12_000,
+            attempts: 2,
+          }),
+        ],
+      }),
+    ],
+    runners: [
+      createRunnerSummary({
+        runner,
+        passedCases: 1,
+        totalCases: 1,
+        averageDurationMs: 24_800,
+        averageTotalTokens: 12_000,
+      }),
+    ],
+  };
+
+  await reporter.onSuiteStart?.({
+    context,
+    cases: [],
+    runners: [runner],
+    startedAt: suiteResult.startedAt,
+  });
+  await reporter.onRunnerFinish?.({
+    context,
+    testCase: { id: "retry-once", prompt: "", assert() {} },
+    runner,
+    result: suiteResult.cases[0]!.runnerResults[0]!,
+    caseIndex: 1,
+    totalCases: 1,
+  });
+  await reporter.onCaseFinish?.({
+    context,
+    testCase: { id: "retry-once", prompt: "", assert() {} },
+    result: suiteResult.cases[0]!,
+    caseIndex: 1,
+    totalCases: 1,
+  });
+  await reporter.onSuiteFinish?.({ context, result: suiteResult });
+
+  const output = writes.join("");
+  expect(output).toContain("retry-once");
+  expect(output).not.toContain("Failure Classes");
+  expect(output).not.toContain("Failures");
+  expect(output).not.toContain("Artifacts:");
+});
+
+test("standard reporter interactive mode shows retry warning on recovered run", async () => {
+  const writes: string[] = [];
+  const reporter = createStandardReporter({
+    stdout: {
+      isTTY: true,
+      columns: 120,
+      write(chunk: string) {
+        writes.push(chunk);
+        return true;
+      },
+    },
+    isInteractive: true,
+    isUnicode: true,
+  });
+
+  const context = {
+    isInteractive: true,
+    cwd: "/workspace",
+    workspaceMode: "shared" as const,
+    suitePath: "examples/flaky-retry-suite.ts",
+    outputDir: ".skillgym-results/run-1",
+    selectedCaseCount: 1,
+    selectedRunnerCount: 1,
+    selectedExecutionCount: 1,
+    scheduleMode: "serial" as const,
+    maxParallel: 1,
+    declaredTags: [],
+  };
+  const runner = createRunnerInfo("cursor-main", { type: "cursor-agent", model: "auto" });
+
+  await reporter.onSuiteStart?.({
+    context,
+    cases: [{ id: "retry-once", prompt: "", assert() {} }],
+    runners: [runner],
+    startedAt: "2026-04-02T12:00:00.000Z",
+  });
+
+  await reporter.onRunnerFinish?.({
+    context,
+    testCase: { id: "retry-once", prompt: "", assert() {} },
+    runner,
+    result: createRunnerResult({
+      runner,
+      passed: true,
+      artifactDir: "x",
+      totalTokens: 10_000,
+      attempts: 2,
+    }),
+    caseIndex: 1,
+    totalCases: 1,
+  });
+
+  expect(writes.join("")).toContain("(1 retry)");
 });
 
 test("standard reporter prints warning line for overlapping shared-workspace schedules", async () => {

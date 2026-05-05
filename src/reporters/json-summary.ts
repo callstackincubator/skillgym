@@ -16,6 +16,7 @@ interface SummaryRunnerResult {
   passed: boolean;
   status: RunnerResult["status"];
   attempt?: number;
+  retryCount: number;
   durationMs: number;
   artifactDir: string;
   usage: RunnerResult["report"]["usage"];
@@ -64,6 +65,7 @@ function summarizeRunnerResult(result: RunnerResult): SummaryRunnerResult {
     passed: result.passed,
     status: result.status,
     attempt: result.attempt,
+    retryCount: countRetries(result),
     durationMs: result.durationMs,
     artifactDir: result.artifactDir,
     usage: result.report.usage,
@@ -90,6 +92,10 @@ function summarizeRunnerResult(result: RunnerResult): SummaryRunnerResult {
   }
 
   return summary;
+}
+
+function countRetries(result: RunnerResult): number {
+  return Math.max(0, (result.attempts?.length ?? 1) - 1);
 }
 
 function summarizeAttemptResult(
