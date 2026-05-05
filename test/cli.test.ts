@@ -38,11 +38,46 @@ test("cli help prints full MOTD banner and help sections", async () => {
   expect(result.stdout).toContain("Prove your agent skills work before you ship them.");
   expect(result.stdout).not.toContain("by Callstack");
   expect(result.stdout).toContain("Usage:");
+  expect(result.stdout).toContain("skillgym skills get core");
   expect(result.stdout).toContain("Commands:");
+  expect(result.stdout).toContain("skills list");
+  expect(result.stdout).toContain("skills get <name>");
   expect(result.stdout).toContain("Run Options:");
   expect(result.stdout).toContain("--schedule <mode>");
   expect(result.stdout).toContain("--max-parallel <n>");
   expect(result.stdout).toContain("Examples:");
+});
+
+test("cli skills list prints bundled skill names", async () => {
+  const result = await execCli(["skills", "list"]);
+
+  expect(result.exitCode).toBe(0);
+  expect(result.stderr).toBe("");
+  expect(result.stdout).toContain("assertions");
+  expect(result.stdout).toContain("core");
+  expect(result.stdout).toContain("reporters");
+  expect(result.stdout).toContain("snapshots");
+  expect(result.stdout).toContain("test-cases");
+  expect(result.stdout).toContain("workspaces");
+});
+
+test("cli skills get core prints the bundled core skill", async () => {
+  const result = await execCli(["skills", "get", "core"]);
+
+  expect(result.exitCode).toBe(0);
+  expect(result.stderr).toBe("");
+  expect(result.stdout).toContain("# skillgym core");
+  expect(result.stdout).toContain("skillgym skills get test-cases");
+  expect(result.stdout).toContain("skillgym run <suite.ts>");
+});
+
+test("cli skills get reports missing skill name without printing MOTD banner", async () => {
+  const result = await execCli(["skills", "get"]);
+
+  expect(result.exitCode).toBe(1);
+  expect(result.stdout).toBe("");
+  expect(result.stderr).toContain("Missing skill name. Usage: skillgym skills get <name>");
+  expect(result.stderr).not.toContain("Prove your agent skills work before you ship them.");
 });
 
 test("cli run reports missing suite path without printing MOTD banner", async () => {

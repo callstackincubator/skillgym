@@ -2,6 +2,7 @@ import { printHelp } from "./cli/help.js";
 import { printBanner } from "./cli/branding.js";
 import { formatCliError } from "./cli/error.js";
 import { RunFailuresError, runCommand } from "./cli/run.js";
+import { listBundledSkills, readBundledSkill } from "./cli/skills.js";
 import { parseArgs } from "./utils/cli.js";
 
 async function main(): Promise<void> {
@@ -47,6 +48,26 @@ async function main(): Promise<void> {
       printBanner({ kind: "full" });
       printHelp();
       return;
+    case "skills": {
+      const subcommand = parsed.positionals[0] ?? "list";
+
+      if (subcommand === "list") {
+        console.log(listBundledSkills().join("\n"));
+        return;
+      }
+
+      if (subcommand === "get") {
+        const skillName = parsed.positionals[1];
+        if (skillName === undefined) {
+          throw new Error("Missing skill name. Usage: skillgym skills get <name>");
+        }
+
+        console.log(readBundledSkill(skillName));
+        return;
+      }
+
+      throw new Error(`Unknown skills subcommand: ${subcommand}`);
+    }
     default:
       printBanner({ kind: "full" });
       printHelp();

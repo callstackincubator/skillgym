@@ -62,6 +62,10 @@ export function printBanner(options: { kind: "compact" | "full"; stdout?: Writer
       `  ${theme.dim("$")} ${theme.light("skillgym help")}                   ${theme.dim("Show CLI help")}`,
       stdout,
     );
+    writeLine(
+      `  ${theme.dim("$")} ${theme.light("skillgym skills get")} ${theme.accent("core")}       ${theme.dim("Read the main bundled skill")}`,
+      stdout,
+    );
     writeLine("", stdout);
   }
 }
