@@ -247,6 +247,15 @@ describe("config", () => {
     expect(parsed.run?.maxParallel).toBe(3);
   });
 
+  test("parses run retryFailed", () => {
+    const parsed = parseConfig({
+      run: { retryFailed: 2 },
+      runners: { open: { agent: { type: "opencode", model: "openai/gpt-5" } } },
+    });
+
+    expect(parsed.run?.retryFailed).toBe(2);
+  });
+
   test("accepts cursor-agent runner configs", () => {
     const parsed = parseConfig({
       runners: {
@@ -312,6 +321,7 @@ describe("config", () => {
       outputDir: path.join(tempDir, "config-results"),
       schedule: "parallel",
       maxParallel: 2,
+      retryFailed: 0,
       tags: [],
     });
   });
@@ -333,6 +343,35 @@ describe("config", () => {
         { runners: { open: { agent: { type: "opencode", model: "openai/gpt-5" } } } },
       ),
     ).toThrow("Invalid config at CLI option --max-parallel: expected integer >= 1");
+  });
+
+  test("run options support retryFailed in config and CLI", () => {
+    expect(
+      resolveRunOptions(
+        {},
+        {
+          run: { retryFailed: 2 },
+          runners: { open: { agent: { type: "opencode", model: "openai/gpt-5" } } },
+        },
+      ),
+    ).toMatchObject({ retryFailed: 2 });
+
+    expect(
+      resolveRunOptions(
+        { retryFailed: "3" },
+        {
+          run: { retryFailed: 2 },
+          runners: { open: { agent: { type: "opencode", model: "openai/gpt-5" } } },
+        },
+      ),
+    ).toMatchObject({ retryFailed: 3 });
+
+    expect(() =>
+      resolveRunOptions(
+        { retryFailed: "-1" },
+        { runners: { open: { agent: { type: "opencode", model: "openai/gpt-5" } } } },
+      ),
+    ).toThrow("Invalid config at CLI option --retry-failed: expected integer >= 0");
   });
 
   test("run options support config tags and let CLI tags override config", () => {

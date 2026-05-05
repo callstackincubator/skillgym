@@ -331,6 +331,102 @@ test("executeSuite with parallel schedule respects maxParallel", async () => {
   expect(maxActive).toBe(2);
 });
 
+test("executeSuite retries only failed executions and preserves attempt artifacts", async () => {
+  const outputDir = await createTempDir();
+  const attemptsByRun = new Map<string, number>();
+  const runnerPathKey = createRunnerInfo("open", {
+    type: "opencode",
+    model: "openai/gpt-5",
+  }).pathKey;
+
+  const result = await executeSuite("./suite.ts", [{ id: "flaky", prompt: "a", assert() {} }], {
+    cwd: outputDir,
+    outputDir,
+    retryFailed: 2,
+    isInteractive: false,
+    config: {
+      runners: {
+        open: { agent: { type: "opencode", model: "openai/gpt-5" } },
+      },
+    },
+    executeRunnerFn: async (testCase, runner, _adapter, options) => {
+      const key = `${testCase.id}:${runner.id}`;
+      const attempt = (attemptsByRun.get(key) ?? 0) + 1;
+      attemptsByRun.set(key, attempt);
+
+      return createRunnerResult({
+        caseId: testCase.id,
+        runner,
+        passed: attempt >= 2,
+        durationMs: attempt * 10,
+        artifactDir: options.artifactDir,
+        totalTokens: 100 * attempt,
+        outputTokens: 20,
+        observedReads: 1,
+      });
+    },
+  });
+
+  const runnerResult = result.cases[0]!.runnerResults[0]!;
+  expect(attemptsByRun.get("flaky:open")).toBe(2);
+  expect(runnerResult).toMatchObject({
+    passed: true,
+    attempt: 2,
+    artifactDir: path.join(result.outputDir, "flaky", runnerPathKey, "attempt-2"),
+  });
+  expect(runnerResult.attempts).toHaveLength(2);
+  expect(runnerResult.attempts?.map((attempt) => attempt.artifactDir)).toEqual([
+    path.join(result.outputDir, "flaky", runnerPathKey),
+    path.join(result.outputDir, "flaky", runnerPathKey, "attempt-2"),
+  ]);
+
+  const saved = JSON.parse(
+    await readFile(path.join(result.outputDir, "results.json"), "utf8"),
+  ) as SuiteRunResult;
+  expect(saved.cases[0]?.runnerResults[0]?.attempts).toHaveLength(2);
+});
+
+test("executeSuite does not retry expected failures", async () => {
+  const outputDir = await createTempDir();
+  let attempts = 0;
+
+  const result = await executeSuite(
+    "./suite.ts",
+    [{ id: "known-gap", prompt: "a", expectedFail: true, assert() {} }],
+    {
+      cwd: outputDir,
+      outputDir,
+      retryFailed: 2,
+      isInteractive: false,
+      config: {
+        runners: {
+          open: { agent: { type: "opencode", model: "openai/gpt-5" } },
+        },
+      },
+      executeRunnerFn: async (testCase, runner, _adapter, options) => {
+        attempts += 1;
+        return createRunnerResult({
+          caseId: testCase.id,
+          runner,
+          passed: false,
+          durationMs: 10,
+          artifactDir: options.artifactDir,
+          totalTokens: 100,
+          outputTokens: 20,
+          observedReads: 1,
+        });
+      },
+    },
+  );
+
+  expect(attempts).toBe(1);
+  expect(result.cases[0]?.runnerResults[0]).toMatchObject({
+    passed: true,
+    status: "expected-failed",
+    attempt: 1,
+  });
+});
+
 test("executeSuite with isolated-by-runner runs serially within a runner and concurrently across runners", async () => {
   const outputDir = await createTempDir();
   const started: string[] = [];

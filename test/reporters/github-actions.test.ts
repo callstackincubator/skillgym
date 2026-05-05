@@ -30,14 +30,19 @@ test("github-actions reporter formats escaped annotations for failed runs", asyn
 
   await reporter.onSuiteFinish?.({
     context: createContext(),
-    result: createSuiteResult({ runner, caseId: "case,a", errorMessage: "boom,\n100%" }),
+    result: createSuiteResult({
+      runner,
+      caseId: "case,a",
+      errorMessage: "boom,\n100%",
+      attempts: 2,
+    }),
   });
 
   expect(writes.join("")).toContain(
     "::error title=case%2Ca > code%3Amain,file=/workspace/examples/basic-suite.ts,line=14,col=15::",
   );
   expect(writes.join("")).toContain(
-    "failure type: assertion%0Afailure origin: assertion%0Aerror: AssertionError: boom,%0A100%25",
+    "failure type: assertion%0Aattempts: 2%0Afailure origin: assertion%0Aerror: AssertionError: boom,%0A100%25",
   );
   expect(writes.join("")).toContain("artifacts: .skillgym-results/run-1/case,a/code-main");
 });
@@ -57,7 +62,7 @@ test("github-actions reporter includes file metadata from user stack frames", as
 
   await reporter.onSuiteFinish?.({
     context: createContext(),
-    result: createSuiteResult({ runner, caseId: "case-a" }),
+    result: createSuiteResult({ runner, caseId: "case-a", attempts: 2 }),
   });
 
   expect(writes.join("")).toContain("file=/workspace/examples/basic-suite.ts,line=14,col=15");
@@ -79,7 +84,7 @@ test("github-actions reporter writes a job summary when GITHUB_STEP_SUMMARY is s
 
   await reporter.onSuiteFinish?.({
     context: createContext(),
-    result: createSuiteResult({ runner, caseId: "case-a" }),
+    result: createSuiteResult({ runner, caseId: "case-a", attempts: 2 }),
   });
 
   const summary = await readFile(summaryPath, "utf8");
@@ -89,9 +94,11 @@ test("github-actions reporter writes a job summary when GITHUB_STEP_SUMMARY is s
   expect(summary).toContain("- Runs: 0 passed, 1 failed");
   expect(summary).toContain("### Runner: `open-main` (opencode, openai/gpt-5)");
   expect(summary).toContain("| Case | Duration | Input | Output | Reasoning | Cache | Billable |");
-  expect(summary).toContain("| ❌ `case-a` | 24s | 9,830 | 1,104 | 0 | 0 | 12,000 |");
   expect(summary).toContain(
-    "- `case-a > open-main`; assertion; AssertionError: expected skill to be loaded before command execution; artifacts: `.skillgym-results/run-1/case-a/open-main`; log: `.skillgym-results/run-1/case-a/open-main/stderr.log`",
+    "| ❌ `case-a` (failed after 2 attempts) | 24s | 9,830 | 1,104 | 0 | 0 | 12,000 |",
+  );
+  expect(summary).toContain(
+    "- `case-a > open-main`; assertion; AssertionError: expected skill to be loaded before command execution; attempts: 2; artifacts: `.skillgym-results/run-1/case-a/open-main`; log: `.skillgym-results/run-1/case-a/open-main/stderr.log`",
   );
 });
 
@@ -137,11 +144,13 @@ function createSuiteResult(options: {
   runner: RunnerInfo;
   caseId: string;
   errorMessage?: string;
+  attempts?: number;
 }): SuiteRunResult {
   const runnerResult = createFailedRunnerResult(
     options.runner,
     options.caseId,
     options.errorMessage,
+    options.attempts,
   );
 
   return {
@@ -161,13 +170,64 @@ function createFailedRunnerResult(
   runner: RunnerInfo,
   caseId: string,
   errorMessage = "expected skill to be loaded before command execution",
+  attempts = 1,
 ): RunnerResult {
+  const artifactDir = `.skillgym-results/run-1/${caseId}/${runner.id.replace(/[:]/g, "-")}`;
+
   return {
     runner,
     passed: false,
     status: "failed",
+    attempt: attempts,
     durationMs: 24_800,
-    artifactDir: `.skillgym-results/run-1/${caseId}/${runner.id.replace(/[:]/g, "-")}`,
+    artifactDir,
+    attempts: Array.from({ length: attempts }, (_, index) => ({
+      runner,
+      passed: false,
+      status: "failed",
+      attempt: index + 1,
+      durationMs: 24_800,
+      artifactDir:
+        index === 0 ? artifactDir : path.join(artifactDir, `attempt-${String(index + 1)}`),
+      error: {
+        name: "AssertionError",
+        message: errorMessage,
+        stack: [
+          `AssertionError: ${errorMessage}`,
+          "    at assert (/workspace/src/assertions/output.ts:88:10)",
+          "    at Object.assert (/workspace/examples/basic-suite.ts:14:15)",
+          "    at executeRunner (/workspace/src/runner/execute-runner.ts:91:7)",
+        ].join("\n"),
+      },
+      failureType: "assertion",
+      failureOrigin: "assertion",
+      failureLogPath:
+        index === 0
+          ? `${artifactDir}/stderr.log`
+          : `${path.join(artifactDir, `attempt-${String(index + 1)}`)}/stderr.log`,
+      report: createSessionReport({
+        runner,
+        usage: {
+          cacheTokens: 0,
+          totalTokens: 12_000,
+          inputTokens: 9_830,
+          outputTokens: 1_104,
+          reasoningTokens: 0,
+          inputChars: 10,
+          outputChars: 5,
+          reasoningChars: 0,
+          source: {
+            input: "provider",
+            output: "provider",
+            reasoning: "provider",
+          },
+        },
+        files: {
+          observedReads: ["a"],
+          observedSkillReads: [],
+        },
+      }),
+    })),
     error: {
       name: "AssertionError",
       message: errorMessage,
@@ -180,7 +240,7 @@ function createFailedRunnerResult(
     },
     failureType: "assertion",
     failureOrigin: "assertion",
-    failureLogPath: `.skillgym-results/run-1/${caseId}/${runner.id.replace(/[:]/g, "-")}/stderr.log`,
+    failureLogPath: `${artifactDir}/stderr.log`,
     report: createSessionReport({
       runner,
       usage: {

@@ -1,3 +1,4 @@
+import path from "node:path";
 import { afterEach, expect, test, vi } from "vitest";
 import type {
   CaseResult,
@@ -68,6 +69,7 @@ test("standard reporter prints runner-grouped results and failure artifacts", as
             passed: false,
             artifactDir: ".skillgym-results/run-1/case-a/code-main",
             totalTokens: 12_000,
+            attempts: 2,
           }),
         ],
       }),
@@ -153,6 +155,7 @@ test("standard reporter prints runner-grouped results and failure artifacts", as
   );
   expect(output).toContain("✓ case-a");
   expect(output).toContain("✗ case-a");
+  expect(output).toContain("failed after 2 attempts");
   expect(output).toContain("Cases       1 failed | 1 passed (2)");
   expect(output).toContain("Runs        1 failed | 3 passed (4)");
   expect(output).toContain("Statuses    0 expected failures | 0 unexpected passes");
@@ -168,6 +171,7 @@ test("standard reporter prints runner-grouped results and failure artifacts", as
   expect(output).toContain("✗ case-a > code-main (codex, gpt-5.4)");
   expect(output).toContain("AssertionError: expected skill to be loaded before command execution");
   expect(output).toContain("at /workspace/examples/basic-suite.ts:14:15");
+  expect(output).toContain("Attempts: 2");
   expect(output).not.toContain("skillgym could not complete the run");
   expect(output).not.toContain("Run did not complete because the runner crashed");
   expect(output).toContain("Artifacts: .skillgym-results/run-1/case-a/code-main");
@@ -1033,14 +1037,71 @@ function createRunnerResult(options: {
   status?: RunnerResult["status"];
   artifactDir: string;
   totalTokens: number;
+  attempts?: number;
   failureClass?: RunnerResult["failureClass"];
 }): RunnerResult {
+  const attempts = options.attempts ?? 1;
   return {
     runner: options.runner,
     passed: options.passed,
     status: options.status ?? (options.passed ? "passed" : "failed"),
+    attempt: attempts,
     durationMs: 24_800,
     artifactDir: options.artifactDir,
+    attempts: Array.from({ length: attempts }, (_, index) => ({
+      runner: options.runner,
+      passed: options.passed,
+      status: options.status ?? (options.passed ? "passed" : "failed"),
+      attempt: index + 1,
+      durationMs: 24_800,
+      artifactDir:
+        index === 0
+          ? options.artifactDir
+          : path.join(options.artifactDir, `attempt-${String(index + 1)}`),
+      error:
+        options.passed || options.status === "unexpected-passed"
+          ? undefined
+          : {
+              name: "AssertionError",
+              message: "expected skill to be loaded before command execution",
+              stack: [
+                "AssertionError: expected skill to be loaded before command execution",
+                "    at assert (/workspace/src/assertions/output.ts:88:10)",
+                "    at Object.assert (/workspace/examples/basic-suite.ts:14:15)",
+                "    at executeRunner (/workspace/src/runner/execute-runner.ts:91:7)",
+              ].join("\n"),
+            },
+      failureType:
+        options.passed || options.status === "unexpected-passed" ? undefined : "assertion",
+      failureOrigin:
+        options.passed || options.status === "unexpected-passed" ? undefined : "assertion",
+      failureClass:
+        options.passed || options.status === "unexpected-passed"
+          ? undefined
+          : (options.failureClass ?? { id: "assertion", label: "Assertion failure" }),
+      report: createSessionReport({
+        runner: options.runner,
+        usage: {
+          cacheTokens: 7_233,
+          totalTokens: options.totalTokens,
+          inputTokens: 9_830,
+          outputTokens: 1_104,
+          reasoningTokens: 0,
+          inputChars: 10,
+          outputChars: 5,
+          reasoningChars: 0,
+          source: {
+            input: "provider",
+            output: "provider",
+            reasoning: "provider",
+          },
+        },
+        files: {
+          observedReads: ["a", "b", "c"],
+          observedSkillReads: [],
+        },
+      }),
+    })),
     error:
       options.passed || options.status === "unexpected-passed"
         ? undefined

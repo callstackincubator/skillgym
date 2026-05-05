@@ -29,6 +29,7 @@ interface FailureEntry {
   caseId: string;
   runner: RunnerInfo;
   artifactDir: string;
+  attempts?: RunnerResult["attempts"];
   error?: SerializedError;
   failureType?: RunnerFailureType;
   failureOrigin?: RunnerFailureOrigin;
@@ -171,6 +172,7 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
           caseId: event.testCase.id,
           runner: event.result.runner,
           artifactDir: event.result.artifactDir,
+          attempts: event.result.attempts,
           error: event.result.error,
           failureType: event.result.failureType,
           failureOrigin: event.result.failureOrigin,
@@ -301,7 +303,9 @@ function formatRunnerCaseRow(
   accent: (value: string) => string,
 ): string {
   const color = result.passed ? pc.green : pc.red;
-  const statusLabel = formatStatusLabel(result.status);
+  const statusLabel = [formatStatusLabel(result.status), formatRetryLabel(result)]
+    .filter((label): label is string => label !== undefined)
+    .join(", ");
   return [
     color(padCell(`${result.passed ? symbols.pass : symbols.fail} ${caseId}`, RUNNER_CASE_WIDTH)),
     padCell(formatDuration(result.durationMs), RUNNER_TIME_WIDTH),
@@ -381,6 +385,10 @@ function formatFailureBlock(
     lines.push(colors.dim(`Log: ${failure.failureLogPath}`));
   }
 
+  if (failure.attempts !== undefined && failure.attempts.length > 1) {
+    lines.push(colors.dim(`Attempts: ${String(failure.attempts.length)}`));
+  }
+
   lines.push(colors.dim(`Artifacts: ${failure.artifactDir}`));
   return lines.join("\n");
 }
@@ -429,6 +437,16 @@ function formatFailureClassLabel(failureClass: FailureClass): string {
   }
 
   return `${failureClass.label} [${failureClass.id}]`;
+}
+
+function formatRetryLabel(result: RunnerResult): string | undefined {
+  if (result.attempts === undefined || result.attempts.length <= 1) {
+    return undefined;
+  }
+
+  return result.passed
+    ? `passed on retry ${String(result.attempt ?? result.attempts.length)}/${String(result.attempts.length)}`
+    : `failed after ${String(result.attempts.length)} attempts`;
 }
 
 function formatErrorLocation(error: SerializedError): string | undefined {

@@ -42,6 +42,7 @@ test("cli help prints full MOTD banner and help sections", async () => {
   expect(result.stdout).toContain("Run Options:");
   expect(result.stdout).toContain("--schedule <mode>");
   expect(result.stdout).toContain("--max-parallel <n>");
+  expect(result.stdout).toContain("--retry-failed <n>");
   expect(result.stdout).toContain("Examples:");
 });
 

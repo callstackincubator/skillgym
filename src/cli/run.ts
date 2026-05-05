@@ -19,6 +19,7 @@ export async function runCommand(options: {
   outputDir?: string;
   schedule?: string;
   maxParallel?: string;
+  retryFailed?: string;
   caseId?: string;
   runner?: string;
   reporter?: string;
@@ -76,6 +77,7 @@ export async function runCommand(options: {
     outputDir: runOptions.outputDir,
     schedule: runOptions.schedule,
     maxParallel: runOptions.maxParallel,
+    retryFailed: runOptions.retryFailed,
     caseId: options.caseId,
     runner: options.runner,
     tags: runOptions.tags,

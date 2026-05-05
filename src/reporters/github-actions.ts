@@ -50,6 +50,10 @@ function formatAnnotationCommand(caseId: string, result: RunnerResult): string {
 function formatAnnotationMessage(result: RunnerResult): string {
   const lines = [`failure type: ${result.failureType ?? "unknown"}`];
 
+  if (result.attempts !== undefined && result.attempts.length > 1) {
+    lines.push(`attempts: ${String(result.attempts.length)}`);
+  }
+
   if (result.failureOrigin !== undefined) {
     lines.push(`failure origin: ${result.failureOrigin}`);
   }
@@ -147,7 +151,8 @@ function formatRunnerAgentLabel(runner: RunnerSummary["runner"]): string {
 function formatRunnerCaseRow(caseId: string, result: RunnerResult): string {
   const status = result.passed ? "✅" : "❌";
   const usage = result.report.usage;
-  return `| ${status} \`${caseId}\` | ${formatDuration(result.durationMs)} | ${formatTokens(usage.inputTokens)} | ${formatTokens(usage.outputTokens)} | ${formatTokens(usage.reasoningTokens)} | ${formatTokens(usage.cacheTokens)} | ${formatTokens(usage.totalTokens)} |`;
+  const retryLabel = formatRetryLabel(result);
+  return `| ${status} \`${caseId}\`${retryLabel === undefined ? "" : ` ${retryLabel}`} | ${formatDuration(result.durationMs)} | ${formatTokens(usage.inputTokens)} | ${formatTokens(usage.outputTokens)} | ${formatTokens(usage.reasoningTokens)} | ${formatTokens(usage.cacheTokens)} | ${formatTokens(usage.totalTokens)} |`;
 }
 
 function getRunnerCases(
@@ -167,6 +172,10 @@ function formatFailureSummaryItem(caseId: string, result: RunnerResult): string 
     `artifacts: \`${result.artifactDir}\``,
   ];
 
+  if (result.attempts !== undefined && result.attempts.length > 1) {
+    segments.splice(2, 0, `attempts: ${String(result.attempts.length)}`);
+  }
+
   if (result.failureClass !== undefined) {
     segments.splice(2, 0, `class: \`${result.failureClass.id}\``);
   }
@@ -180,6 +189,16 @@ function formatFailureSummaryItem(caseId: string, result: RunnerResult): string 
   }
 
   return segments.join("; ");
+}
+
+function formatRetryLabel(result: RunnerResult): string | undefined {
+  if (result.attempts === undefined || result.attempts.length <= 1) {
+    return undefined;
+  }
+
+  return result.passed
+    ? `(passed on retry ${String(result.attempt ?? result.attempts.length)}/${String(result.attempts.length)})`
+    : `(failed after ${String(result.attempts.length)} attempts)`;
 }
 
 function listFailures(result: SuiteRunResult): Array<{ caseId: string; result: RunnerResult }> {

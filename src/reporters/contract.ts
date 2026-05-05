@@ -38,6 +38,8 @@ export interface RunnerStartEvent {
   context: ReporterContext;
   testCase: TestCase;
   runner: RunnerInfo;
+  attempt?: number;
+  maxAttempts?: number;
   caseIndex: number;
   totalCases: number;
 }
@@ -47,6 +49,8 @@ export interface RunnerFinishEvent {
   testCase: TestCase;
   runner: RunnerInfo;
   result: RunnerResult;
+  attempt?: number;
+  maxAttempts?: number;
   caseIndex: number;
   totalCases: number;
 }

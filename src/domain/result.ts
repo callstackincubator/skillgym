@@ -1,7 +1,7 @@
 import type { RunnerInfo } from "./runner.js";
 import type { SessionReport } from "./session-report.js";
 
-export interface RunnerResult {
+interface BaseRunnerResult {
   runner: RunnerInfo;
   passed: boolean;
   status: RunnerResultStatus;
@@ -13,6 +13,15 @@ export interface RunnerResult {
   failureOrigin?: RunnerFailureOrigin;
   failureClass?: FailureClass;
   failureLogPath?: string;
+}
+
+export interface RunnerAttemptResult extends BaseRunnerResult {
+  attempt: number;
+}
+
+export interface RunnerResult extends BaseRunnerResult {
+  attempt?: number;
+  attempts?: RunnerAttemptResult[];
 }
 
 export interface FailureClass {

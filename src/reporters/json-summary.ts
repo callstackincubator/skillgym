@@ -14,6 +14,22 @@ interface SummaryError {
 interface SummaryRunnerResult {
   runner: RunnerResult["runner"];
   passed: boolean;
+  status: RunnerResult["status"];
+  attempt?: number;
+  durationMs: number;
+  artifactDir: string;
+  usage: RunnerResult["report"]["usage"];
+  attempts?: SummaryAttemptResult[];
+  error?: SummaryError;
+  failureType?: RunnerResult["failureType"];
+  failureOrigin?: RunnerResult["failureOrigin"];
+  failureClass?: FailureClass;
+}
+
+interface SummaryAttemptResult {
+  passed: boolean;
+  status: RunnerResult["status"];
+  attempt: number;
   durationMs: number;
   artifactDir: string;
   usage: RunnerResult["report"]["usage"];
@@ -46,6 +62,43 @@ function summarizeRunnerResult(result: RunnerResult): SummaryRunnerResult {
   const summary: SummaryRunnerResult = {
     runner: result.runner,
     passed: result.passed,
+    status: result.status,
+    attempt: result.attempt,
+    durationMs: result.durationMs,
+    artifactDir: result.artifactDir,
+    usage: result.report.usage,
+  };
+
+  if (result.attempts !== undefined) {
+    summary.attempts = result.attempts.map(summarizeAttemptResult);
+  }
+
+  if (result.error !== undefined) {
+    summary.error = { name: result.error.name, message: result.error.message };
+  }
+
+  if (result.failureType !== undefined) {
+    summary.failureType = result.failureType;
+  }
+
+  if (result.failureOrigin !== undefined) {
+    summary.failureOrigin = result.failureOrigin;
+  }
+
+  if (result.failureClass !== undefined) {
+    summary.failureClass = result.failureClass;
+  }
+
+  return summary;
+}
+
+function summarizeAttemptResult(
+  result: NonNullable<RunnerResult["attempts"]>[number],
+): SummaryAttemptResult {
+  const summary: SummaryAttemptResult = {
+    passed: result.passed,
+    status: result.status,
+    attempt: result.attempt,
     durationMs: result.durationMs,
     artifactDir: result.artifactDir,
     usage: result.report.usage,
