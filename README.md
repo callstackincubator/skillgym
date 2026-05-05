@@ -104,6 +104,13 @@ View CLI help:
 npx skillgym help
 ```
 
+List bundled agent-facing skills and read the main one:
+
+```bash
+npx skillgym skills list
+npx skillgym skills get core
+```
+
 By default, `skillgym` uses the built-in `standard` reporter.
 
 TypeScript config, suite, and reporter modules work out of the box on Node `>=22.18.0` using Node's built-in TypeScript stripping.

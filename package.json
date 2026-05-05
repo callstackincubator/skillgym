@@ -26,7 +26,8 @@
   },
   "files": [
     "dist",
-    "bin.js"
+    "bin.js",
+    "skills"
   ],
   "type": "module",
   "main": "./dist/index.js",

@@ -7,9 +7,13 @@ export function printHelp(): void {
   console.log(`
 ${theme.bold("Usage:")} skillgym <command> [options]
 
+If you are an LLM agent, run ${theme.light("skillgym skills get core")} before authoring or debugging a benchmark suite.
+
 ${theme.bold("Commands:")}
-  run ${theme.accent("<suite.ts>")}    Execute a benchmark suite against the configured runners
-  help              Show this help message
+  run ${theme.accent("<suite.ts>")}     Execute a benchmark suite against the configured runners
+  skills list        List bundled skill files
+  skills get ${theme.accent("<name>")}  Print one bundled skill file
+  help               Show this help message
 
 ${theme.bold("Run Options:")}
   --config ${theme.accent("<path>")}        Load an explicit skillgym config file
@@ -25,6 +29,7 @@ ${theme.bold("Run Options:")}
   --update-snapshots       Refresh snapshot baselines for the executed runs
 
 ${theme.bold("Examples:")}
+  ${theme.dim("$")} ${theme.light("skillgym skills get core")}
   ${theme.dim("$")} ${theme.light("skillgym run ./examples/basic-suite.ts")}
   ${theme.dim("$")} ${theme.light("skillgym run ./examples/basic-suite.ts --runner open-main")}
   ${theme.dim("$")} ${theme.light("skillgym run ./examples/basic-suite.ts --case always-passes")}
