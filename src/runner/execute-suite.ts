@@ -2,7 +2,13 @@ import path from "node:path";
 import process from "node:process";
 import os from "node:os";
 import { getCaseExecutionOptions } from "../config.js";
-import type { CaseResult, RunnerResult, RunnerSummary, SuiteRunResult } from "../domain/result.js";
+import type {
+  CaseResult,
+  RunnerAttemptResult,
+  RunnerResult,
+  RunnerSummary,
+  SuiteRunResult,
+} from "../domain/result.js";
 import type { ResolvedRunner, RunnerConfig, RunnerInfo } from "../domain/runner.js";
 import type { ScheduleMode } from "../domain/schedule.js";
 import type { SuiteWorkspaceConfig, TestCase } from "../domain/test-case.js";
@@ -49,6 +55,7 @@ export async function executeSuite(
     outputDir?: string;
     schedule?: ScheduleMode;
     maxParallel?: number;
+    retryFailed?: number;
     caseId?: string;
     runner?: string;
     tags?: string[];
@@ -59,6 +66,7 @@ export async function executeSuite(
       run?: {
         workspace?: SuiteWorkspaceConfig;
         maxSteps?: number;
+        retryFailed?: number;
         tags?: string[];
       };
       runners: Record<string, RunnerConfig>;
@@ -76,6 +84,7 @@ export async function executeSuite(
   const outputDir = path.resolve(options.outputDir ?? ".skillgym-results", timestampDirName());
   const scheduleMode = options.schedule ?? "serial";
   const maxParallel = resolveMaxParallel(scheduleMode, options.maxParallel);
+  const retryFailed = options.retryFailed ?? options.config.run?.retryFailed ?? 0;
   await ensureDir(outputDir);
   const selectedRunners = selectRunners(options.config.runners, options.runner);
   const normalizedCases = normalizeTestCases(testCases);
@@ -196,6 +205,7 @@ export async function executeSuite(
         snapshots: options.snapshots,
         snapshotStore,
         maxSteps: options.config.run?.maxSteps,
+        retryFailed,
         reporter: options.reporter,
         rejectedRunners,
       });
@@ -214,6 +224,7 @@ export async function executeSuite(
         snapshots: options.snapshots,
         snapshotStore,
         maxSteps: options.config.run?.maxSteps,
+        retryFailed,
         reporter: options.reporter,
         rejectedRunners,
       });
@@ -317,6 +328,7 @@ async function executePlannedExecution(
     snapshots?: SnapshotRuntimeOptions;
     snapshotStore?: SnapshotStore;
     maxSteps?: number;
+    retryFailed: number;
     reporter?: BenchmarkReporter;
     rejectedRunners: Map<string, RunnerResult>;
   },
@@ -338,14 +350,6 @@ async function executePlannedExecution(
     });
   }
 
-  await options.reporter?.onRunnerStart?.({
-    context: options.context,
-    testCase: item.testCase,
-    runner: item.runner.info,
-    caseIndex: item.caseIndex + 1,
-    totalCases: options.selectedCases.length,
-  });
-
   const artifactDir = path.join(
     options.outputDir,
     sanitizePathSegment(item.testCase.id),
@@ -353,46 +357,86 @@ async function executePlannedExecution(
   );
   await ensureDir(artifactDir);
 
-  const rejectedResult = options.rejectedRunners.get(item.runner.id);
-  const rawResult =
-    rejectedResult === undefined
-      ? await runExecution(item, {
-          resolvedWorkspace: options.resolvedWorkspace,
-          executeRunnerFn: options.executeRunnerFn,
-          outputDir: options.outputDir,
-          maxSteps: options.maxSteps,
-          snapshots: options.snapshots,
-          snapshotStore: options.snapshotStore,
-        })
-      : await createRejectedModelResult(item, artifactDir);
+  const maxAttempts = options.retryFailed + 1;
+  const attempts: RunnerAttemptResult[] = [];
+  let result: RunnerResult | undefined;
 
-  if (rejectedResult === undefined && (await isModelRejectedResult(rawResult))) {
-    rawResult.failureType = "runner-crash";
-    rawResult.failureOrigin = "model-rejected";
-    if (rawResult.error?.name === "AssertionError" || rawResult.error === undefined) {
-      rawResult.error = {
-        name: "Error",
-        message: `Runner rejected configured model "${item.runner.info.agent.model ?? "unknown"}" during initial execution.`,
-      };
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    await options.reporter?.onRunnerStart?.({
+      context: options.context,
+      testCase: item.testCase,
+      runner: item.runner.info,
+      attempt,
+      maxAttempts,
+      caseIndex: item.caseIndex + 1,
+      totalCases: options.selectedCases.length,
+    });
+
+    const attemptArtifactDir = resolveAttemptArtifactDir(artifactDir, attempt);
+    await ensureDir(attemptArtifactDir);
+
+    const rejectedResult = options.rejectedRunners.get(item.runner.id);
+    const rawResult =
+      rejectedResult === undefined
+        ? await runExecution(item, {
+            artifactDir: attemptArtifactDir,
+            resolvedWorkspace: options.resolvedWorkspace,
+            executeRunnerFn: options.executeRunnerFn,
+            outputDir: options.outputDir,
+            maxSteps: options.maxSteps,
+            snapshots: options.snapshots,
+            snapshotStore: options.snapshotStore,
+          })
+        : await createRejectedModelResult(item, attemptArtifactDir);
+
+    if (rejectedResult === undefined && (await isModelRejectedResult(rawResult))) {
+      rawResult.failureType = "runner-crash";
+      rawResult.failureOrigin = "model-rejected";
+      if (rawResult.error?.name === "AssertionError" || rawResult.error === undefined) {
+        rawResult.error = {
+          name: "Error",
+          message: `Runner rejected configured model "${item.runner.info.agent.model ?? "unknown"}" during initial execution.`,
+        };
+      }
+      rawResult.failureLogPath ??= path.join(attemptArtifactDir, "stderr.log");
+      options.rejectedRunners.set(item.runner.id, rawResult);
+      await writeJson(path.join(attemptArtifactDir, "error.json"), rawResult.error);
+      await writeJson(path.join(attemptArtifactDir, "report.json"), rawResult.report);
     }
-    rawResult.failureLogPath ??= path.join(artifactDir, "stderr.log");
-    options.rejectedRunners.set(item.runner.id, rawResult);
-    await writeJson(path.join(artifactDir, "error.json"), rawResult.error);
-    await writeJson(path.join(artifactDir, "report.json"), rawResult.report);
+
+    const classifiedAttempt = createAttemptResult(
+      classifyExpectedFailure(item.testCase, rawResult),
+      attempt,
+    );
+    attempts.push(classifiedAttempt);
+    result = {
+      ...classifiedAttempt,
+      attempts: [...attempts],
+    };
+
+    await options.reporter?.onRunnerFinish?.({
+      context: options.context,
+      testCase: item.testCase,
+      runner: item.runner.info,
+      result,
+      attempt,
+      maxAttempts,
+      caseIndex: item.caseIndex + 1,
+      totalCases: options.selectedCases.length,
+    });
+
+    if (!shouldRetry(classifiedAttempt, options.retryFailed, attempt)) {
+      break;
+    }
   }
 
-  const result = classifyExpectedFailure(item.testCase, rawResult);
+  if (result === undefined) {
+    throw new Error(
+      `Execution finished without a result for ${item.testCase.id} > ${item.runner.id}`,
+    );
+  }
 
   options.caseResults[item.caseIndex]!.runnerResults[item.runnerIndex] = result;
-
-  await options.reporter?.onRunnerFinish?.({
-    context: options.context,
-    testCase: item.testCase,
-    runner: item.runner.info,
-    result,
-    caseIndex: item.caseIndex + 1,
-    totalCases: options.selectedCases.length,
-  });
 
   state.completedRuns += 1;
 
@@ -412,6 +456,7 @@ async function executePlannedExecution(
 async function runExecution(
   item: PlannedSuiteExecution,
   options: {
+    artifactDir: string;
     resolvedWorkspace: ReturnType<typeof resolveEffectiveWorkspace>;
     executeRunnerFn: typeof executeRunner;
     outputDir: string;
@@ -420,18 +465,13 @@ async function runExecution(
     snapshotStore?: SnapshotStore;
   },
 ): Promise<RunnerResult> {
-  const artifactDir = path.join(
-    options.outputDir,
-    sanitizePathSegment(item.testCase.id),
-    item.runner.info.pathKey,
-  );
   const executionStartedMs = Date.now();
   let result: RunnerResult;
   let preparedWorkspace;
 
   try {
     preparedWorkspace = await prepareWorkspace(options.resolvedWorkspace, {
-      artifactDir,
+      artifactDir: options.artifactDir,
       outputDir: options.outputDir,
       testCase: item.testCase,
       runner: item.runner.info,
@@ -444,7 +484,7 @@ async function runExecution(
       getAdapter(item.runner.config.agent),
       {
         cwd: preparedWorkspace.cwd,
-        artifactDir,
+        artifactDir: options.artifactDir,
         timeoutMs: item.timeoutMs,
         maxSteps: options.maxSteps,
         snapshots:
@@ -458,25 +498,40 @@ async function runExecution(
     result = createExecutionFailureResult(error, {
       testCase: item.testCase,
       runner: item.runner.info,
-      artifactDir,
+      artifactDir: options.artifactDir,
       durationMs: Date.now() - executionStartedMs,
       failureOrigin: isWorkspaceFailure ? classifyWorkspaceFailureOrigin(error) : undefined,
       failureLogPath: isWorkspaceFailure
-        ? resolveWorkspaceFailureLogPath(artifactDir, error)
+        ? resolveWorkspaceFailureLogPath(options.artifactDir, error)
         : undefined,
     });
-    await writeJson(path.join(artifactDir, "error.json"), result.error);
-    await writeJson(path.join(artifactDir, "report.json"), result.report);
+    await writeJson(path.join(options.artifactDir, "error.json"), result.error);
+    await writeJson(path.join(options.artifactDir, "report.json"), result.report);
   } finally {
     if (preparedWorkspace !== undefined) {
       await finalizeWorkspace(preparedWorkspace, {
-        artifactDir,
+        artifactDir: options.artifactDir,
         passed: result!.passed,
       });
     }
   }
 
   return result;
+}
+
+function createAttemptResult(result: RunnerResult, attempt: number): RunnerAttemptResult {
+  return {
+    ...result,
+    attempt,
+  };
+}
+
+function shouldRetry(result: RunnerAttemptResult, retryFailed: number, attempt: number): boolean {
+  return !result.passed && attempt <= retryFailed && result.failureOrigin !== "model-rejected";
+}
+
+function resolveAttemptArtifactDir(artifactDir: string, attempt: number): string {
+  return attempt === 1 ? artifactDir : path.join(artifactDir, `attempt-${String(attempt)}`);
 }
 
 async function createRejectedModelResult(

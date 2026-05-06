@@ -33,8 +33,121 @@ test("json-summary reporter omits session internals and prints summary on suite 
             runner,
             passed: false,
             status: "failed",
+            attempt: 2,
             durationMs: 18_200,
             artifactDir: ".skillgym-results/run-1/case-a/open-main",
+            attempts: [
+              {
+                runner,
+                passed: false,
+                status: "failed",
+                attempt: 1,
+                durationMs: 20_000,
+                artifactDir: ".skillgym-results/run-1/case-a/open-main",
+                failureType: "assertion",
+                failureOrigin: "assertion",
+                failureClass: {
+                  id: "missing-flag",
+                  label: "Missing required flag",
+                },
+                error: {
+                  name: "AssertionError",
+                  message: "expected skill to be loaded",
+                },
+                report: {
+                  runner,
+                  sessionId: "sess-attempt-1",
+                  prompt: "Do the thing",
+                  usage: {
+                    inputTokens: 900,
+                    outputTokens: 180,
+                    reasoningTokens: 40,
+                    cacheTokens: 350,
+                    totalTokens: 1080,
+                    inputChars: 4000,
+                    outputChars: 800,
+                    reasoningChars: 200,
+                    source: { input: "provider", output: "provider", reasoning: "derived" },
+                  },
+                  files: {
+                    observedReads: ["/workspace/src/index.ts"],
+                    observedSkillReads: ["/workspace/.claude/skills/my-skill.md"],
+                  },
+                  detectedSkills: [],
+                  events: [],
+                  finalOutput: "Done.",
+                  startedAt: "2026-04-02T12:00:00.000Z",
+                  endedAt: "2026-04-02T12:00:20.000Z",
+                  durationMs: 20_000,
+                  rawArtifacts: {},
+                },
+              },
+              {
+                runner,
+                passed: false,
+                status: "failed",
+                attempt: 2,
+                durationMs: 18_200,
+                artifactDir: ".skillgym-results/run-1/case-a/open-main",
+                failureType: "assertion",
+                failureOrigin: "assertion",
+                failureClass: {
+                  id: "missing-flag",
+                  label: "Missing required flag",
+                },
+                error: {
+                  name: "AssertionError",
+                  message: "expected skill to be loaded",
+                  stack:
+                    "AssertionError: expected skill to be loaded\n    at /workspace/suite.ts:10:5",
+                },
+                report: {
+                  runner,
+                  sessionId: "sess-abc123",
+                  prompt: "Do the thing",
+                  usage: {
+                    inputTokens: 1000,
+                    outputTokens: 200,
+                    reasoningTokens: 50,
+                    cacheTokens: 400,
+                    totalTokens: 1200,
+                    inputChars: 4000,
+                    outputChars: 800,
+                    reasoningChars: 200,
+                    source: { input: "provider", output: "provider", reasoning: "derived" },
+                  },
+                  files: {
+                    observedReads: ["/workspace/src/index.ts"],
+                    observedSkillReads: ["/workspace/.claude/skills/my-skill.md"],
+                  },
+                  detectedSkills: [
+                    { skill: "my-skill", confidence: "explicit", evidence: ["loaded skill"] },
+                  ],
+                  events: [
+                    {
+                      type: "toolCall",
+                      tool: "Read",
+                      args: { file_path: "/workspace/src/index.ts" },
+                      at: "2026-04-02T12:00:01.000Z",
+                    },
+                    {
+                      type: "message",
+                      role: "assistant",
+                      text: "I'll read the file.",
+                      at: "2026-04-02T12:00:02.000Z",
+                    },
+                  ],
+                  finalOutput: "Done.",
+                  startedAt: "2026-04-02T12:00:00.000Z",
+                  endedAt: "2026-04-02T12:00:18.000Z",
+                  durationMs: 18_200,
+                  rawArtifacts: {
+                    stdoutPath: ".skillgym-results/run-1/case-a/open-main/stdout.log",
+                    sessionPath: ".skillgym-results/run-1/case-a/open-main/session.json",
+                  },
+                },
+              },
+            ],
             failureType: "assertion",
             failureOrigin: "assertion",
             failureClass: {
@@ -156,6 +269,9 @@ test("json-summary reporter omits session internals and prints summary on suite 
   const runnerResult = caseResult.runnerResults[0];
   expect(runnerResult.runner.id).toBe("open-main");
   expect(runnerResult.passed).toBe(false);
+  expect(runnerResult.status).toBe("failed");
+  expect(runnerResult.attempt).toBe(2);
+  expect(runnerResult.retryCount).toBe(1);
   expect(runnerResult.durationMs).toBe(18_200);
   expect(runnerResult.artifactDir).toBe(".skillgym-results/run-1/case-a/open-main");
   expect(runnerResult.failureType).toBe("assertion");
@@ -173,6 +289,58 @@ test("json-summary reporter omits session internals and prints summary on suite 
   // usage preserved
   expect(runnerResult.usage.inputTokens).toBe(1000);
   expect(runnerResult.usage.totalTokens).toBe(1200);
+  expect(runnerResult.attempts).toEqual([
+    {
+      passed: false,
+      status: "failed",
+      attempt: 1,
+      durationMs: 20_000,
+      artifactDir: ".skillgym-results/run-1/case-a/open-main",
+      usage: {
+        inputTokens: 900,
+        outputTokens: 180,
+        reasoningTokens: 40,
+        cacheTokens: 350,
+        totalTokens: 1080,
+        inputChars: 4000,
+        outputChars: 800,
+        reasoningChars: 200,
+        source: { input: "provider", output: "provider", reasoning: "derived" },
+      },
+      error: { name: "AssertionError", message: "expected skill to be loaded" },
+      failureType: "assertion",
+      failureOrigin: "assertion",
+      failureClass: {
+        id: "missing-flag",
+        label: "Missing required flag",
+      },
+    },
+    {
+      passed: false,
+      status: "failed",
+      attempt: 2,
+      durationMs: 18_200,
+      artifactDir: ".skillgym-results/run-1/case-a/open-main",
+      usage: {
+        inputTokens: 1000,
+        outputTokens: 200,
+        reasoningTokens: 50,
+        cacheTokens: 400,
+        totalTokens: 1200,
+        inputChars: 4000,
+        outputChars: 800,
+        reasoningChars: 200,
+        source: { input: "provider", output: "provider", reasoning: "derived" },
+      },
+      error: { name: "AssertionError", message: "expected skill to be loaded" },
+      failureType: "assertion",
+      failureOrigin: "assertion",
+      failureClass: {
+        id: "missing-flag",
+        label: "Missing required flag",
+      },
+    },
+  ]);
 
   // session internals omitted
   expect(runnerResult.report).toBeUndefined();

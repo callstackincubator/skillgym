@@ -29,6 +29,7 @@ interface FailureEntry {
   caseId: string;
   runner: RunnerInfo;
   artifactDir: string;
+  attempts?: RunnerResult["attempts"];
   error?: SerializedError;
   failureType?: RunnerFailureType;
   failureOrigin?: RunnerFailureOrigin;
@@ -61,6 +62,7 @@ interface InteractiveRunEntry {
   caseId: string;
   runner: RunnerInfo;
   status: InteractiveRunStatus;
+  retryCount: number;
 }
 
 interface InteractiveState {
@@ -93,7 +95,6 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
     colors.isColorSupported ? `${ACCENT_OPEN}${value}${ACCENT_CLOSE}` : value;
   const symbols: ReporterSymbols = getSymbols(unicode);
   const spinner = unicode ? cliSpinners.dots : cliSpinners.line;
-  const failures: FailureEntry[] = [];
   let interactiveState: InteractiveState | undefined;
 
   return {
@@ -148,36 +149,25 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
       }
 
       const key = createRunKey(event.testCase.id, event.runner.id);
-      setInteractiveRunStatus(interactiveState, key, "running");
+      setInteractiveRunResult(interactiveState, key, { status: "running", retryCount: 0 });
       interactiveState.spinnerFrameIndex = 0;
       renderInteractiveRunList(interactiveState, stdout, colors, symbols, spinner.frames);
       startSpinner(interactiveState, stdout, colors, symbols, spinner.frames, spinner.interval);
     },
     onRunnerFinish(event) {
       if (interactive && interactiveState !== undefined) {
-        setInteractiveRunStatus(
+        setInteractiveRunResult(
           interactiveState,
           createRunKey(event.testCase.id, event.runner.id),
-          event.result.status,
+          {
+            status: event.result.status,
+            retryCount: countRetries(event.result),
+          },
         );
         if (!hasRunningEntries(interactiveState)) {
           stopSpinner(interactiveState);
         }
         renderInteractiveRunList(interactiveState, stdout, colors, symbols, spinner.frames);
-      }
-
-      if (!event.result.passed) {
-        failures.push({
-          caseId: event.testCase.id,
-          runner: event.result.runner,
-          artifactDir: event.result.artifactDir,
-          error: event.result.error,
-          failureType: event.result.failureType,
-          failureOrigin: event.result.failureOrigin,
-          failureClass: event.result.failureClass,
-          failureLogPath: event.result.failureLogPath,
-          status: event.result.status,
-        });
       }
     },
     onCaseFinish(event) {
@@ -188,6 +178,8 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
       writeLine(formatCaseRow(event.result, symbols), stdout);
     },
     onSuiteFinish(event) {
+      const failures = collectFinalFailures(event.result);
+
       if (interactiveState !== undefined) {
         stopSpinner(interactiveState);
         renderInteractiveRunList(interactiveState, stdout, colors, symbols, spinner.frames);
@@ -200,7 +192,13 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
         writeLine(formatRunnerLegend(colors), stdout);
         for (const caseResult of getRunnerCases(event.result, summary.runner.id)) {
           writeLine(
-            formatRunnerCaseRow(caseResult.caseId, caseResult.runnerResult, symbols, accent),
+            formatRunnerCaseRow(
+              caseResult.caseId,
+              caseResult.runnerResult,
+              symbols,
+              accent,
+              colors,
+            ),
             stdout,
           );
         }
@@ -299,13 +297,16 @@ function formatRunnerCaseRow(
   result: RunnerResult,
   symbols: ReturnType<typeof getSymbols>,
   accent: (value: string) => string,
+  _colors: ReturnType<typeof pc.createColors>,
 ): string {
   const color = result.passed ? pc.green : pc.red;
   const statusLabel = formatStatusLabel(result.status);
+  const caseLabel = `${result.passed ? symbols.pass : symbols.fail} ${caseId}`;
+
   return [
-    color(padCell(`${result.passed ? symbols.pass : symbols.fail} ${caseId}`, RUNNER_CASE_WIDTH)),
+    color(padCell(caseLabel, RUNNER_CASE_WIDTH)),
     padCell(formatDuration(result.durationMs), RUNNER_TIME_WIDTH),
-    statusLabel === undefined
+    (statusLabel === undefined ? "" : statusLabel) === ""
       ? formatTokenSummary(result.report.usage, accent)
       : `${formatTokenSummary(result.report.usage, accent)} ${pc.dim(statusLabel)}`,
   ].join("   ");
@@ -379,6 +380,10 @@ function formatFailureBlock(
 
   if (failure.failureLogPath !== undefined && failure.failureType !== "assertion") {
     lines.push(colors.dim(`Log: ${failure.failureLogPath}`));
+  }
+
+  if (failure.attempts !== undefined && failure.attempts.length > 1) {
+    lines.push(colors.dim(`Attempts: ${String(failure.attempts.length)}`));
   }
 
   lines.push(colors.dim(`Artifacts: ${failure.artifactDir}`));
@@ -588,6 +593,31 @@ function getRunnerCases(
   });
 }
 
+function collectFinalFailures(result: SuiteRunResult): FailureEntry[] {
+  return result.cases.flatMap((caseResult) =>
+    caseResult.runnerResults.flatMap((runnerResult) => {
+      if (runnerResult.passed) {
+        return [];
+      }
+
+      return [
+        {
+          caseId: caseResult.caseId,
+          runner: runnerResult.runner,
+          artifactDir: runnerResult.artifactDir,
+          attempts: runnerResult.attempts,
+          error: runnerResult.error,
+          failureType: runnerResult.failureType,
+          failureOrigin: runnerResult.failureOrigin,
+          failureClass: runnerResult.failureClass,
+          failureLogPath: runnerResult.failureLogPath,
+          status: runnerResult.status,
+        },
+      ];
+    }),
+  );
+}
+
 function createInteractiveState(event: SuiteStartEvent): InteractiveState {
   const entries = event.cases.flatMap((testCase) => {
     return event.runners.map((runner) => ({
@@ -595,6 +625,7 @@ function createInteractiveState(event: SuiteStartEvent): InteractiveState {
       caseId: testCase.id,
       runner,
       status: "queued" as const,
+      retryCount: 0,
     }));
   });
 
@@ -610,10 +641,10 @@ function createRunKey(caseId: string, runnerId: string): string {
   return `${caseId}\u0000${runnerId}`;
 }
 
-function setInteractiveRunStatus(
+function setInteractiveRunResult(
   state: InteractiveState,
   key: string,
-  status: InteractiveRunStatus,
+  result: { status: InteractiveRunStatus; retryCount: number },
 ): void {
   const index = state.entryIndexByKey.get(key);
 
@@ -623,7 +654,8 @@ function setInteractiveRunStatus(
 
   state.entries[index] = {
     ...state.entries[index]!,
-    status,
+    status: result.status,
+    retryCount: result.retryCount,
   };
 }
 
@@ -685,8 +717,10 @@ function formatInteractiveRunRow(
 ): string {
   const statusIcon = formatInteractiveStatusIcon(entry, state, colors, symbols, frames);
   const statusLabel = formatInteractiveStatusLabel(entry.status);
+  const retryLabel = formatInteractiveRetryLabel(entry, colors);
   const row = `${statusIcon} ${padCell(entry.caseId, caseWidth)}  /  ${entry.runner.id}${statusLabel}`;
   const runnerMeta = ` ${formatRunnerAgentLabel(entry.runner)}`;
+  const retryMeta = retryLabel === undefined ? "" : ` ${retryLabel}`;
 
   switch (entry.status) {
     case "queued":
@@ -695,7 +729,7 @@ function formatInteractiveRunRow(
       return `${row}${colors.dim(runnerMeta)}`;
     case "passed":
     case "expected-failed":
-      return `${colors.green(row)}${colors.dim(runnerMeta)}`;
+      return `${colors.green(row)}${colors.dim(runnerMeta)}${retryMeta}`;
     case "failed":
     case "unexpected-passed":
       return `${colors.red(row)}${colors.dim(runnerMeta)}`;
@@ -715,6 +749,25 @@ function formatInteractiveStatusLabel(status: InteractiveRunStatus): string {
     case "passed":
       return "";
   }
+}
+
+function formatInteractiveRetryLabel(
+  entry: InteractiveRunEntry,
+  colors: ReturnType<typeof pc.createColors>,
+): string | undefined {
+  if (entry.status !== "passed" || entry.retryCount === 0) {
+    return undefined;
+  }
+
+  return colors.yellow(formatRetryCountLabel(entry.retryCount));
+}
+
+function countRetries(result: RunnerResult): number {
+  return Math.max(0, (result.attempts?.length ?? 1) - 1);
+}
+
+function formatRetryCountLabel(retryCount: number): string {
+  return `(${retryCount === 1 ? "1 retry" : `${String(retryCount)} retries`})`;
 }
 
 function formatInteractiveStatusIcon(

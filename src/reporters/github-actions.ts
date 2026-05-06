@@ -49,6 +49,11 @@ function formatAnnotationCommand(caseId: string, result: RunnerResult): string {
 
 function formatAnnotationMessage(result: RunnerResult): string {
   const lines = [`failure type: ${result.failureType ?? "unknown"}`];
+  const retryCount = countRetries(result);
+
+  if (retryCount > 0) {
+    lines.push(`retries: ${String(retryCount)}`);
+  }
 
   if (result.failureOrigin !== undefined) {
     lines.push(`failure origin: ${result.failureOrigin}`);
@@ -147,7 +152,8 @@ function formatRunnerAgentLabel(runner: RunnerSummary["runner"]): string {
 function formatRunnerCaseRow(caseId: string, result: RunnerResult): string {
   const status = result.passed ? "✅" : "❌";
   const usage = result.report.usage;
-  return `| ${status} \`${caseId}\` | ${formatDuration(result.durationMs)} | ${formatTokens(usage.inputTokens)} | ${formatTokens(usage.outputTokens)} | ${formatTokens(usage.reasoningTokens)} | ${formatTokens(usage.cacheTokens)} | ${formatTokens(usage.totalTokens)} |`;
+  const retryLabel = formatRetryLabel(result);
+  return `| ${status} \`${caseId}\`${retryLabel === undefined ? "" : ` ${retryLabel}`} | ${formatDuration(result.durationMs)} | ${formatTokens(usage.inputTokens)} | ${formatTokens(usage.outputTokens)} | ${formatTokens(usage.reasoningTokens)} | ${formatTokens(usage.cacheTokens)} | ${formatTokens(usage.totalTokens)} |`;
 }
 
 function getRunnerCases(
@@ -167,6 +173,12 @@ function formatFailureSummaryItem(caseId: string, result: RunnerResult): string 
     `artifacts: \`${result.artifactDir}\``,
   ];
 
+  const retryCount = countRetries(result);
+
+  if (retryCount > 0) {
+    segments.splice(2, 0, `retries: ${String(retryCount)}`);
+  }
+
   if (result.failureClass !== undefined) {
     segments.splice(2, 0, `class: \`${result.failureClass.id}\``);
   }
@@ -180,6 +192,19 @@ function formatFailureSummaryItem(caseId: string, result: RunnerResult): string 
   }
 
   return segments.join("; ");
+}
+
+function formatRetryLabel(result: RunnerResult): string | undefined {
+  const retryCount = countRetries(result);
+  if (retryCount === 0) {
+    return undefined;
+  }
+
+  return `(${retryCount === 1 ? "1 retry" : `${String(retryCount)} retries`})`;
+}
+
+function countRetries(result: RunnerResult): number {
+  return Math.max(0, (result.attempts?.length ?? 1) - 1);
 }
 
 function listFailures(result: SuiteRunResult): Array<{ caseId: string; result: RunnerResult }> {

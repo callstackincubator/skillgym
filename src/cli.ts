@@ -23,6 +23,7 @@ async function main(): Promise<void> {
       const scheduleOption = parsed.options.schedule;
       const configOption = parsed.options.config;
       const maxParallelOption = parsed.options["max-parallel"];
+      const retryFailedOption = parsed.options["retry-failed"];
       const updateSnapshotsOption = parsed.options["update-snapshots"];
       const snapshotsOption = parsed.options.snapshots;
       const tagOption = parsed.options.tag;
@@ -36,6 +37,7 @@ async function main(): Promise<void> {
         reporter: getStringOption(reporterOption),
         schedule: getStringOption(scheduleOption),
         maxParallel: getStringOption(maxParallelOption),
+        retryFailed: getStringOption(retryFailedOption),
         tags: parseTagOption(tagOption),
         reporterCwd: process.cwd(),
         configPath: getStringOption(configOption),

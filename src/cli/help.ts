@@ -21,6 +21,7 @@ ${theme.bold("Run Options:")}
   --output-dir ${theme.accent("<path>")}    Override where run artifacts are written
   --schedule ${theme.accent("<mode>")}      Choose ${theme.light("serial")}, ${theme.light("parallel")}, or ${theme.light("isolated-by-runner")}
   --max-parallel ${theme.accent("<n>")}     Cap concurrent executions for non-serial schedules
+  --retry-failed ${theme.accent("<n>")}     Retry only failed case x runner executions up to ${theme.light("n")} extra times
   --case ${theme.accent("<id>")}            Filter the configured suite to one case id
   --tag ${theme.accent("<tag>")}            Filter cases by tag; repeat or comma-separate for OR matching
   --runner ${theme.accent("<runner-id>")}   Filter the configured runner set by runner id
@@ -37,6 +38,7 @@ ${theme.bold("Examples:")}
   ${theme.dim("$")} ${theme.light("skillgym run ./examples/basic-suite.ts --reporter standard")}
   ${theme.dim("$")} ${theme.light("skillgym run ./examples/basic-suite.ts --schedule isolated-by-runner")}
   ${theme.dim("$")} ${theme.light("skillgym run ./examples/basic-suite.ts --schedule parallel --max-parallel 4")}
+  ${theme.dim("$")} ${theme.light("skillgym run ./examples/basic-suite.ts --retry-failed 2")}
   ${theme.dim("$")} ${theme.light("skillgym run ./examples/basic-suite.ts --update-snapshots")}
 `);
 }
