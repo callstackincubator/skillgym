@@ -71,6 +71,9 @@ export class CursorAgentAdapter extends BaseAdapter implements RunnerAdapter {
     const observedReads: string[] = [];
     const explicitSkillNames = new Set<string>();
     const seenToolCalls = new Set<string>();
+    const seenCommands = new Set<string>();
+    const seenReadPaths = new Set<string>();
+    const seenSkillSignals = new Set<string>();
     const callBaseDirs = new Map<string, string>();
 
     let sessionCwd = input.cwd;
@@ -110,7 +113,7 @@ export class CursorAgentAdapter extends BaseAdapter implements RunnerAdapter {
           continue;
         }
 
-        const callId = readString(record, "call_id");
+        const callId = readCursorToolCallId(record);
         const isCompleted = readString(record, "subtype") === "completed";
         const hasEmittedCall = callId !== undefined && seenToolCalls.has(callId);
         const baseDir =
@@ -118,7 +121,7 @@ export class CursorAgentAdapter extends BaseAdapter implements RunnerAdapter {
             ? resolveToolBaseDir(toolCall.args, sessionCwd)
             : resolveCursorCallBaseDir(callId, toolCall.args, sessionCwd, callBaseDirs);
 
-        if (!hasEmittedCall) {
+        if (!hasEmittedCall && !isCompleted) {
           events.push({
             type: "toolCall",
             tool: toolCall.tool,
@@ -132,11 +135,14 @@ export class CursorAgentAdapter extends BaseAdapter implements RunnerAdapter {
         }
 
         const command = extractCommand(toolCall.tool, toolCall.args);
-        if (command !== undefined) {
+        if (command !== undefined && shouldEmitCursorCallDetail(seenCommands, callId, command)) {
           events.push({ type: "command", command, at });
           for (const filePath of extractFilePathsFromCommand(command)) {
             const resolvedPath = resolveReportedPath(filePath, baseDir);
-            if (resolvedPath === undefined) {
+            if (
+              resolvedPath === undefined ||
+              !shouldEmitCursorCallDetail(seenReadPaths, callId, resolvedPath)
+            ) {
               continue;
             }
 
@@ -148,14 +154,20 @@ export class CursorAgentAdapter extends BaseAdapter implements RunnerAdapter {
         const readPath = extractReadPath(toolCall.tool, toolCall.args);
         if (readPath !== undefined) {
           const resolvedPath = resolveReportedPath(readPath, baseDir);
-          if (resolvedPath !== undefined) {
+          if (
+            resolvedPath !== undefined &&
+            shouldEmitCursorCallDetail(seenReadPaths, callId, resolvedPath)
+          ) {
             observedReads.push(resolvedPath);
             events.push({ type: "fileRead", path: resolvedPath, at });
           }
         }
 
         const skillName = extractSkillName(toolCall.tool, toolCall.args);
-        if (skillName !== undefined) {
+        if (
+          skillName !== undefined &&
+          shouldEmitCursorCallDetail(seenSkillSignals, callId, skillName)
+        ) {
           explicitSkillNames.add(skillName);
           events.push({ type: "skillSignal", skill: skillName, signal: "tool:skill", at });
         }
@@ -297,6 +309,10 @@ function readTimestamp(record: Record<string, unknown>): string | undefined {
   return typeof timestamp === "number" ? new Date(timestamp).toISOString() : undefined;
 }
 
+function readCursorToolCallId(record: Record<string, unknown>): string | undefined {
+  return readString(record, "call_id") ?? readString(record, "model_call_id");
+}
+
 function extractMessageText(message: Record<string, unknown>): string {
   const content = message.content;
   if (!Array.isArray(content)) {
@@ -394,6 +410,24 @@ function readToolBaseDir(args: unknown): string | undefined {
   }
 
   return readString(args, "workingDirectory") ?? readString(args, "cwd");
+}
+
+function shouldEmitCursorCallDetail(
+  seenValues: Set<string>,
+  callId: string | undefined,
+  value: string,
+): boolean {
+  if (callId === undefined) {
+    return true;
+  }
+
+  const key = `${callId}\u0000${value}`;
+  if (seenValues.has(key)) {
+    return false;
+  }
+
+  seenValues.add(key);
+  return true;
 }
 
 function stringifyUnknown(value: unknown): string {

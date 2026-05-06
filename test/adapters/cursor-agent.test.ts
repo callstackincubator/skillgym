@@ -173,6 +173,8 @@ test("CursorAgentAdapter normalize extracts commands, file reads, tool results, 
   expect(report.detectedSkills).toEqual(
     expect.arrayContaining([expect.objectContaining({ skill: "find-skills" })]),
   );
+  expect(report.events.filter((event) => event.type === "toolCall")).toHaveLength(1);
+  expect(report.events.filter((event) => event.type === "command")).toHaveLength(1);
   expect(report.events).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
@@ -242,6 +244,7 @@ test("CursorAgentAdapter normalize resolves shell reads against stored call work
   expect(report.files.observedReads).toEqual([
     "/tmp/isolated-workspace/skills/find-skills/SKILL.md",
   ]);
+  expect(report.events.filter((event) => event.type === "fileRead")).toHaveLength(1);
   expect(report.events).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
@@ -297,6 +300,7 @@ test("CursorAgentAdapter normalize resolves read tool calls against stored call 
   expect(report.detectedSkills).toEqual(
     expect.arrayContaining([expect.objectContaining({ skill: "find-skills" })]),
   );
+  expect(report.events.filter((event) => event.type === "fileRead")).toHaveLength(1);
   expect(report.events).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
