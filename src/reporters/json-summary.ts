@@ -16,6 +16,27 @@ interface SummaryRunnerResult {
   passed: boolean;
   status: RunnerResult["status"];
   attempt?: number;
+  repeatTarget?: number;
+  completedRepetitions?: number;
+  successfulRepetitions?: number;
+  stoppedAtRepetition?: number;
+  retryCount: number;
+  durationMs: number;
+  artifactDir: string;
+  usage: RunnerResult["report"]["usage"];
+  attempts?: SummaryAttemptResult[];
+  repetitions?: SummaryRepetitionResult[];
+  error?: SummaryError;
+  failureType?: RunnerResult["failureType"];
+  failureOrigin?: RunnerResult["failureOrigin"];
+  failureClass?: FailureClass;
+}
+
+interface SummaryRepetitionResult {
+  repetition: number;
+  passed: boolean;
+  status: RunnerResult["status"];
+  attempt?: number;
   retryCount: number;
   durationMs: number;
   artifactDir: string;
@@ -65,7 +86,63 @@ function summarizeRunnerResult(result: RunnerResult): SummaryRunnerResult {
     passed: result.passed,
     status: result.status,
     attempt: result.attempt,
+    repeatTarget: result.repeatTarget,
+    completedRepetitions: result.completedRepetitions,
+    successfulRepetitions: result.successfulRepetitions,
+    stoppedAtRepetition: result.stoppedAtRepetition,
     retryCount: countRetries(result),
+    durationMs: result.durationMs,
+    artifactDir: result.artifactDir,
+    usage: result.report.usage,
+  };
+
+  if (result.attempts !== undefined) {
+    summary.attempts = result.attempts.map(summarizeAttemptResult);
+  }
+
+  if (result.repetitions !== undefined) {
+    summary.repetitions = result.repetitions.map(summarizeRepetitionResult);
+  }
+
+  if (result.error !== undefined) {
+    summary.error = { name: result.error.name, message: result.error.message };
+  }
+
+  if (result.failureType !== undefined) {
+    summary.failureType = result.failureType;
+  }
+
+  if (result.failureOrigin !== undefined) {
+    summary.failureOrigin = result.failureOrigin;
+  }
+
+  if (result.failureClass !== undefined) {
+    summary.failureClass = result.failureClass;
+  }
+
+  return summary;
+}
+
+function countRetries(result: RunnerResult): number {
+  if (result.repetitions !== undefined) {
+    return result.repetitions.reduce(
+      (sum, repetition) => sum + Math.max(0, (repetition.attempts?.length ?? 1) - 1),
+      0,
+    );
+  }
+
+  return Math.max(0, (result.attempts?.length ?? 1) - 1);
+}
+
+function summarizeRepetitionResult(
+  result: NonNullable<RunnerResult["repetitions"]>[number],
+): SummaryRepetitionResult {
+  const summary: SummaryRepetitionResult = {
+    repetition: result.repetition,
+    passed: result.passed,
+    status: result.status,
+    attempt: result.attempt,
+    retryCount: Math.max(0, (result.attempts?.length ?? 1) - 1),
     durationMs: result.durationMs,
     artifactDir: result.artifactDir,
     usage: result.report.usage,
@@ -92,10 +169,6 @@ function summarizeRunnerResult(result: RunnerResult): SummaryRunnerResult {
   }
 
   return summary;
-}
-
-function countRetries(result: RunnerResult): number {
-  return Math.max(0, (result.attempts?.length ?? 1) - 1);
 }
 
 function summarizeAttemptResult(

@@ -372,18 +372,22 @@ test("executeSuite retries only failed executions and preserves attempt artifact
   expect(runnerResult).toMatchObject({
     passed: true,
     attempt: 2,
-    artifactDir: path.join(result.outputDir, "flaky", runnerPathKey, "attempt-2"),
+    artifactDir: path.join(result.outputDir, "flaky", runnerPathKey),
+    repeatTarget: 1,
+    completedRepetitions: 1,
+    successfulRepetitions: 1,
   });
-  expect(runnerResult.attempts).toHaveLength(2);
-  expect(runnerResult.attempts?.map((attempt) => attempt.artifactDir)).toEqual([
-    path.join(result.outputDir, "flaky", runnerPathKey),
-    path.join(result.outputDir, "flaky", runnerPathKey, "attempt-2"),
+  expect(runnerResult.repetitions).toHaveLength(1);
+  expect(runnerResult.repetitions?.[0]?.attempts).toHaveLength(2);
+  expect(runnerResult.repetitions?.[0]?.attempts?.map((attempt) => attempt.artifactDir)).toEqual([
+    path.join(result.outputDir, "flaky", runnerPathKey, "repeat-1"),
+    path.join(result.outputDir, "flaky", runnerPathKey, "repeat-1", "attempt-2"),
   ]);
 
   const saved = JSON.parse(
     await readFile(path.join(result.outputDir, "results.json"), "utf8"),
   ) as SuiteRunResult;
-  expect(saved.cases[0]?.runnerResults[0]?.attempts).toHaveLength(2);
+  expect(saved.cases[0]?.runnerResults[0]?.repetitions?.[0]?.attempts).toHaveLength(2);
 });
 
 test("executeSuite does not retry expected failures", async () => {
@@ -893,6 +897,128 @@ test("executeSuite aggregates expected failures as suite-health passes", async (
   expect(saved.cases[0]?.runnerResults[0]?.status).toBe("expected-failed");
 });
 
+test("executeSuite repeats successful runs and aggregates repetition metrics", async () => {
+  const outputDir = await createTempDir();
+  let invocation = 0;
+
+  const result = await executeSuite("./suite.ts", [{ id: "stable", prompt: "a", assert() {} }], {
+    cwd: outputDir,
+    outputDir,
+    repeat: 3,
+    repeatFailure: 1,
+    isInteractive: false,
+    config: {
+      runners: {
+        open: { agent: { type: "opencode", model: "openai/gpt-5" } },
+      },
+    },
+    executeRunnerFn: async (testCase, runner, _adapter, options) => {
+      invocation += 1;
+      return createRunnerResult({
+        caseId: testCase.id,
+        runner,
+        passed: true,
+        durationMs: invocation * 10,
+        artifactDir: options.artifactDir,
+        totalTokens: invocation * 100,
+        outputTokens: 20,
+        observedReads: 1,
+      });
+    },
+  });
+
+  expect(invocation).toBe(3);
+  expect(result.cases[0]?.runnerResults[0]).toMatchObject({
+    passed: true,
+    status: "passed",
+    repeatTarget: 3,
+    completedRepetitions: 3,
+    successfulRepetitions: 3,
+    durationMs: 20,
+  });
+  expect(result.cases[0]?.runnerResults[0]?.report.usage.totalTokens).toBe(200);
+  expect(result.cases[0]?.runnerResults[0]?.repetitions?.map((entry) => entry.artifactDir)).toEqual(
+    [
+      path.join(
+        result.outputDir,
+        "stable",
+        createRunnerInfo("open", { type: "opencode", model: "openai/gpt-5" }).pathKey,
+        "repeat-1",
+      ),
+      path.join(
+        result.outputDir,
+        "stable",
+        createRunnerInfo("open", { type: "opencode", model: "openai/gpt-5" }).pathKey,
+        "repeat-2",
+      ),
+      path.join(
+        result.outputDir,
+        "stable",
+        createRunnerInfo("open", { type: "opencode", model: "openai/gpt-5" }).pathKey,
+        "repeat-3",
+      ),
+    ],
+  );
+});
+
+test("executeSuite stops on a failed repetition and keeps averages from successful repetitions", async () => {
+  const outputDir = await createTempDir();
+  let invocation = 0;
+
+  const result = await executeSuite("./suite.ts", [{ id: "flaky", prompt: "a", assert() {} }], {
+    cwd: outputDir,
+    outputDir,
+    repeat: 4,
+    repeatFailure: 1,
+    isInteractive: false,
+    config: {
+      runners: {
+        open: { agent: { type: "opencode", model: "openai/gpt-5" } },
+      },
+    },
+    executeRunnerFn: async (testCase, runner, _adapter, options) => {
+      invocation += 1;
+      if (invocation <= 2) {
+        return createRunnerResult({
+          caseId: testCase.id,
+          runner,
+          passed: true,
+          durationMs: 10,
+          artifactDir: options.artifactDir,
+          totalTokens: invocation * 100,
+          outputTokens: 20,
+          observedReads: 1,
+        });
+      }
+
+      return createRunnerResult({
+        caseId: testCase.id,
+        runner,
+        passed: false,
+        durationMs: 40,
+        artifactDir: options.artifactDir,
+        totalTokens: 500,
+        outputTokens: 20,
+        observedReads: 1,
+      });
+    },
+  });
+
+  expect(result.cases[0]?.runnerResults[0]).toMatchObject({
+    passed: false,
+    status: "failed",
+    repeatTarget: 4,
+    completedRepetitions: 3,
+    successfulRepetitions: 2,
+    stoppedAtRepetition: 3,
+    durationMs: 10,
+  });
+  expect(result.cases[0]?.runnerResults[0]?.report.usage.totalTokens).toBe(150);
+  expect(result.cases[0]?.runnerResults[0]?.error?.message).toContain(
+    "expected skill to be loaded before command execution",
+  );
+});
+
 test("executeSuite filters cases by tags with OR semantics and preserves result metadata", async () => {
   const outputDir = await createTempDir();
   const executed: string[] = [];
@@ -1117,6 +1243,39 @@ test("executeSuite refreshes matching snapshots in update mode", async () => {
   };
 
   expect(saved.entries["alpha::open"]?.value).toBe(222);
+});
+
+test("executeSuite snapshots use the average of successful repetitions", async () => {
+  const outputDir = await createTempDir();
+  const snapshotsPath = path.join(outputDir, "skillgym.snapshots.json");
+  let invocation = 0;
+
+  await executeSuite("./suite.ts", [{ id: "alpha", prompt: "a", assert() {} }], {
+    cwd: outputDir,
+    outputDir,
+    repeat: 2,
+    config: {
+      runners: {
+        open: { agent: { type: "opencode", model: "openai/gpt-5" } },
+      },
+    },
+    snapshots: createSnapshotRuntime(snapshotsPath),
+    executeRunnerFn: async (testCase, runner, _adapter, options) => {
+      invocation += 1;
+      return executeRunner(
+        testCase,
+        runner,
+        createSnapshotAdapter(runner, invocation === 1 ? 100 : 200),
+        options,
+      );
+    },
+  });
+
+  const saved = JSON.parse(await readFile(snapshotsPath, "utf8")) as {
+    entries: Record<string, { value: number }>;
+  };
+
+  expect(saved.entries["alpha::open"]?.value).toBe(150);
 });
 
 function createRunnerResultForKey(

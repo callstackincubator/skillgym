@@ -19,6 +19,8 @@ export async function runCommand(options: {
   outputDir?: string;
   schedule?: string;
   maxParallel?: string;
+  repeat?: string;
+  repeatFailure?: string;
   retryFailed?: string;
   caseId?: string;
   runner?: string;
@@ -39,6 +41,8 @@ export async function runCommand(options: {
       outputDir: options.outputDir,
       schedule: options.schedule,
       maxParallel: options.maxParallel,
+      repeat: options.repeat,
+      repeatFailure: options.repeatFailure,
       retryFailed: options.retryFailed,
       tags: options.tags,
     },
@@ -78,6 +82,8 @@ export async function runCommand(options: {
     outputDir: runOptions.outputDir,
     schedule: runOptions.schedule,
     maxParallel: runOptions.maxParallel,
+    repeat: runOptions.repeat,
+    repeatFailure: runOptions.repeatFailure,
     retryFailed: runOptions.retryFailed,
     caseId: options.caseId,
     runner: options.runner,
