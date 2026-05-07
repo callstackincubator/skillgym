@@ -17,6 +17,7 @@ export type {
 } from "./domain/test-case.js";
 export type {
   FailureClass,
+  RepetitionResult,
   RunnerAttemptResult,
   RunnerFailureOrigin,
   RunnerFailureType,

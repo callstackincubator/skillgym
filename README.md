@@ -40,7 +40,8 @@ const config: SkillGymConfig = {
     reporter: "standard",
     schedule: "serial",
     maxParallel: 4,
-    retryFailed: 1,
+    repeat: 3,
+    repeatFailure: 1,
     maxSteps: 4,
   },
   defaults: {
@@ -152,7 +153,9 @@ Most important config properties:
 - `run.reporter`: built-in `standard` reporter or a custom reporter module path
 - `run.schedule`: execution scheduling mode for case x runner pairs
 - `run.maxParallel`: maximum concurrent executions for non-serial schedules, defaulting to available CPU parallelism
-- `run.retryFailed`: rerun only failed case x runner executions up to this many additional attempts
+- `run.repeat`: require this many successful repetitions per case x runner execution
+- `run.repeatFailure`: retry the current repetition up to this many additional attempts after failure
+- `run.retryFailed`: compatibility alias for `run.repeatFailure`
 - `run.maxSteps`: best-effort limit on streamed agent steps before skillgym terminates the run
 - `run.workspace`: default workspace mode for the suite
 - `defaults.timeoutMs`: default per-case timeout
@@ -174,7 +177,11 @@ For concurrent schedules, `run.maxParallel` defaults to `os.availableParallelism
 
 Concurrent schedules do not copy or isolate the workspace by themselves. Overlapping runs may still interact through the same filesystem state and live runner output unless you use isolated workspaces. OpenCode, Codex, and Claude Code runtime state are isolated per run under each artifact directory.
 
-`run.retryFailed` is useful when broad benchmark runs include occasional flaky agent failures. SkillGym only retries executions that still count as failed after result classification, keeps each attempt's artifacts, and reports whether a final pass came from a retry.
+`run.repeat` is useful when you want stability sampling instead of a single lucky pass. Each case x runner execution keeps running until it records the requested number of successful classified outcomes, or stops early when one repetition still fails after exhausting `run.repeatFailure` retries.
+
+`run.repeatFailure` retries only the current repetition when it still counts as failed after result classification. SkillGym keeps all repetition and retry artifacts, averages visible duration and token metrics across the final outcomes of completed successful repetitions, and preserves the full nested detail in `results.json`.
+
+Artifacts for repeated runs are grouped under the stable case x runner directory using `repeat-N` directories, with retry attempts nested as `attempt-N` inside the repetition that needed recovery.
 
 `run.maxSteps` is enforced on a best-effort basis by monitoring each runner's streamed JSONL output. A step is one observed model round, not one token and not necessarily one tool call, but the exact boundary is still runner-defined, so the same prompt may consume different numbers of steps across agents. When the observed step count exceeds the configured limit, skillgym kills the agent process, fails the run with origin `max-steps`, and preserves raw stdout/stderr artifacts for debugging. No partial normalized report is produced for that failure.
 

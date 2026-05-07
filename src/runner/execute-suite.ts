@@ -4,6 +4,7 @@ import os from "node:os";
 import { getCaseExecutionOptions } from "../config.js";
 import type {
   CaseResult,
+  RepetitionResult,
   RunnerAttemptResult,
   RunnerResult,
   RunnerSummary,
@@ -55,6 +56,8 @@ export async function executeSuite(
     outputDir?: string;
     schedule?: ScheduleMode;
     maxParallel?: number;
+    repeat?: number;
+    repeatFailure?: number;
     retryFailed?: number;
     caseId?: string;
     runner?: string;
@@ -66,6 +69,8 @@ export async function executeSuite(
       run?: {
         workspace?: SuiteWorkspaceConfig;
         maxSteps?: number;
+        repeat?: number;
+        repeatFailure?: number;
         retryFailed?: number;
         tags?: string[];
       };
@@ -84,7 +89,13 @@ export async function executeSuite(
   const outputDir = path.resolve(options.outputDir ?? ".skillgym-results", timestampDirName());
   const scheduleMode = options.schedule ?? "serial";
   const maxParallel = resolveMaxParallel(scheduleMode, options.maxParallel);
-  const retryFailed = options.retryFailed ?? options.config.run?.retryFailed ?? 0;
+  const repeat = options.repeat ?? options.config.run?.repeat ?? 1;
+  const repeatFailure =
+    options.repeatFailure ??
+    options.retryFailed ??
+    options.config.run?.repeatFailure ??
+    options.config.run?.retryFailed ??
+    0;
   await ensureDir(outputDir);
   const selectedRunners = selectRunners(options.config.runners, options.runner);
   const normalizedCases = normalizeTestCases(testCases);
@@ -120,6 +131,7 @@ export async function executeSuite(
         selectedRunners,
         scheduleMode,
         maxParallel,
+        repeat,
         workspaceMode: resolvedWorkspace.mode,
         caseFilter: options.caseId,
         runnerFilter: options.runner,
@@ -143,6 +155,7 @@ export async function executeSuite(
         selectedRunners,
         scheduleMode,
         maxParallel,
+        repeat,
         workspaceMode: resolvedWorkspace.mode,
         caseFilter: options.caseId,
         runnerFilter: options.runner,
@@ -163,6 +176,7 @@ export async function executeSuite(
     selectedRunners,
     scheduleMode,
     maxParallel,
+    repeat,
     workspaceMode: resolvedWorkspace.mode,
     caseFilter: options.caseId,
     runnerFilter: options.runner,
@@ -205,7 +219,8 @@ export async function executeSuite(
         snapshots: options.snapshots,
         snapshotStore,
         maxSteps: options.config.run?.maxSteps,
-        retryFailed,
+        repeat,
+        repeatFailure,
         reporter: options.reporter,
         rejectedRunners,
       });
@@ -224,7 +239,8 @@ export async function executeSuite(
         snapshots: options.snapshots,
         snapshotStore,
         maxSteps: options.config.run?.maxSteps,
-        retryFailed,
+        repeat,
+        repeatFailure,
         reporter: options.reporter,
         rejectedRunners,
       });
@@ -328,7 +344,8 @@ async function executePlannedExecution(
     snapshots?: SnapshotRuntimeOptions;
     snapshotStore?: SnapshotStore;
     maxSteps?: number;
-    retryFailed: number;
+    repeat: number;
+    repeatFailure: number;
     reporter?: BenchmarkReporter;
     rejectedRunners: Map<string, RunnerResult>;
   },
@@ -357,84 +374,128 @@ async function executePlannedExecution(
   );
   await ensureDir(artifactDir);
 
-  const maxAttempts = options.retryFailed + 1;
-  const attempts: RunnerAttemptResult[] = [];
-  let result: RunnerResult | undefined;
+  await options.reporter?.onRunnerStart?.({
+    context: options.context,
+    testCase: item.testCase,
+    runner: item.runner.info,
+    caseIndex: item.caseIndex + 1,
+    totalCases: options.selectedCases.length,
+  });
 
-  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    await options.reporter?.onRunnerStart?.({
-      context: options.context,
-      testCase: item.testCase,
-      runner: item.runner.info,
-      attempt,
-      maxAttempts,
-      caseIndex: item.caseIndex + 1,
-      totalCases: options.selectedCases.length,
-    });
+  const repetitions: RepetitionResult[] = [];
+  const successfulRepetitions: RepetitionResult[] = [];
+  let terminalFailure: RepetitionResult | undefined;
+  const maxAttempts = options.repeatFailure + 1;
 
-    const attemptArtifactDir = resolveAttemptArtifactDir(artifactDir, attempt);
-    await ensureDir(attemptArtifactDir);
+  for (let repetition = 1; repetition <= options.repeat; repetition += 1) {
+    const repetitionArtifactDir = resolveRepetitionArtifactDir(artifactDir, repetition);
+    await ensureDir(repetitionArtifactDir);
+    const attempts: RunnerAttemptResult[] = [];
+    let repetitionResult: RepetitionResult | undefined;
 
-    const rejectedResult = options.rejectedRunners.get(item.runner.id);
-    const rawResult =
-      rejectedResult === undefined
-        ? await runExecution(item, {
-            artifactDir: attemptArtifactDir,
-            resolvedWorkspace: options.resolvedWorkspace,
-            executeRunnerFn: options.executeRunnerFn,
-            outputDir: options.outputDir,
-            maxSteps: options.maxSteps,
-            snapshots: options.snapshots,
-            snapshotStore: options.snapshotStore,
-          })
-        : await createRejectedModelResult(item, attemptArtifactDir);
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      const attemptArtifactDir = resolveAttemptArtifactDir(repetitionArtifactDir, attempt);
+      await ensureDir(attemptArtifactDir);
 
-    if (rejectedResult === undefined && (await isModelRejectedResult(rawResult))) {
-      rawResult.failureType = "runner-crash";
-      rawResult.failureOrigin = "model-rejected";
-      if (rawResult.error?.name === "AssertionError" || rawResult.error === undefined) {
-        rawResult.error = {
-          name: "Error",
-          message: `Runner rejected configured model "${item.runner.info.agent.model ?? "unknown"}" during initial execution.`,
-        };
+      const rejectedResult = options.rejectedRunners.get(item.runner.id);
+      const rawResult =
+        rejectedResult === undefined
+          ? await runExecution(item, {
+              artifactDir: attemptArtifactDir,
+              resolvedWorkspace: options.resolvedWorkspace,
+              executeRunnerFn: options.executeRunnerFn,
+              outputDir: options.outputDir,
+              maxSteps: options.maxSteps,
+            })
+          : await createRejectedModelResult(item, attemptArtifactDir);
+
+      if (rejectedResult === undefined && (await isModelRejectedResult(rawResult))) {
+        rawResult.failureType = "runner-crash";
+        rawResult.failureOrigin = "model-rejected";
+        if (rawResult.error?.name === "AssertionError" || rawResult.error === undefined) {
+          rawResult.error = {
+            name: "Error",
+            message: `Runner rejected configured model "${item.runner.info.agent.model ?? "unknown"}" during initial execution.`,
+          };
+        }
+        rawResult.failureLogPath ??= path.join(attemptArtifactDir, "stderr.log");
+        options.rejectedRunners.set(item.runner.id, rawResult);
+        await writeJson(path.join(attemptArtifactDir, "error.json"), rawResult.error);
+        await writeJson(path.join(attemptArtifactDir, "report.json"), rawResult.report);
       }
-      rawResult.failureLogPath ??= path.join(attemptArtifactDir, "stderr.log");
-      options.rejectedRunners.set(item.runner.id, rawResult);
-      await writeJson(path.join(attemptArtifactDir, "error.json"), rawResult.error);
-      await writeJson(path.join(attemptArtifactDir, "report.json"), rawResult.report);
+
+      const classifiedAttempt = createAttemptResult(
+        classifyExpectedFailure(item.testCase, rawResult),
+        attempt,
+      );
+      attempts.push(classifiedAttempt);
+      repetitionResult = createRepetitionResult(classifiedAttempt, repetition, attempts);
+
+      if (!shouldRetry(classifiedAttempt, options.repeatFailure, attempt)) {
+        break;
+      }
     }
 
-    const classifiedAttempt = createAttemptResult(
-      classifyExpectedFailure(item.testCase, rawResult),
-      attempt,
+    if (repetitionResult === undefined) {
+      throw new Error(
+        `Execution finished without a repetition result for ${item.testCase.id} > ${item.runner.id}`,
+      );
+    }
+
+    repetitions.push(repetitionResult);
+
+    if (repetitionResult.passed) {
+      successfulRepetitions.push(repetitionResult);
+      continue;
+    }
+
+    terminalFailure = repetitionResult;
+    break;
+  }
+
+  let result = createAggregateRunnerResult({
+    runner: item.runner.info,
+    artifactDir,
+    repeatTarget: options.repeat,
+    repetitions,
+    successfulRepetitions,
+    terminalFailure,
+  });
+
+  if (
+    options.snapshots !== undefined &&
+    options.snapshotStore !== undefined &&
+    successfulRepetitions.length > 0
+  ) {
+    const snapshotFailure = applyAggregateSnapshotCheck(
+      item.testCase,
+      item.runner.info,
+      artifactDir,
+      successfulRepetitions,
+      options.snapshotStore,
+      options.snapshots,
     );
-    attempts.push(classifiedAttempt);
-    result = {
-      ...classifiedAttempt,
-      attempts: [...attempts],
-    };
 
-    await options.reporter?.onRunnerFinish?.({
-      context: options.context,
-      testCase: item.testCase,
-      runner: item.runner.info,
-      result,
-      attempt,
-      maxAttempts,
-      caseIndex: item.caseIndex + 1,
-      totalCases: options.selectedCases.length,
-    });
-
-    if (!shouldRetry(classifiedAttempt, options.retryFailed, attempt)) {
-      break;
+    if (snapshotFailure !== undefined) {
+      result = createAggregateRunnerResult({
+        runner: item.runner.info,
+        artifactDir,
+        repeatTarget: options.repeat,
+        repetitions,
+        successfulRepetitions,
+        terminalFailure: classifyExpectedFailure(item.testCase, snapshotFailure),
+      });
     }
   }
 
-  if (result === undefined) {
-    throw new Error(
-      `Execution finished without a result for ${item.testCase.id} > ${item.runner.id}`,
-    );
-  }
+  await options.reporter?.onRunnerFinish?.({
+    context: options.context,
+    testCase: item.testCase,
+    runner: item.runner.info,
+    result,
+    caseIndex: item.caseIndex + 1,
+    totalCases: options.selectedCases.length,
+  });
 
   options.caseResults[item.caseIndex]!.runnerResults[item.runnerIndex] = result;
 
@@ -461,8 +522,6 @@ async function runExecution(
     executeRunnerFn: typeof executeRunner;
     outputDir: string;
     maxSteps?: number;
-    snapshots?: SnapshotRuntimeOptions;
-    snapshotStore?: SnapshotStore;
   },
 ): Promise<RunnerResult> {
   const executionStartedMs = Date.now();
@@ -487,10 +546,6 @@ async function runExecution(
         artifactDir: options.artifactDir,
         timeoutMs: item.timeoutMs,
         maxSteps: options.maxSteps,
-        snapshots:
-          options.snapshots !== undefined && options.snapshotStore !== undefined
-            ? { runtime: options.snapshots, store: options.snapshotStore }
-            : undefined,
       },
     );
   } catch (error) {
@@ -526,12 +581,155 @@ function createAttemptResult(result: RunnerResult, attempt: number): RunnerAttem
   };
 }
 
+function createRepetitionResult(
+  result: RunnerAttemptResult,
+  repetition: number,
+  attempts: RunnerAttemptResult[],
+): RepetitionResult {
+  return {
+    ...result,
+    repetition,
+    attempts: [...attempts],
+  };
+}
+
 function shouldRetry(result: RunnerAttemptResult, retryFailed: number, attempt: number): boolean {
   return !result.passed && attempt <= retryFailed && result.failureOrigin !== "model-rejected";
 }
 
+function resolveRepetitionArtifactDir(artifactDir: string, repetition: number): string {
+  return path.join(artifactDir, `repeat-${String(repetition)}`);
+}
+
 function resolveAttemptArtifactDir(artifactDir: string, attempt: number): string {
   return attempt === 1 ? artifactDir : path.join(artifactDir, `attempt-${String(attempt)}`);
+}
+
+function createAggregateRunnerResult(options: {
+  runner: RunnerInfo;
+  artifactDir: string;
+  repeatTarget: number;
+  repetitions: RepetitionResult[];
+  successfulRepetitions: RepetitionResult[];
+  terminalFailure?: RepetitionResult | RunnerResult;
+}): RunnerResult {
+  const aggregateSource =
+    options.successfulRepetitions.length > 0
+      ? aggregateSuccessfulRepetitions(options.successfulRepetitions)
+      : options.terminalFailure === undefined
+        ? undefined
+        : {
+            durationMs: options.terminalFailure.durationMs,
+            report: options.terminalFailure.report,
+          };
+
+  if (aggregateSource === undefined) {
+    throw new Error(`Missing aggregate source for runner ${options.runner.id}`);
+  }
+
+  return {
+    runner: options.runner,
+    passed: options.terminalFailure === undefined,
+    status:
+      options.terminalFailure?.status ?? options.successfulRepetitions.at(-1)?.status ?? "passed",
+    durationMs: aggregateSource.durationMs,
+    artifactDir: options.artifactDir,
+    report: aggregateSource.report,
+    error: options.terminalFailure?.error,
+    failureType: options.terminalFailure?.failureType,
+    failureOrigin: options.terminalFailure?.failureOrigin,
+    failureClass: options.terminalFailure?.failureClass,
+    failureLogPath: options.terminalFailure?.failureLogPath,
+    attempt: options.repetitions.at(-1)?.attempt,
+    attempts: options.repeatTarget === 1 ? options.repetitions[0]?.attempts : undefined,
+    repeatTarget: options.repeatTarget,
+    completedRepetitions: options.repetitions.length,
+    successfulRepetitions: options.successfulRepetitions.length,
+    ...(options.terminalFailure === undefined
+      ? {}
+      : { stoppedAtRepetition: options.repetitions.at(-1)?.repetition }),
+    repetitions: [...options.repetitions],
+  };
+}
+
+function aggregateSuccessfulRepetitions(
+  repetitions: RepetitionResult[],
+): Pick<RunnerResult, "durationMs" | "report"> {
+  const template = repetitions.at(-1);
+
+  if (template === undefined) {
+    throw new Error("Cannot aggregate zero successful repetitions.");
+  }
+
+  return {
+    durationMs: average(repetitions.map((result) => result.durationMs)),
+    report: {
+      ...template.report,
+      durationMs: averageDefined(repetitions.map((result) => result.report.durationMs)),
+      usage: {
+        ...template.report.usage,
+        inputTokens: averageDefined(repetitions.map((result) => result.report.usage.inputTokens)),
+        outputTokens: averageDefined(repetitions.map((result) => result.report.usage.outputTokens)),
+        reasoningTokens: averageDefined(
+          repetitions.map((result) => result.report.usage.reasoningTokens),
+        ),
+        cacheTokens: averageDefined(repetitions.map((result) => result.report.usage.cacheTokens)),
+        totalTokens: averageDefined(repetitions.map((result) => result.report.usage.totalTokens)),
+      },
+      rawArtifacts: template.report.rawArtifacts,
+    },
+  };
+}
+
+function applyAggregateSnapshotCheck(
+  testCase: TestCase,
+  runner: RunnerInfo,
+  artifactDir: string,
+  repetitions: RepetitionResult[],
+  store: SnapshotStore,
+  runtime: SnapshotRuntimeOptions,
+): RunnerResult | undefined {
+  const metric = runtime.config.metric ?? "totalTokens";
+  const values = repetitions
+    .map((result) => result.report.usage[metric])
+    .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+
+  if (values.length !== repetitions.length) {
+    return createExecutionFailureResult(
+      new Error(
+        `Snapshot check requires provider token metric ${metric}, but it was unavailable for ${testCase.id} / ${runner.id}.`,
+      ),
+      {
+        testCase,
+        runner,
+        artifactDir,
+        durationMs: average(repetitions.map((result) => result.durationMs)),
+        failureOrigin: "snapshot",
+        report: aggregateSuccessfulRepetitions(repetitions).report,
+      },
+    );
+  }
+
+  try {
+    store.check(
+      {
+        caseId: testCase.id,
+        runner,
+        actual: average(values),
+      },
+      runtime,
+    );
+    return undefined;
+  } catch (error) {
+    return createExecutionFailureResult(error, {
+      testCase,
+      runner,
+      artifactDir,
+      durationMs: average(repetitions.map((result) => result.durationMs)),
+      failureOrigin: "snapshot",
+      report: aggregateSuccessfulRepetitions(repetitions).report,
+    });
+  }
 }
 
 async function createRejectedModelResult(
@@ -646,6 +844,15 @@ function timestampDirName(): string {
   return new Date().toISOString().replace(/[:.]/g, "-");
 }
 
+function averageDefined(values: Array<number | undefined>): number | undefined {
+  const defined = values.filter((value): value is number => value !== undefined);
+  if (defined.length === 0) {
+    return undefined;
+  }
+
+  return average(defined);
+}
+
 function isNumber(value: number | undefined): value is number {
   return typeof value === "number";
 }
@@ -754,6 +961,7 @@ function createReporterContext(options: {
   selectedRunners: ResolvedRunner[];
   scheduleMode: ScheduleMode;
   maxParallel: number;
+  repeat: number;
   caseFilter?: string;
   runnerFilter?: string;
   tagFilter: string[];
@@ -769,6 +977,7 @@ function createReporterContext(options: {
     selectedCaseCount: options.selectedCases.length,
     selectedRunnerCount: options.selectedRunners.length,
     selectedExecutionCount: options.selectedCases.length * options.selectedRunners.length,
+    repeat: options.repeat,
     scheduleMode: options.scheduleMode,
     maxParallel: options.maxParallel,
     caseFilter: options.caseFilter,

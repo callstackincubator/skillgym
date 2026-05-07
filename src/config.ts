@@ -24,6 +24,8 @@ const RUN_KEYS = [
   "workspace",
   "maxSteps",
   "maxParallel",
+  "repeat",
+  "repeatFailure",
   "retryFailed",
   "tags",
 ] as const;
@@ -65,6 +67,8 @@ export interface SkillGymConfig {
     workspace?: SuiteWorkspaceConfig;
     maxSteps?: number;
     maxParallel?: number;
+    repeat?: number;
+    repeatFailure?: number;
     retryFailed?: number;
     tags?: string[];
   };
@@ -123,6 +127,8 @@ export function resolveRunOptions(
     outputDir?: string;
     schedule?: string;
     maxParallel?: string;
+    repeat?: string;
+    repeatFailure?: string;
     retryFailed?: string;
     tags?: string[];
   },
@@ -132,6 +138,8 @@ export function resolveRunOptions(
   outputDir?: string;
   schedule: ScheduleMode;
   maxParallel?: number;
+  repeat: number;
+  repeatFailure: number;
   retryFailed: number;
   tags: string[];
 } {
@@ -139,10 +147,16 @@ export function resolveRunOptions(
     cliOptions.maxParallel !== undefined
       ? parseIntegerString(cliOptions.maxParallel, "CLI option --max-parallel", 1)
       : config.run?.maxParallel;
-  const retryFailed =
-    cliOptions.retryFailed !== undefined
-      ? parseIntegerString(cliOptions.retryFailed, "CLI option --retry-failed", 0)
-      : (config.run?.retryFailed ?? 0);
+  const repeat =
+    cliOptions.repeat !== undefined
+      ? parseIntegerString(cliOptions.repeat, "CLI option --repeat", 1)
+      : (config.run?.repeat ?? 1);
+  const repeatFailure =
+    cliOptions.repeatFailure !== undefined
+      ? parseIntegerString(cliOptions.repeatFailure, "CLI option --repeat-failure", 0)
+      : cliOptions.retryFailed !== undefined
+        ? parseIntegerString(cliOptions.retryFailed, "CLI option --retry-failed", 0)
+        : (config.run?.repeatFailure ?? config.run?.retryFailed ?? 0);
 
   return {
     cwd:
@@ -158,7 +172,9 @@ export function resolveRunOptions(
         ? parseScheduleMode(cliOptions.schedule, "CLI option --schedule")
         : (config.run?.schedule ?? "serial"),
     ...(maxParallel === undefined ? {} : { maxParallel }),
-    retryFailed,
+    repeat,
+    repeatFailure,
+    retryFailed: repeatFailure,
     tags: cliOptions.tags ?? config.run?.tags ?? [],
   };
 }
@@ -265,6 +281,10 @@ function resolveConfigPaths(config: SkillGymConfig, configDir: string): SkillGym
             ...(config.run.maxParallel === undefined
               ? {}
               : { maxParallel: config.run.maxParallel }),
+            ...(config.run.repeat === undefined ? {} : { repeat: config.run.repeat }),
+            ...(config.run.repeatFailure === undefined
+              ? {}
+              : { repeatFailure: config.run.repeatFailure }),
             ...(config.run.retryFailed === undefined
               ? {}
               : { retryFailed: config.run.retryFailed }),
@@ -358,6 +378,12 @@ function parseRunConfig(value: unknown, configPath: string): SkillGymConfig["run
 
   const maxSteps = parseOptionalInteger(record.maxSteps, `${configPath}.maxSteps`, 1);
   const maxParallel = parseOptionalInteger(record.maxParallel, `${configPath}.maxParallel`, 1);
+  const repeat = parseOptionalInteger(record.repeat, `${configPath}.repeat`, 1);
+  const repeatFailure = parseOptionalInteger(
+    record.repeatFailure,
+    `${configPath}.repeatFailure`,
+    0,
+  );
   const retryFailed = parseOptionalInteger(record.retryFailed, `${configPath}.retryFailed`, 0);
 
   return {
@@ -368,6 +394,8 @@ function parseRunConfig(value: unknown, configPath: string): SkillGymConfig["run
     workspace: parseOptionalWorkspaceConfig(record.workspace, `${configPath}.workspace`),
     ...(maxSteps === undefined ? {} : { maxSteps }),
     ...(maxParallel === undefined ? {} : { maxParallel }),
+    ...(repeat === undefined ? {} : { repeat }),
+    ...(repeatFailure === undefined ? {} : { repeatFailure }),
     ...(retryFailed === undefined ? {} : { retryFailed }),
     tags: parseOptionalStringArray(record.tags, `${configPath}.tags`),
   };
