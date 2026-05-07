@@ -56,6 +56,7 @@ export async function executeRunner(
     } catch (error) {
       return await writeAndReturnFailure(error, {
         suitePath: options.suitePath,
+        cwd: options.cwd,
         testCase,
         runner,
         artifactDir,
@@ -71,6 +72,7 @@ export async function executeRunner(
     } catch (error) {
       return await writeAndReturnFailure(error, {
         suitePath: options.suitePath,
+        cwd: options.cwd,
         testCase,
         runner,
         artifactDir,
@@ -91,6 +93,7 @@ export async function executeRunner(
       } catch (error) {
         return await writeAndReturnFailure(error, {
           suitePath: options.suitePath,
+          cwd: options.cwd,
           testCase,
           runner,
           artifactDir,
@@ -109,6 +112,7 @@ export async function executeRunner(
       const isAssertionFailure = error instanceof AssertionError;
       return await writeAndReturnFailure(error, {
         suitePath: options.suitePath,
+        cwd: options.cwd,
         testCase,
         runner,
         artifactDir,
@@ -133,6 +137,7 @@ export async function executeRunner(
   } catch (error) {
     return await writeAndReturnFailure(error, {
       suitePath: options.suitePath,
+      cwd: options.cwd,
       testCase,
       runner,
       artifactDir,
@@ -178,6 +183,7 @@ async function writeAndReturnFailure(
   error: unknown,
   options: {
     suitePath: string;
+    cwd: string;
     testCase: TestCase;
     runner: RunnerInfo;
     artifactDir: string;
@@ -194,6 +200,7 @@ async function writeAndReturnFailure(
   await writeJson(path.join(options.artifactDir, "report.json"), result.report);
   await writeExplainArtifactIfNeeded(error, {
     suitePath: options.suitePath,
+    cwd: options.cwd,
     caseId: options.testCase.id,
     runnerId: options.runner.id,
     artifactDir: options.artifactDir,
@@ -206,6 +213,7 @@ async function writeExplainArtifactIfNeeded(
   error: unknown,
   options: {
     suitePath: string;
+    cwd: string;
     caseId: string;
     runnerId: string;
     artifactDir: string;
@@ -221,6 +229,7 @@ async function writeExplainArtifactIfNeeded(
     suitePath: options.suitePath,
     caseId: options.caseId,
     runnerId: options.runnerId,
+    cwd: options.cwd,
     sessionId: options.report.sessionId,
     questions,
   };

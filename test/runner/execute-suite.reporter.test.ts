@@ -1427,6 +1427,9 @@ function createSnapshotAdapter(runner: RunnerInfo, totalTokens: number): RunnerA
         },
       });
     },
+    async explain() {
+      throw new Error("not used in snapshot adapter tests");
+    },
   };
 }
 

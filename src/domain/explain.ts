@@ -9,6 +9,7 @@ export interface ExplainArtifact {
   suitePath: string;
   caseId: string;
   runnerId: string;
+  cwd: string;
   sessionId?: string;
   questions: ExplainQuestionArtifact[];
 }

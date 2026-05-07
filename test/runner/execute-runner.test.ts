@@ -59,6 +59,9 @@ test("executeRunner forwards showRunnerOutput to adapter runs", async () => {
         prompt: input.prompt,
       });
     },
+    async explain() {
+      throw new Error("not used in executeRunner tests");
+    },
   };
 
   const result = await executeRunner(
@@ -98,6 +101,9 @@ test("executeRunner marks run as failed when adapter export collection fails", a
     },
     async normalize() {
       throw new Error("should not normalize after collect failure");
+    },
+    async explain() {
+      throw new Error("should not explain after collect failure");
     },
   };
 
@@ -346,6 +352,9 @@ test("executeRunner marks timeout failures separately from runner crashes", asyn
     async normalize() {
       throw new Error("should not normalize after timeout");
     },
+    async explain() {
+      throw new Error("should not explain after timeout");
+    },
   };
 
   const result = await executeRunner(
@@ -384,6 +393,9 @@ test("executeRunner marks max-steps failures separately from other runner crashe
     },
     async normalize() {
       throw new Error("should not normalize after max-steps");
+    },
+    async explain() {
+      throw new Error("should not explain after max-steps");
     },
   };
 
@@ -542,6 +554,7 @@ test("executeRunner writes explain.json for hard explainable assertion failures"
     suitePath,
     caseId: "alpha",
     runnerId: "open-main",
+    cwd: outputDir,
     sessionId: "ses_123",
   });
   expect(explainJson.questions).toHaveLength(1);
@@ -673,6 +686,9 @@ function createSuccessfulAdapter(
         },
         sessionId: usage.sessionId,
       });
+    },
+    async explain() {
+      throw new Error("not used in executeRunner tests");
     },
   };
 }
