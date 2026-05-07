@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
@@ -40,6 +40,7 @@ test("cli help prints full MOTD banner and help sections", async () => {
   expect(result.stdout).toContain("Usage:");
   expect(result.stdout).toContain("skillgym skills get core");
   expect(result.stdout).toContain("Commands:");
+  expect(result.stdout).toContain("explain <artifactDir>");
   expect(result.stdout).toContain("skills list");
   expect(result.stdout).toContain("skills get <name>");
   expect(result.stdout).toContain("Run Options:");
@@ -92,6 +93,153 @@ test("cli run reports missing suite path without printing MOTD banner", async ()
   expect(result.stderr).toContain("`skillgym run` needs a suite file to execute.");
   expect(result.stderr).toContain("skillgym run ./examples/basic-suite.ts");
   expect(result.stderr).not.toContain("at main");
+});
+
+test("cli explain reports missing artifact directory without printing MOTD banner", async () => {
+  const result = await execCli(["explain"]);
+
+  expect(result.exitCode).toBe(1);
+  expect(result.stdout).toBe("");
+  expect(result.stderr).toContain(
+    "Missing artifact directory. Usage: skillgym explain <artifactDir>",
+  );
+  expect(result.stderr).not.toContain("Prove your agent skills work before you ship them.");
+});
+
+test("explainCommand writes explanations.json from persisted explain questions", async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), "skillgym-cli-"));
+  tempDirs.push(tempDir);
+  const artifactDir = path.join(tempDir, "alpha", "open-main", "repeat-1");
+  await mkdir(artifactDir, { recursive: true });
+  await writeFile(
+    path.join(artifactDir, "report.json"),
+    `${JSON.stringify({
+      runner: {
+        id: "open-main",
+        pathKey: "open-main",
+        agent: { type: "opencode", model: "openai/gpt-5" },
+      },
+      prompt: "prompt",
+      usage: {
+        inputChars: 0,
+        outputChars: 0,
+        reasoningChars: 0,
+        source: { input: "chars", output: "chars", reasoning: "chars" },
+      },
+      files: { observedReads: [], observedSkillReads: [] },
+      detectedSkills: [],
+      events: [],
+      finalOutput: "",
+      rawArtifacts: {},
+    })}\n`,
+    "utf8",
+  );
+  await writeFile(
+    path.join(artifactDir, "explain.json"),
+    `${JSON.stringify({
+      suitePath: path.join(tempDir, "suite.ts"),
+      caseId: "alpha",
+      runnerId: "open-main",
+      cwd: tempDir,
+      sessionId: "ses_123",
+      questions: [
+        {
+          question: "Why did you skip SKILL.md?",
+          source: { filePath: path.join(tempDir, "suite.ts"), line: "12", column: "5" },
+        },
+      ],
+    })}\n`,
+    "utf8",
+  );
+
+  const explain = vi.fn(async () => ({
+    answers: [
+      {
+        question: {
+          question: "Why did you skip SKILL.md?",
+          source: { filePath: path.join(tempDir, "suite.ts"), line: "12", column: "5" },
+        },
+        answer: "Because the prompt looked sufficient.",
+        sessionId: "ses_123",
+        startedAt: "2026-05-07T10:00:00.000Z",
+        endedAt: "2026-05-07T10:00:01.000Z",
+        durationMs: 1_000,
+        rawArtifacts: {
+          stdoutPath: path.join(artifactDir, "explain", "question-01", "stdout.log"),
+        },
+      },
+    ],
+  }));
+
+  vi.resetModules();
+  vi.doMock("../src/config.js", () => ({
+    loadConfig: vi.fn(async () => ({
+      config: {
+        runners: {
+          "open-main": { agent: { type: "opencode", model: "openai/gpt-5" } },
+        },
+      },
+    })),
+  }));
+  vi.doMock("../src/adapters/index.js", () => ({
+    getAdapter: vi.fn(() => ({
+      run: vi.fn(),
+      collect: vi.fn(),
+      normalize: vi.fn(),
+      explain,
+    })),
+  }));
+
+  const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+  try {
+    const { explainCommand } = await import("../src/cli/explain.js");
+    await explainCommand({ artifactDir });
+  } finally {
+    logSpy.mockRestore();
+    vi.doUnmock("../src/config.js");
+    vi.doUnmock("../src/adapters/index.js");
+    vi.resetModules();
+  }
+
+  expect(explain).toHaveBeenCalledWith(
+    expect.objectContaining({
+      artifactDir,
+      cwd: tempDir,
+      sessionId: "ses_123",
+    }),
+  );
+
+  const explanations = JSON.parse(
+    await readFile(path.join(artifactDir, "explanations.json"), "utf8"),
+  ) as {
+    sessionId: string;
+    questions: Array<{ answer: string; sessionId?: string; rawArtifacts: { stdoutPath?: string } }>;
+  };
+  expect(explanations.sessionId).toBe("ses_123");
+  expect(explanations.questions).toEqual([
+    expect.objectContaining({
+      answer: "Because the prompt looked sufficient.",
+      sessionId: "ses_123",
+      rawArtifacts: expect.objectContaining({
+        stdoutPath: path.join(artifactDir, "explain", "question-01", "stdout.log"),
+      }),
+    }),
+  ]);
+});
+
+test("explainCommand refuses to overwrite existing explanations.json", async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), "skillgym-cli-"));
+  tempDirs.push(tempDir);
+  const artifactDir = path.join(tempDir, "alpha", "open-main", "repeat-1");
+  await mkdir(artifactDir, { recursive: true });
+  await writeFile(path.join(artifactDir, "explanations.json"), "{}\n", "utf8");
+
+  vi.resetModules();
+  const { explainCommand } = await import("../src/cli/explain.js");
+
+  await expect(explainCommand({ artifactDir })).rejects.toThrow(
+    "Explain output already exists for this artifact directory.",
+  );
 });
 
 test("cli parser preserves repeated tag flags", () => {
