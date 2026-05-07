@@ -19,6 +19,7 @@ import { createSessionReport } from "../helpers/session-report.js";
 import { CommandTimeoutError } from "../../src/utils/process.js";
 
 const tempDirs: string[] = [];
+const suitePath = "/tmp/skillgym/suite.ts";
 
 afterEach(async () => {
   await Promise.all(
@@ -65,6 +66,7 @@ test("executeRunner forwards showRunnerOutput to adapter runs", async () => {
     runner,
     adapter,
     {
+      suitePath,
       cwd: outputDir,
       artifactDir: path.join(outputDir, "alpha", runner.pathKey),
       timeoutMs: 5_000,
@@ -104,6 +106,7 @@ test("executeRunner marks run as failed when adapter export collection fails", a
     runner,
     adapter,
     {
+      suitePath,
       cwd: outputDir,
       artifactDir: path.join(outputDir, "alpha", runner.pathKey),
       timeoutMs: 5_000,
@@ -141,6 +144,7 @@ test("executeRunner marks AssertionError failures separately from runner crashes
     runner,
     adapter,
     {
+      suitePath,
       cwd: outputDir,
       artifactDir: path.join(outputDir, "alpha", runner.pathKey),
       timeoutMs: 5_000,
@@ -175,6 +179,7 @@ test("executeRunner preserves assertion failure classes attached with assert.cla
     runner,
     adapter,
     {
+      suitePath,
       cwd: outputDir,
       artifactDir: path.join(outputDir, "alpha", runner.pathKey),
       timeoutMs: 5_000,
@@ -204,6 +209,7 @@ test("executeRunner treats non-AssertionError exceptions from assert as run fail
     runner,
     adapter,
     {
+      suitePath,
       cwd: outputDir,
       artifactDir: path.join(outputDir, "alpha", runner.pathKey),
       timeoutMs: 5_000,
@@ -234,6 +240,7 @@ test("executeRunner flushes collected soft assertion failures after assert hook 
     runner,
     adapter,
     {
+      suitePath,
       cwd: outputDir,
       artifactDir: path.join(outputDir, "alpha", runner.pathKey),
       timeoutMs: 5_000,
@@ -267,6 +274,7 @@ test("executeRunner merges soft failures with a later hard AssertionError", asyn
     runner,
     adapter,
     {
+      suitePath,
       cwd: outputDir,
       artifactDir: path.join(outputDir, "alpha", runner.pathKey),
       timeoutMs: 5_000,
@@ -298,6 +306,7 @@ test("executeRunner clears soft assertion state between runs", async () => {
     runner,
     adapter,
     {
+      suitePath,
       cwd: outputDir,
       artifactDir: path.join(outputDir, "alpha", runner.pathKey),
       timeoutMs: 5_000,
@@ -313,6 +322,7 @@ test("executeRunner clears soft assertion state between runs", async () => {
     runner,
     adapter,
     {
+      suitePath,
       cwd: outputDir,
       artifactDir: path.join(outputDir, "beta", runner.pathKey),
       timeoutMs: 5_000,
@@ -343,6 +353,7 @@ test("executeRunner marks timeout failures separately from runner crashes", asyn
     runner,
     adapter,
     {
+      suitePath,
       cwd: outputDir,
       artifactDir: path.join(outputDir, "alpha", runner.pathKey),
       timeoutMs: 5_000,
@@ -381,6 +392,7 @@ test("executeRunner marks max-steps failures separately from other runner crashe
     runner,
     adapter,
     {
+      suitePath,
       cwd: outputDir,
       artifactDir: path.join(outputDir, "alpha", runner.pathKey),
       timeoutMs: 5_000,
@@ -408,6 +420,7 @@ test("executeRunner creates a missing snapshot baseline and passes", async () =>
     runner,
     adapter,
     {
+      suitePath,
       cwd: outputDir,
       artifactDir: path.join(outputDir, "alpha", runner.pathKey),
       timeoutMs: 5_000,
@@ -439,6 +452,7 @@ test("executeRunner fails when snapshot absolute tolerance is exceeded", async (
     runner,
     adapter,
     {
+      suitePath,
       cwd: outputDir,
       artifactDir: path.join(outputDir, "alpha", runner.pathKey),
       timeoutMs: 5_000,
@@ -466,6 +480,7 @@ test("executeRunner fails when snapshot metric is unavailable", async () => {
     runner,
     adapter,
     {
+      suitePath,
       cwd: outputDir,
       artifactDir: path.join(outputDir, "alpha", runner.pathKey),
       timeoutMs: 5_000,
@@ -481,9 +496,140 @@ test("executeRunner fails when snapshot metric is unavailable", async () => {
   );
 });
 
+test("executeRunner writes explain.json for hard explainable assertion failures", async () => {
+  const outputDir = await createTempDir();
+  const runner = createRunnerInfo("open-main", { type: "opencode", model: "openai/gpt-5" });
+  const adapter = createSuccessfulAdapter(runner, { totalTokens: 120, sessionId: "ses_123" });
+  let expectedLine = "0";
+
+  const result = await executeRunner(
+    {
+      id: "alpha",
+      prompt: "prompt",
+      assert(report) {
+        expectedLine = String(currentLineNumber() + 1);
+        skillgymAssert.fileReads.includes(report, "SKILL.md", {
+          explain: {
+            question: "Why did you skip reading SKILL.md before acting?",
+          },
+        });
+      },
+    },
+    runner,
+    adapter,
+    {
+      suitePath,
+      cwd: outputDir,
+      artifactDir: path.join(outputDir, "alpha", runner.pathKey),
+      timeoutMs: 5_000,
+    },
+  );
+
+  expect(result.passed).toBe(false);
+  const explainJson = JSON.parse(
+    await readFile(path.join(result.artifactDir, "explain.json"), "utf8"),
+  ) as {
+    suitePath: string;
+    caseId: string;
+    runnerId: string;
+    sessionId?: string;
+    questions: Array<{
+      question: string;
+      source: { filePath: string; line: string; column: string };
+    }>;
+  };
+  expect(explainJson).toMatchObject({
+    suitePath,
+    caseId: "alpha",
+    runnerId: "open-main",
+    sessionId: "ses_123",
+  });
+  expect(explainJson.questions).toHaveLength(1);
+  expect(explainJson.questions[0]?.question).toBe(
+    "Why did you skip reading SKILL.md before acting?",
+  );
+  expect(explainJson.questions[0]?.source.filePath).toContain("execute-runner.test.ts");
+  expect(explainJson.questions[0]?.source.line).toBe(expectedLine);
+});
+
+test("executeRunner writes explain.json with collected soft and hard assertion questions", async () => {
+  const outputDir = await createTempDir();
+  const runner = createRunnerInfo("open-main", { type: "opencode", model: "openai/gpt-5" });
+  const adapter = createSuccessfulAdapter(runner, { totalTokens: 120, sessionId: "ses_123" });
+
+  const result = await executeRunner(
+    {
+      id: "alpha",
+      prompt: "prompt",
+      assert(report) {
+        skillgymAssert.soft.output.notEmpty(report, {
+          explain: {
+            question: "Why did you produce no final output?",
+          },
+        });
+        skillgymAssert.soft.commands.includes(report, "pnpm test", {
+          explain: {
+            question: "Why did you skip running pnpm test?",
+          },
+        });
+        skillgymAssert.fileReads.includes(report, "README.md", {
+          explain: {
+            question: "Why did you skip reading README.md?",
+          },
+        });
+      },
+    },
+    runner,
+    adapter,
+    {
+      suitePath,
+      cwd: outputDir,
+      artifactDir: path.join(outputDir, "alpha", runner.pathKey),
+      timeoutMs: 5_000,
+    },
+  );
+
+  expect(result.passed).toBe(false);
+  const explainJson = JSON.parse(
+    await readFile(path.join(result.artifactDir, "explain.json"), "utf8"),
+  ) as { questions: Array<{ question: string }> };
+  expect(explainJson.questions.map((question) => question.question)).toEqual([
+    "Why did you produce no final output?",
+    "Why did you skip running pnpm test?",
+    "Why did you skip reading README.md?",
+  ]);
+});
+
+test("executeRunner skips explain.json when assertion failure has no explainable question", async () => {
+  const outputDir = await createTempDir();
+  const runner = createRunnerInfo("open-main", { type: "opencode", model: "openai/gpt-5" });
+  const adapter = createSuccessfulAdapter(runner, { totalTokens: 120, sessionId: "ses_123" });
+
+  const result = await executeRunner(
+    {
+      id: "alpha",
+      prompt: "prompt",
+      assert() {
+        throw new AssertionError({ message: "plain assertion failure" });
+      },
+    },
+    runner,
+    adapter,
+    {
+      suitePath,
+      cwd: outputDir,
+      artifactDir: path.join(outputDir, "alpha", runner.pathKey),
+      timeoutMs: 5_000,
+    },
+  );
+
+  expect(result.passed).toBe(false);
+  await expect(readFile(path.join(result.artifactDir, "explain.json"), "utf8")).rejects.toThrow();
+});
+
 function createSuccessfulAdapter(
   runner: ReturnType<typeof createRunnerInfo>,
-  usage: { totalTokens?: number },
+  usage: { totalTokens?: number; sessionId?: string },
 ): RunnerAdapter {
   return {
     async run(input: RunInput): Promise<RunHandle> {
@@ -525,9 +671,20 @@ function createSuccessfulAdapter(
             reasoning: "provider",
           },
         },
+        sessionId: usage.sessionId,
       });
     },
   };
+}
+
+function currentLineNumber(): number {
+  const stack = new Error().stack;
+  const frame = stack?.split("\n")[2]?.match(/:(\d+):\d+\)?$/);
+  if (frame === undefined || frame === null) {
+    throw new Error("Failed to resolve current line number.");
+  }
+
+  return Number(frame[1]);
 }
 
 function createSnapshotRuntime(

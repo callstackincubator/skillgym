@@ -401,6 +401,7 @@ async function executePlannedExecution(
       const rawResult =
         rejectedResult === undefined
           ? await runExecution(item, {
+              suitePath: options.context.suitePath,
               artifactDir: attemptArtifactDir,
               resolvedWorkspace: options.resolvedWorkspace,
               executeRunnerFn: options.executeRunnerFn,
@@ -517,6 +518,7 @@ async function executePlannedExecution(
 async function runExecution(
   item: PlannedSuiteExecution,
   options: {
+    suitePath: string;
     artifactDir: string;
     resolvedWorkspace: ReturnType<typeof resolveEffectiveWorkspace>;
     executeRunnerFn: typeof executeRunner;
@@ -542,6 +544,7 @@ async function runExecution(
       item.runner.info,
       getAdapter(item.runner.config.agent),
       {
+        suitePath: options.suitePath,
         cwd: preparedWorkspace.cwd,
         artifactDir: options.artifactDir,
         timeoutMs: item.timeoutMs,

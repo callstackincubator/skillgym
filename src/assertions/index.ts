@@ -20,3 +20,4 @@ export type {
   ToolCallAssertions,
   ToolCallMatcher,
 } from "./types.js";
+export type { ExplainOptions } from "./explain.js";

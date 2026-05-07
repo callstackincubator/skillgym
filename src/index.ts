@@ -65,4 +65,5 @@ export type {
   StructuredCommandMatcher,
   ToolCallAssertions,
   ToolCallMatcher,
+  ExplainOptions,
 } from "./assertions/index.js";
