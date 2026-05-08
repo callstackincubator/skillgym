@@ -1020,6 +1020,149 @@ test("executeSuite stops on a failed repetition and keeps averages from successf
   );
 });
 
+test("executeSuite repeats asserts with persisted temp state and retries failed repetitions", async () => {
+  const outputDir = await createTempDir();
+  const stateDir = await createTempDir();
+  const stableCounterPath = path.join(stateDir, "stable-counter.json");
+  const flakyCounterPath = path.join(stateDir, "flaky-counter.json");
+  const runner = createRunnerInfo("open", { type: "opencode", model: "openai/gpt-5" });
+
+  await writeFile(stableCounterPath, JSON.stringify({ value: 0 }, null, 2), "utf8");
+  await writeFile(flakyCounterPath, JSON.stringify({ value: 0 }, null, 2), "utf8");
+
+  const stableSeen: number[] = [];
+  const flakySeen: number[] = [];
+  const suitePath = path.join(stateDir, "repeat-suite.ts");
+
+  const adapter: RunnerAdapter = {
+    async run(input: RunInput): Promise<RunHandle> {
+      return {
+        startedAt: "2026-04-03T10:00:00.000Z",
+        endedAt: "2026-04-03T10:00:01.000Z",
+        durationMs: 1_000,
+        stdoutPath: path.join(input.artifactsDir, "stdout.log"),
+        stderrPath: path.join(input.artifactsDir, "stderr.log"),
+      };
+    },
+    async collect(handle: RunHandle): Promise<RawRunArtifacts> {
+      return {
+        stdout: "",
+        stderr: "",
+        stdoutPath: handle.stdoutPath,
+        stderrPath: handle.stderrPath,
+        startedAt: handle.startedAt,
+        endedAt: handle.endedAt,
+        durationMs: handle.durationMs,
+      };
+    },
+    async normalize(input: RunInput) {
+      return createSessionReport({
+        runner,
+        prompt: input.prompt,
+        finalOutput: input.prompt,
+      });
+    },
+    async explain() {
+      throw new Error("not used in repeat-state test");
+    },
+  };
+
+  const cases: TestCase[] = [
+    {
+      id: "repeat-counter-stable",
+      prompt: "Print the stable repeat counter.",
+      async assert() {
+        const next = await incrementCounter(stableCounterPath);
+        stableSeen.push(next);
+        console.log(next);
+      },
+    },
+    {
+      id: "repeat-counter-flaky",
+      prompt: "Print the flaky repeat counter.",
+      async assert() {
+        const next = await incrementCounter(flakyCounterPath);
+        flakySeen.push(next);
+        console.log(next);
+
+        if (next === 3 || next === 4) {
+          throw new Error(`intentional failure at counter ${String(next)}`);
+        }
+      },
+    },
+  ];
+
+  const result = await executeSuite(suitePath, cases, {
+    cwd: outputDir,
+    outputDir,
+    repeat: 4,
+    repeatFailure: 2,
+    isInteractive: false,
+    config: {
+      runners: {
+        open: { agent: { type: "opencode", model: "openai/gpt-5" } },
+      },
+    },
+    executeRunnerFn: (testCase, runnerInfo, _unusedAdapter, options) => {
+      return executeRunner(testCase, runnerInfo, adapter, options);
+    },
+  });
+
+  const stableResult = result.cases.find(
+    (caseResult) => caseResult.caseId === "repeat-counter-stable",
+  )?.runnerResults[0];
+  const flakyResult = result.cases.find(
+    (caseResult) => caseResult.caseId === "repeat-counter-flaky",
+  )?.runnerResults[0];
+
+  expect(stableSeen).toEqual([1, 2, 3, 4]);
+  expect(flakySeen).toEqual([1, 2, 3, 4, 5, 6]);
+  expect(await readCounter(stableCounterPath)).toBe(4);
+  expect(await readCounter(flakyCounterPath)).toBe(6);
+
+  expect(stableResult).toMatchObject({
+    passed: true,
+    status: "passed",
+    repeatTarget: 4,
+    completedRepetitions: 4,
+    successfulRepetitions: 4,
+  });
+  expect(stableResult?.repetitions?.map((entry) => entry.attempt)).toEqual([1, 1, 1, 1]);
+
+  expect(flakyResult).toMatchObject({
+    passed: true,
+    status: "passed",
+    repeatTarget: 4,
+    completedRepetitions: 4,
+    successfulRepetitions: 4,
+    attempt: 1,
+  });
+  expect(flakyResult?.repetitions).toHaveLength(4);
+  expect(flakyResult?.repetitions?.map((entry) => entry.attempt)).toEqual([1, 1, 3, 1]);
+  expect(flakyResult?.repetitions?.[2]?.attempts?.map((entry) => entry.passed)).toEqual([
+    false,
+    false,
+    true,
+  ]);
+  expect(flakyResult?.repetitions?.[2]?.attempts?.map((entry) => entry.error?.message)).toEqual([
+    "intentional failure at counter 3",
+    "intentional failure at counter 4",
+    undefined,
+  ]);
+  expect(flakyResult?.repetitions?.[2]?.attempts?.[0]?.artifactDir).toBe(
+    path.join(result.outputDir, "repeat-counter-flaky", runner.pathKey, "repeat-3"),
+  );
+  expect(flakyResult?.repetitions?.[2]?.attempts?.[1]?.artifactDir).toBe(
+    path.join(result.outputDir, "repeat-counter-flaky", runner.pathKey, "repeat-3", "attempt-2"),
+  );
+  expect(flakyResult?.repetitions?.[2]?.attempts?.[2]?.artifactDir).toBe(
+    path.join(result.outputDir, "repeat-counter-flaky", runner.pathKey, "repeat-3", "attempt-3"),
+  );
+  expect(flakyResult?.leafArtifactDir).toBe(
+    path.join(result.outputDir, "repeat-counter-flaky", runner.pathKey, "repeat-4"),
+  );
+});
+
 test("executeSuite filters cases by tags with OR semantics and preserves result metadata", async () => {
   const outputDir = await createTempDir();
   const executed: string[] = [];
@@ -1370,6 +1513,22 @@ async function createTempDir(): Promise<string> {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), "skillgym-suite-"));
   tempDirs.push(tempDir);
   return tempDir;
+}
+
+async function incrementCounter(filePath: string): Promise<number> {
+  const current = await readCounter(filePath);
+  const next = current + 1;
+  await writeFile(filePath, JSON.stringify({ value: next }, null, 2), "utf8");
+  return next;
+}
+
+async function readCounter(filePath: string): Promise<number> {
+  const contents = JSON.parse(await readFile(filePath, "utf8")) as { value?: unknown };
+  if (typeof contents.value !== "number") {
+    throw new Error(`Invalid counter file: ${filePath}`);
+  }
+
+  return contents.value;
 }
 
 function createSnapshotRuntime(filePath: string): SnapshotRuntimeOptions {
