@@ -85,6 +85,16 @@ Common grouped assertion options:
 ```ts
 interface AssertionOptions {
   message?: string;
+  explain?: {
+    question:
+      | string
+      | ((ctx: {
+          report: SessionReport;
+          expected?: unknown;
+          actual?: unknown;
+          observed?: unknown;
+        }) => string | undefined);
+  };
 }
 ```
 
@@ -96,8 +106,31 @@ type SkillConfidence = "weak" | "medium" | "strong" | "explicit";
 interface SkillAssertionOptions {
   minConfidence?: SkillConfidence;
   message?: string;
+  explain?: AssertionOptions["explain"];
 }
 ```
+
+## Deferred explain questions
+
+Grouped assertions can attach a follow-up question that `skillgym` persists when the assertion fails.
+
+- `explain.question` can be a fixed string
+- or a callback that renders a question from the failing assertion context
+- questions are persisted only for failed runs
+- unsupported assertions are skipped unless you provide a custom `explain.question`
+
+Example:
+
+```ts
+assert.fileReads.includes(report, /SKILL\.md$/, {
+  explain: {
+    question: ({ observed }) =>
+      `You were expected to read SKILL.md before acting. Why did you continue with these reads instead: ${JSON.stringify(observed)}?`,
+  },
+});
+```
+
+When at least one explainable assertion fails, `skillgym` writes `explain.json` into the failed run artifact directory. You can later resume the original runner session with `skillgym explain <artifactDir>`.
 
 ## Skills
 
