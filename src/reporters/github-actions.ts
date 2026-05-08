@@ -50,6 +50,11 @@ function formatAnnotationCommand(caseId: string, result: RunnerResult): string {
 function formatAnnotationMessage(result: RunnerResult): string {
   const lines = [`failure type: ${result.failureType ?? "unknown"}`];
   const retryCount = countRetries(result);
+  const repeatLabel = formatRepeatLabel(result);
+
+  if (repeatLabel !== undefined) {
+    lines.push(`repeats: ${repeatLabel}`);
+  }
 
   if (retryCount > 0) {
     lines.push(`retries: ${String(retryCount)}`);
@@ -67,7 +72,10 @@ function formatAnnotationMessage(result: RunnerResult): string {
     lines.push(`error: ${result.error.name}: ${result.error.message}`);
   }
 
-  lines.push(`artifacts: ${result.artifactDir}`);
+  lines.push(`artifacts: ${result.leafArtifactDir}`);
+  if (result.leafArtifactDir !== result.artifactDir) {
+    lines.push(`artifact root: ${result.artifactDir}`);
+  }
 
   if (result.failureLogPath !== undefined) {
     lines.push(`log: ${result.failureLogPath}`);
@@ -152,8 +160,12 @@ function formatRunnerAgentLabel(runner: RunnerSummary["runner"]): string {
 function formatRunnerCaseRow(caseId: string, result: RunnerResult): string {
   const status = result.passed ? "✅" : "❌";
   const usage = result.report.usage;
+  const repeatLabel = formatRepeatLabel(result);
   const retryLabel = formatRetryLabel(result);
-  return `| ${status} \`${caseId}\`${retryLabel === undefined ? "" : ` ${retryLabel}`} | ${formatDuration(result.durationMs)} | ${formatTokens(usage.inputTokens)} | ${formatTokens(usage.outputTokens)} | ${formatTokens(usage.reasoningTokens)} | ${formatTokens(usage.cacheTokens)} | ${formatTokens(usage.totalTokens)} |`;
+  const meta = [repeatLabel === undefined ? undefined : `(${repeatLabel} repeats)`, retryLabel]
+    .filter((value): value is string => value !== undefined)
+    .join(" ");
+  return `| ${status} \`${caseId}\`${meta === "" ? "" : ` ${meta}`} | ${formatDuration(result.durationMs)} | ${formatTokens(usage.inputTokens)} | ${formatTokens(usage.outputTokens)} | ${formatTokens(usage.reasoningTokens)} | ${formatTokens(usage.cacheTokens)} | ${formatTokens(usage.totalTokens)} |`;
 }
 
 function getRunnerCases(
@@ -170,10 +182,19 @@ function formatFailureSummaryItem(caseId: string, result: RunnerResult): string 
   const segments = [
     `\`${caseId} > ${result.runner.id}\``,
     `${result.failureType ?? "unknown"}`,
-    `artifacts: \`${result.artifactDir}\``,
+    `artifacts: \`${result.leafArtifactDir}\``,
   ];
 
+  if (result.leafArtifactDir !== result.artifactDir) {
+    segments.push(`artifact root: \`${result.artifactDir}\``);
+  }
+
   const retryCount = countRetries(result);
+  const repeatLabel = formatRepeatLabel(result);
+
+  if (repeatLabel !== undefined) {
+    segments.splice(2, 0, `repeats: ${repeatLabel}`);
+  }
 
   if (retryCount > 0) {
     segments.splice(2, 0, `retries: ${String(retryCount)}`);
@@ -204,7 +225,26 @@ function formatRetryLabel(result: RunnerResult): string | undefined {
 }
 
 function countRetries(result: RunnerResult): number {
+  if (result.repetitions !== undefined) {
+    return result.repetitions.reduce(
+      (sum, repetition) => sum + Math.max(0, (repetition.attempts?.length ?? 1) - 1),
+      0,
+    );
+  }
+
   return Math.max(0, (result.attempts?.length ?? 1) - 1);
+}
+
+function formatRepeatLabel(result: RunnerResult): string | undefined {
+  if (result.repeatTarget === undefined || result.repeatTarget <= 1) {
+    return undefined;
+  }
+
+  if (result.passed) {
+    return `${String(result.successfulRepetitions ?? result.repeatTarget)}/${String(result.repeatTarget)}`;
+  }
+
+  return `${String(result.stoppedAtRepetition ?? result.successfulRepetitions ?? 0)}/${String(result.repeatTarget)}`;
 }
 
 function listFailures(result: SuiteRunResult): Array<{ caseId: string; result: RunnerResult }> {

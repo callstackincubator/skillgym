@@ -256,6 +256,16 @@ describe("config", () => {
     expect(parsed.run?.retryFailed).toBe(2);
   });
 
+  test("parses run repeat and repeatFailure", () => {
+    const parsed = parseConfig({
+      run: { repeat: 3, repeatFailure: 2 },
+      runners: { open: { agent: { type: "opencode", model: "openai/gpt-5" } } },
+    });
+
+    expect(parsed.run?.repeat).toBe(3);
+    expect(parsed.run?.repeatFailure).toBe(2);
+  });
+
   test("accepts cursor-agent runner configs", () => {
     const parsed = parseConfig({
       runners: {
@@ -321,6 +331,8 @@ describe("config", () => {
       outputDir: path.join(tempDir, "config-results"),
       schedule: "parallel",
       maxParallel: 2,
+      repeat: 1,
+      repeatFailure: 0,
       retryFailed: 0,
       tags: [],
     });
@@ -372,6 +384,35 @@ describe("config", () => {
         { runners: { open: { agent: { type: "opencode", model: "openai/gpt-5" } } } },
       ),
     ).toThrow("Invalid config at CLI option --retry-failed: expected integer >= 0");
+  });
+
+  test("run options support repeat and repeatFailure with retryFailed fallback", () => {
+    expect(
+      resolveRunOptions(
+        {},
+        {
+          run: { repeat: 4, repeatFailure: 2 },
+          runners: { open: { agent: { type: "opencode", model: "openai/gpt-5" } } },
+        },
+      ),
+    ).toMatchObject({ repeat: 4, repeatFailure: 2, retryFailed: 2 });
+
+    expect(
+      resolveRunOptions(
+        { repeat: "5", repeatFailure: "3", retryFailed: "1" },
+        {
+          run: { repeat: 4, repeatFailure: 2, retryFailed: 9 },
+          runners: { open: { agent: { type: "opencode", model: "openai/gpt-5" } } },
+        },
+      ),
+    ).toMatchObject({ repeat: 5, repeatFailure: 3, retryFailed: 3 });
+
+    expect(
+      resolveRunOptions(
+        { retryFailed: "4" },
+        { runners: { open: { agent: { type: "opencode", model: "openai/gpt-5" } } } },
+      ),
+    ).toMatchObject({ repeat: 1, repeatFailure: 4, retryFailed: 4 });
   });
 
   test("run options support config tags and let CLI tags override config", () => {
@@ -527,6 +568,7 @@ function createRunnerResult(options: {
     status: "passed",
     durationMs: 10,
     artifactDir: options.artifactDir,
+    leafArtifactDir: options.artifactDir,
     report: createSessionReport({ runner: options.runner }),
   };
 }

@@ -29,12 +29,17 @@ interface FailureEntry {
   caseId: string;
   runner: RunnerInfo;
   artifactDir: string;
+  leafArtifactDir: string;
   attempts?: RunnerResult["attempts"];
+  repetitions?: RunnerResult["repetitions"];
+  successfulRepetitions?: RunnerResult["successfulRepetitions"];
+  stoppedAtRepetition?: RunnerResult["stoppedAtRepetition"];
   error?: SerializedError;
   failureType?: RunnerFailureType;
   failureOrigin?: RunnerFailureOrigin;
   failureClass?: FailureClass;
   failureLogPath?: string;
+  passed: boolean;
   status: RunnerResult["status"];
 }
 
@@ -105,7 +110,6 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
         `${colors.dim("Workspace ")}${colors.bold(event.context.workspaceMode === "shared" ? event.context.cwd : `${event.context.workspaceMode} per run`)}`,
         stdout,
       );
-      writeLine(`${colors.dim("Output    ")}${colors.bold(event.context.outputDir)}`, stdout);
       writeLine(`${colors.dim("Cases     ")}${String(event.context.selectedCaseCount)}`, stdout);
       if (event.context.tagFilter !== undefined) {
         writeLine(`${colors.dim("Tags      ")}${event.context.tagFilter.join(", ")}`, stdout);
@@ -259,6 +263,14 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
         stdout,
       );
       writeLine(formatSummaryDetailLine("Output", event.result.outputDir, colors), stdout);
+
+      if (failures.length > 0) {
+        writeLine("", stdout);
+        writeLine(
+          colors.yellow("Explain failed runs with `skillgym explain <artifactDir>`."),
+          stdout,
+        );
+      }
     },
     onError() {
       if (interactiveState === undefined) {
@@ -300,7 +312,7 @@ function formatRunnerCaseRow(
   _colors: ReturnType<typeof pc.createColors>,
 ): string {
   const color = result.passed ? pc.green : pc.red;
-  const statusLabel = formatStatusLabel(result.status);
+  const statusLabel = formatResultMetaLabel(result);
   const caseLabel = `${result.passed ? symbols.pass : symbols.fail} ${caseId}`;
 
   return [
@@ -323,6 +335,16 @@ function formatStatusLabel(status: RunnerResult["status"]): string | undefined {
     case "unexpected-passed":
       return "unexpected pass";
   }
+}
+
+function formatResultMetaLabel(result: RunnerResult): string | undefined {
+  const segments = [
+    formatStatusLabel(result.status),
+    formatRepeatLabel(result),
+    formatRetryLabel(result),
+  ];
+  const visible = segments.filter((segment): segment is string => segment !== undefined);
+  return visible.length === 0 ? undefined : visible.join(", ");
 }
 
 function formatRunnerLegend(colors: ReturnType<typeof pc.createColors>): string {
@@ -386,7 +408,17 @@ function formatFailureBlock(
     lines.push(colors.dim(`Attempts: ${String(failure.attempts.length)}`));
   }
 
-  lines.push(colors.dim(`Artifacts: ${failure.artifactDir}`));
+  const repeatLabel = formatRepeatLabelFromCounts(
+    failure.repetitions?.length,
+    failure.successfulRepetitions,
+    failure.passed,
+    failure.stoppedAtRepetition,
+  );
+
+  if (repeatLabel !== undefined) {
+    lines.push(colors.dim(`Repeats: ${repeatLabel}`));
+  }
+
   return lines.join("\n");
 }
 
@@ -399,7 +431,7 @@ function formatFailureGroup(
   ];
 
   for (const failure of group.failures) {
-    lines.push(colors.dim(`- ${failure.caseId} > ${failure.runner.id}: ${failure.artifactDir}`));
+    lines.push(colors.dim(`- ${failure.caseId} > ${failure.runner.id}`));
   }
 
   return lines.join("\n");
@@ -605,12 +637,17 @@ function collectFinalFailures(result: SuiteRunResult): FailureEntry[] {
           caseId: caseResult.caseId,
           runner: runnerResult.runner,
           artifactDir: runnerResult.artifactDir,
-          attempts: runnerResult.attempts,
+          leafArtifactDir: runnerResult.leafArtifactDir,
+          attempts: runnerResult.repetitions?.at(-1)?.attempts ?? runnerResult.attempts,
           error: runnerResult.error,
           failureType: runnerResult.failureType,
           failureOrigin: runnerResult.failureOrigin,
           failureClass: runnerResult.failureClass,
           failureLogPath: runnerResult.failureLogPath,
+          repetitions: runnerResult.repetitions,
+          successfulRepetitions: runnerResult.successfulRepetitions,
+          stoppedAtRepetition: runnerResult.stoppedAtRepetition,
+          passed: runnerResult.passed,
           status: runnerResult.status,
         },
       ];
@@ -755,7 +792,7 @@ function formatInteractiveRetryLabel(
   entry: InteractiveRunEntry,
   colors: ReturnType<typeof pc.createColors>,
 ): string | undefined {
-  if (entry.status !== "passed" || entry.retryCount === 0) {
+  if ((entry.status !== "passed" && entry.status !== "expected-failed") || entry.retryCount === 0) {
     return undefined;
   }
 
@@ -763,11 +800,53 @@ function formatInteractiveRetryLabel(
 }
 
 function countRetries(result: RunnerResult): number {
+  if (result.repetitions !== undefined) {
+    return result.repetitions.reduce(
+      (sum, repetition) => sum + Math.max(0, (repetition.attempts?.length ?? 1) - 1),
+      0,
+    );
+  }
+
   return Math.max(0, (result.attempts?.length ?? 1) - 1);
 }
 
 function formatRetryCountLabel(retryCount: number): string {
   return `(${retryCount === 1 ? "1 retry" : `${String(retryCount)} retries`})`;
+}
+
+function formatRetryLabel(result: RunnerResult): string | undefined {
+  const retryCount = countRetries(result);
+  if (retryCount === 0) {
+    return undefined;
+  }
+
+  return retryCount === 1 ? "1 retry" : `${String(retryCount)} retries`;
+}
+
+function formatRepeatLabel(result: RunnerResult): string | undefined {
+  return formatRepeatLabelFromCounts(
+    result.repeatTarget,
+    result.successfulRepetitions,
+    result.passed,
+    result.stoppedAtRepetition,
+  );
+}
+
+function formatRepeatLabelFromCounts(
+  repeatTarget: number | undefined,
+  successfulRepetitions: number | undefined,
+  passed: boolean,
+  stoppedAtRepetition: number | undefined,
+): string | undefined {
+  if (repeatTarget === undefined || repeatTarget <= 1) {
+    return undefined;
+  }
+
+  if (passed) {
+    return `${String(successfulRepetitions ?? repeatTarget)}/${String(repeatTarget)} repeats`;
+  }
+
+  return `failed at ${String(stoppedAtRepetition ?? successfulRepetitions ?? 0)}/${String(repeatTarget)}`;
 }
 
 function formatInteractiveStatusIcon(

@@ -11,9 +11,13 @@ If you are an LLM agent, run ${theme.light("skillgym skills get core")} before a
 
 ${theme.bold("Commands:")}
   run ${theme.accent("<suite.ts>")}     Execute a benchmark suite against the configured runners
+  explain ${theme.accent("<artifactDir>")} Explain a failed run from the exact failed leaf artifact directory
   skills list        List bundled skill files
   skills get ${theme.accent("<name>")}  Print one bundled skill file
   help               Show this help message
+
+${theme.bold("Explain Options:")}
+  --rerun             Re-run explain and overwrite an existing ${theme.light("explanations.json")} artifact
 
 ${theme.bold("Run Options:")}
   --config ${theme.accent("<path>")}        Load an explicit skillgym config file
@@ -21,7 +25,9 @@ ${theme.bold("Run Options:")}
   --output-dir ${theme.accent("<path>")}    Override where run artifacts are written
   --schedule ${theme.accent("<mode>")}      Choose ${theme.light("serial")}, ${theme.light("parallel")}, or ${theme.light("isolated-by-runner")}
   --max-parallel ${theme.accent("<n>")}     Cap concurrent executions for non-serial schedules
-  --retry-failed ${theme.accent("<n>")}     Retry only failed case x runner executions up to ${theme.light("n")} extra times
+  --repeat ${theme.accent("<n>")}           Require ${theme.light("n")} successful repetitions per case x runner
+  --repeat-failure ${theme.accent("<n>")}   Retry the current repetition up to ${theme.light("n")} extra times after failure
+  --retry-failed ${theme.accent("<n>")}     Deprecated alias for ${theme.light("--repeat-failure")}
   --case ${theme.accent("<id>")}            Filter the configured suite to one case id
   --tag ${theme.accent("<tag>")}            Filter cases by tag; repeat or comma-separate for OR matching
   --runner ${theme.accent("<runner-id>")}   Filter the configured runner set by runner id
@@ -38,7 +44,9 @@ ${theme.bold("Examples:")}
   ${theme.dim("$")} ${theme.light("skillgym run ./examples/basic-suite.ts --reporter standard")}
   ${theme.dim("$")} ${theme.light("skillgym run ./examples/basic-suite.ts --schedule isolated-by-runner")}
   ${theme.dim("$")} ${theme.light("skillgym run ./examples/basic-suite.ts --schedule parallel --max-parallel 4")}
-  ${theme.dim("$")} ${theme.light("skillgym run ./examples/basic-suite.ts --retry-failed 2")}
+  ${theme.dim("$")} ${theme.light("skillgym run ./examples/basic-suite.ts --repeat 5 --repeat-failure 2")}
   ${theme.dim("$")} ${theme.light("skillgym run ./examples/basic-suite.ts --update-snapshots")}
+  ${theme.dim("$")} ${theme.light("skillgym explain ./.skillgym-results/run-1/case-a/open-main/repeat-1")}
+  ${theme.dim("$")} ${theme.light("skillgym explain ./.skillgym-results/run-1/case-a/open-main/repeat-1 --rerun")}
 `);
 }

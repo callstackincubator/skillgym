@@ -12,6 +12,7 @@ export interface ReporterContext {
   selectedCaseCount: number;
   selectedRunnerCount: number;
   selectedExecutionCount: number;
+  repeat?: number;
   scheduleMode: ScheduleMode;
   maxParallel: number;
   caseFilter?: string;

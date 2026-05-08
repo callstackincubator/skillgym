@@ -7,11 +7,17 @@ export interface StackFrameLocation {
 }
 
 export function extractUserStackFrame(error: SerializedError): StackFrameLocation | undefined {
-  if (error.stack === undefined) {
+  return extractUserStackFrameFromStack(error.stack);
+}
+
+export function extractUserStackFrameFromStack(
+  stack: string | undefined,
+): StackFrameLocation | undefined {
+  if (stack === undefined) {
     return undefined;
   }
 
-  const frames = error.stack.split("\n").slice(1);
+  const frames = stack.split("\n").slice(1);
   for (const frame of frames) {
     const parsed = parseStackFrame(frame);
     if (parsed === undefined) {

@@ -1,6 +1,7 @@
 import { printHelp } from "./cli/help.js";
 import { printBanner } from "./cli/branding.js";
 import { formatCliError } from "./cli/error.js";
+import { explainCommand } from "./cli/explain.js";
 import { RunFailuresError, runCommand } from "./cli/run.js";
 import { listBundledSkills, readBundledSkill } from "./cli/skills.js";
 import { parseArgs } from "./utils/cli.js";
@@ -23,6 +24,8 @@ async function main(): Promise<void> {
       const scheduleOption = parsed.options.schedule;
       const configOption = parsed.options.config;
       const maxParallelOption = parsed.options["max-parallel"];
+      const repeatOption = parsed.options.repeat;
+      const repeatFailureOption = parsed.options["repeat-failure"];
       const retryFailedOption = parsed.options["retry-failed"];
       const updateSnapshotsOption = parsed.options["update-snapshots"];
       const snapshotsOption = parsed.options.snapshots;
@@ -37,6 +40,8 @@ async function main(): Promise<void> {
         reporter: getStringOption(reporterOption),
         schedule: getStringOption(scheduleOption),
         maxParallel: getStringOption(maxParallelOption),
+        repeat: getStringOption(repeatOption),
+        repeatFailure: getStringOption(repeatFailureOption),
         retryFailed: getStringOption(retryFailedOption),
         tags: parseTagOption(tagOption),
         reporterCwd: process.cwd(),
@@ -44,6 +49,15 @@ async function main(): Promise<void> {
         updateSnapshots: updateSnapshotsOption === true,
         snapshotsPath: getStringOption(snapshotsOption),
       });
+      return;
+    }
+    case "explain": {
+      const artifactDir = parsed.positionals[0];
+      if (artifactDir === undefined) {
+        throw new Error("Missing artifact directory. Usage: skillgym explain <artifactDir>");
+      }
+
+      await explainCommand({ artifactDir, rerun: parsed.options.rerun === true });
       return;
     }
     case "help":

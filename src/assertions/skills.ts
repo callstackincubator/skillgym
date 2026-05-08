@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import type { SkillDetection } from "../domain/session-report.js";
 import type { SessionReport } from "../domain/session-report.js";
+import { captureExplainableAssertion } from "./explain.js";
 import { composeAssertionMessage } from "./matchers.js";
 import type { SkillAssertionOptions, SkillAssertions } from "./types.js";
 
@@ -13,24 +14,50 @@ const confidenceRank = {
 
 export const skillAssertions: SkillAssertions = {
   has(report, skill, options) {
-    assert.ok(
-      getMatchingSkills(report, skill, options).length > 0,
-      composeAssertionMessage(
-        `Expected detectedSkills to include ${JSON.stringify(skill)}${formatMinConfidence(options)}.`,
-        formatObservedSkills(report.detectedSkills),
-        options?.message,
-      ),
+    const matches = getMatchingSkills(report, skill, options);
+    captureExplainableAssertion(
+      () =>
+        assert.ok(
+          matches.length > 0,
+          composeAssertionMessage(
+            `Expected detectedSkills to include ${JSON.stringify(skill)}${formatMinConfidence(options)}.`,
+            formatObservedSkills(report.detectedSkills),
+            options?.message,
+          ),
+        ),
+      {
+        report,
+        assertionOptions: options,
+        expected: skill,
+        actual: matches.length,
+        observed: report.detectedSkills,
+        buildQuestion: () =>
+          `You were expected to load the skill ${JSON.stringify(skill)}${formatMinConfidence(options)}. Why did you not load it?`,
+      },
     );
   },
   notHas(report, skill, options) {
-    assert.equal(
-      getMatchingSkills(report, skill, options).length,
-      0,
-      composeAssertionMessage(
-        `Expected detectedSkills not to include ${JSON.stringify(skill)}${formatMinConfidence(options)}.`,
-        formatObservedSkills(report.detectedSkills),
-        options?.message,
-      ),
+    const matches = getMatchingSkills(report, skill, options);
+    captureExplainableAssertion(
+      () =>
+        assert.equal(
+          matches.length,
+          0,
+          composeAssertionMessage(
+            `Expected detectedSkills not to include ${JSON.stringify(skill)}${formatMinConfidence(options)}.`,
+            formatObservedSkills(report.detectedSkills),
+            options?.message,
+          ),
+        ),
+      {
+        report,
+        assertionOptions: options,
+        expected: 0,
+        actual: matches.length,
+        observed: report.detectedSkills,
+        buildQuestion: () =>
+          `You were expected not to load the skill ${JSON.stringify(skill)}${formatMinConfidence(options)}. Why did you load it anyway?`,
+      },
     );
   },
   includes(report, skills, options) {
@@ -38,40 +65,76 @@ export const skillAssertions: SkillAssertions = {
       (skill) => getMatchingSkills(report, skill, options).length === 0,
     );
 
-    assert.equal(
-      missing.length,
-      0,
-      composeAssertionMessage(
-        `Expected detectedSkills to include all of: ${skills.map((skill) => JSON.stringify(skill)).join(", ")}${formatMinConfidence(options)}. Missing: ${missing.map((skill) => JSON.stringify(skill)).join(", ") || "(none)"}.`,
-        formatObservedSkills(report.detectedSkills),
-        options?.message,
-      ),
+    captureExplainableAssertion(
+      () =>
+        assert.equal(
+          missing.length,
+          0,
+          composeAssertionMessage(
+            `Expected detectedSkills to include all of: ${skills.map((skill) => JSON.stringify(skill)).join(", ")}${formatMinConfidence(options)}. Missing: ${missing.map((skill) => JSON.stringify(skill)).join(", ") || "(none)"}.`,
+            formatObservedSkills(report.detectedSkills),
+            options?.message,
+          ),
+        ),
+      {
+        report,
+        assertionOptions: options,
+        expected: skills,
+        actual: missing,
+        observed: report.detectedSkills,
+        buildQuestion: () =>
+          `You were expected to load all required skills${formatMinConfidence(options)}. Why were these skills missing: ${missing.map((skill) => JSON.stringify(skill)).join(", ") || "(none)"}?`,
+      },
     );
   },
   count(report, skill, expected, options) {
     const actual = getMatchingSkills(report, skill, options).length;
 
-    assert.equal(
-      actual,
-      expected,
-      composeAssertionMessage(
-        `Expected detectedSkills to include ${JSON.stringify(skill)} exactly ${expected} time(s)${formatMinConfidence(options)}, but found ${actual}.`,
-        formatObservedSkills(report.detectedSkills),
-        options?.message,
-      ),
+    captureExplainableAssertion(
+      () =>
+        assert.equal(
+          actual,
+          expected,
+          composeAssertionMessage(
+            `Expected detectedSkills to include ${JSON.stringify(skill)} exactly ${expected} time(s)${formatMinConfidence(options)}, but found ${actual}.`,
+            formatObservedSkills(report.detectedSkills),
+            options?.message,
+          ),
+        ),
+      {
+        report,
+        assertionOptions: options,
+        expected,
+        actual,
+        observed: report.detectedSkills,
+        buildQuestion: () =>
+          `You were expected to load the skill ${JSON.stringify(skill)} exactly ${expected} time(s)${formatMinConfidence(options)}, but loaded it ${actual} time(s). Why?`,
+      },
     );
   },
   exactlyOne(report, skill, options) {
     const actual = getMatchingSkills(report, skill, options).length;
 
-    assert.equal(
-      actual,
-      1,
-      composeAssertionMessage(
-        `Expected detectedSkills to include ${JSON.stringify(skill)} exactly once${formatMinConfidence(options)}, but found ${actual}.`,
-        formatObservedSkills(report.detectedSkills),
-        options?.message,
-      ),
+    captureExplainableAssertion(
+      () =>
+        assert.equal(
+          actual,
+          1,
+          composeAssertionMessage(
+            `Expected detectedSkills to include ${JSON.stringify(skill)} exactly once${formatMinConfidence(options)}, but found ${actual}.`,
+            formatObservedSkills(report.detectedSkills),
+            options?.message,
+          ),
+        ),
+      {
+        report,
+        assertionOptions: options,
+        expected: 1,
+        actual,
+        observed: report.detectedSkills,
+        buildQuestion: () =>
+          `You were expected to load the skill ${JSON.stringify(skill)} exactly once${formatMinConfidence(options)}, but loaded it ${actual} time(s). Why?`,
+      },
     );
   },
   only(report, skills, options) {
@@ -79,14 +142,26 @@ export const skillAssertions: SkillAssertions = {
       (item) => meetsMinConfidence(item, options?.minConfidence) && !skills.includes(item.skill),
     );
 
-    assert.equal(
-      unexpected.length,
-      0,
-      composeAssertionMessage(
-        `Expected detectedSkills to contain only: ${skills.map((skill) => JSON.stringify(skill)).join(", ") || "(none)"}${formatMinConfidence(options)}. Unexpected: ${unexpected.map((item) => `${item.skill} (${item.confidence})`).join(" | ") || "(none)"}.`,
-        formatObservedSkills(report.detectedSkills),
-        options?.message,
-      ),
+    captureExplainableAssertion(
+      () =>
+        assert.equal(
+          unexpected.length,
+          0,
+          composeAssertionMessage(
+            `Expected detectedSkills to contain only: ${skills.map((skill) => JSON.stringify(skill)).join(", ") || "(none)"}${formatMinConfidence(options)}. Unexpected: ${unexpected.map((item) => `${item.skill} (${item.confidence})`).join(" | ") || "(none)"}.`,
+            formatObservedSkills(report.detectedSkills),
+            options?.message,
+          ),
+        ),
+      {
+        report,
+        assertionOptions: options,
+        expected: skills,
+        actual: unexpected.map((item) => item.skill),
+        observed: report.detectedSkills,
+        buildQuestion: () =>
+          `You were expected to load only these skills${formatMinConfidence(options)}: ${skills.map((skill) => JSON.stringify(skill)).join(", ") || "(none)"}. Why did you also load: ${unexpected.map((item) => `${item.skill} (${item.confidence})`).join(" | ") || "(none)"}?`,
+      },
     );
   },
 };

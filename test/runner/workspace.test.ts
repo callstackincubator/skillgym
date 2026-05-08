@@ -74,6 +74,7 @@ test("executeSuite provisions isolated workspaces from suite template and remove
         status: "passed",
         durationMs: 10,
         artifactDir: options.artifactDir,
+        leafArtifactDir: options.artifactDir,
         report: createSessionReport({ runner, prompt: "hello" }),
       };
     },
@@ -85,7 +86,7 @@ test("executeSuite provisions isolated workspaces from suite template and remove
   await expect(stat(seenCwds[0]!)).rejects.toThrow();
 
   const workspaceMetadata = await readFile(
-    path.join(runOutputDir, "alpha", runner.pathKey, "workspace.json"),
+    path.join(runOutputDir, "alpha", runner.pathKey, "repeat-1", "workspace.json"),
     "utf8",
   );
   expect(workspaceMetadata).toContain('"mode": "isolated"');
@@ -128,7 +129,7 @@ test("executeSuite preserves failed isolated workspaces and writes bootstrap log
   expect(result.cases[0]?.runnerResults[0]?.error?.message).toContain("Workspace bootstrap failed");
   expect(result.cases[0]?.runnerResults[0]?.failureOrigin).toBe("workspace-bootstrap");
   expect(result.cases[0]?.runnerResults[0]?.failureLogPath).toBe(
-    path.join(runOutputDir, "alpha", runner.pathKey, "bootstrap.stderr.log"),
+    path.join(runOutputDir, "alpha", runner.pathKey, "repeat-1", "bootstrap.stderr.log"),
   );
 
   const workspaceRoot = path.join(runOutputDir, "workspaces", "alpha");
@@ -137,7 +138,7 @@ test("executeSuite preserves failed isolated workspaces and writes bootstrap log
   const preservedWorkspace = path.join(workspaceRoot, entries[0]!);
   expect((await stat(preservedWorkspace)).isDirectory()).toBe(true);
 
-  const artifactDir = path.join(runOutputDir, "alpha", runner.pathKey);
+  const artifactDir = path.join(runOutputDir, "alpha", runner.pathKey, "repeat-1");
   const stdout = await readFile(path.join(artifactDir, "bootstrap.stdout.log"), "utf8");
   const stderr = await readFile(path.join(artifactDir, "bootstrap.stderr.log"), "utf8");
   const workspaceMetadata = await readFile(path.join(artifactDir, "workspace.json"), "utf8");
@@ -190,6 +191,7 @@ test("executeSuite resolves suite-relative bootstrap script args before running 
           status: "passed",
           durationMs: 10,
           artifactDir: options.artifactDir,
+          leafArtifactDir: options.artifactDir,
           report: createSessionReport({ runner, prompt: "hello" }),
         };
       },

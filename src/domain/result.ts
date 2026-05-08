@@ -7,6 +7,7 @@ interface BaseRunnerResult {
   status: RunnerResultStatus;
   durationMs: number;
   artifactDir: string;
+  leafArtifactDir: string;
   report: SessionReport;
   error?: SerializedError;
   failureType?: RunnerFailureType;
@@ -19,9 +20,20 @@ export interface RunnerAttemptResult extends BaseRunnerResult {
   attempt: number;
 }
 
+export interface RepetitionResult extends BaseRunnerResult {
+  repetition: number;
+  attempt?: number;
+  attempts?: RunnerAttemptResult[];
+}
+
 export interface RunnerResult extends BaseRunnerResult {
   attempt?: number;
   attempts?: RunnerAttemptResult[];
+  repeatTarget?: number;
+  completedRepetitions?: number;
+  successfulRepetitions?: number;
+  stoppedAtRepetition?: number;
+  repetitions?: RepetitionResult[];
 }
 
 export interface FailureClass {

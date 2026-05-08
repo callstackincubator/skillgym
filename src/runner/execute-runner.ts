@@ -1,10 +1,12 @@
 import path from "node:path";
 import { AssertionError } from "node:assert";
+import type { ExplainArtifact } from "../domain/explain.js";
 import type { RunnerAdapter } from "../domain/adapter.js";
 import type { RunnerFailureOrigin, RunnerResult } from "../domain/result.js";
 import type { RunnerInfo } from "../domain/runner.js";
 import type { SessionReport } from "../domain/session-report.js";
 import type { TestCase } from "../domain/test-case.js";
+import { getAttachedExplainQuestions } from "../assertions/explain.js";
 import { createAssertionContext } from "../assertions/context.js";
 import { getAttachedFailureClass } from "../failure-classification.js";
 import { runWithSoftAssertions } from "../assertions/soft.js";
@@ -18,6 +20,7 @@ export async function executeRunner(
   runner: RunnerInfo,
   adapter: RunnerAdapter,
   options: {
+    suitePath: string;
     cwd: string;
     artifactDir: string;
     timeoutMs: number;
@@ -52,6 +55,8 @@ export async function executeRunner(
       artifacts = await adapter.collect(handle, input);
     } catch (error) {
       return await writeAndReturnFailure(error, {
+        suitePath: options.suitePath,
+        cwd: options.cwd,
         testCase,
         runner,
         artifactDir,
@@ -66,6 +71,8 @@ export async function executeRunner(
       report = await adapter.normalize(input, artifacts);
     } catch (error) {
       return await writeAndReturnFailure(error, {
+        suitePath: options.suitePath,
+        cwd: options.cwd,
         testCase,
         runner,
         artifactDir,
@@ -85,6 +92,8 @@ export async function executeRunner(
         );
       } catch (error) {
         return await writeAndReturnFailure(error, {
+          suitePath: options.suitePath,
+          cwd: options.cwd,
           testCase,
           runner,
           artifactDir,
@@ -102,6 +111,8 @@ export async function executeRunner(
     } catch (error) {
       const isAssertionFailure = error instanceof AssertionError;
       return await writeAndReturnFailure(error, {
+        suitePath: options.suitePath,
+        cwd: options.cwd,
         testCase,
         runner,
         artifactDir,
@@ -121,10 +132,13 @@ export async function executeRunner(
       status: "passed",
       durationMs: Date.now() - startedMs,
       artifactDir,
+      leafArtifactDir: artifactDir,
       report,
     };
   } catch (error) {
     return await writeAndReturnFailure(error, {
+      suitePath: options.suitePath,
+      cwd: options.cwd,
       testCase,
       runner,
       artifactDir,
@@ -169,6 +183,8 @@ function applySnapshotCheck(
 async function writeAndReturnFailure(
   error: unknown,
   options: {
+    suitePath: string;
+    cwd: string;
     testCase: TestCase;
     runner: RunnerInfo;
     artifactDir: string;
@@ -183,7 +199,42 @@ async function writeAndReturnFailure(
   const result = createExecutionFailureResult(error, options);
   await writeJson(path.join(options.artifactDir, "error.json"), result.error);
   await writeJson(path.join(options.artifactDir, "report.json"), result.report);
+  await writeExplainArtifactIfNeeded(error, {
+    suitePath: options.suitePath,
+    cwd: options.cwd,
+    caseId: options.testCase.id,
+    runnerId: options.runner.id,
+    artifactDir: options.artifactDir,
+    report: result.report,
+  });
   return result;
+}
+
+async function writeExplainArtifactIfNeeded(
+  error: unknown,
+  options: {
+    suitePath: string;
+    cwd: string;
+    caseId: string;
+    runnerId: string;
+    artifactDir: string;
+    report: SessionReport;
+  },
+): Promise<void> {
+  const questions = getAttachedExplainQuestions(error);
+  if (questions.length === 0) {
+    return;
+  }
+
+  const explainArtifact: ExplainArtifact = {
+    suitePath: options.suitePath,
+    caseId: options.caseId,
+    runnerId: options.runnerId,
+    cwd: options.cwd,
+    sessionId: options.report.sessionId,
+    questions,
+  };
+  await writeJson(path.join(options.artifactDir, "explain.json"), explainArtifact);
 }
 
 function sanitizePathSegment(value: string): string {

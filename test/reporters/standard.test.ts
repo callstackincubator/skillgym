@@ -162,18 +162,19 @@ test("standard reporter prints runner-grouped results and failure artifacts", as
   expect(output).toContain("9,830 / 1,104 / 0 / 7,233 / 16,604");
   expect(output).toContain("9,830 / 1,104 / 0 / 7,233 / 12,000");
   expect(output).toContain("Tokens      9,830 / 1,104 / 0 / 7,233 / 15,201");
-  expect(output).toContain("Output      .skillgym-results/run-1");
   expect(output).toContain("Failures");
   expect(output).toContain("Failure Classes");
   expect(output).toContain("Assertion failure [assertion] (1)");
-  expect(output).toContain("- case-a > code-main: .skillgym-results/run-1/case-a/code-main");
+  expect(output).toContain("- case-a > code-main");
   expect(output).toContain("✗ case-a > code-main (codex, gpt-5.4)");
   expect(output).toContain("AssertionError: expected skill to be loaded before command execution");
   expect(output).toContain("at /workspace/examples/basic-suite.ts:14:15");
   expect(output).toContain("Attempts: 2");
   expect(output).not.toContain("skillgym could not complete the run");
   expect(output).not.toContain("Run did not complete because the runner crashed");
-  expect(output).toContain("Artifacts: .skillgym-results/run-1/case-a/code-main");
+  expect(output).not.toContain("Artifacts:");
+  expect(output).not.toContain("Artifact Root:");
+  expect(output).toContain("Explain failed runs with `skillgym explain <artifactDir>`.");
 });
 
 test("standard reporter interactive mode renders queued, running, and finished runs", async () => {
@@ -736,7 +737,8 @@ test("standard reporter prints friendly runner crash message with log path", asy
   expect(output).toContain("Run did not complete because the runner crashed.");
   expect(output).toContain("AssertionError: expected skill to be loaded before command execution");
   expect(output).toContain("Log: .skillgym-results/run-1/case-a/code-main/stderr.log");
-  expect(output).toContain("Artifacts: .skillgym-results/run-1/case-a/code-main");
+  expect(output).not.toContain("Artifacts:");
+  expect(output).toContain("Explain failed runs with `skillgym explain <artifactDir>`.");
 });
 
 test("standard reporter points workspace bootstrap failures to bootstrap logs", async () => {
@@ -838,7 +840,8 @@ test("standard reporter points workspace bootstrap failures to bootstrap logs", 
   expect(output).toContain("Workspace bootstrap failed.");
   expect(output).toContain("Error: Workspace bootstrap failed: sh ./bootstrap.sh (exit 4)");
   expect(output).toContain("Log: .skillgym-results/run-1/case-a/open-main/bootstrap.stderr.log");
-  expect(output).toContain("Artifacts: .skillgym-results/run-1/case-a/open-main");
+  expect(output).not.toContain("Artifacts:");
+  expect(output).toContain("Explain failed runs with `skillgym explain <artifactDir>`.");
 });
 
 test("standard reporter renders max-steps failures with a clear message", async () => {
@@ -1163,8 +1166,8 @@ test("standard reporter groups failures by custom failure class", async () => {
 
   const output = writes.join("");
   expect(output).toContain("Wrong CLI alias [wrong-cli-alias] (2)");
-  expect(output).toContain("- case-a > open-main: .skillgym-results/run-1/case-a/open-main");
-  expect(output).toContain("- case-b > open-main: .skillgym-results/run-1/case-b/open-main");
+  expect(output).toContain("- case-a > open-main");
+  expect(output).toContain("- case-b > open-main");
 });
 
 function createCaseResult(options: { caseId: string; runnerResults: RunnerResult[] }): CaseResult {
@@ -1181,11 +1184,17 @@ function createRunnerResult(options: {
   passed: boolean;
   status?: RunnerResult["status"];
   artifactDir: string;
+  leafArtifactDir?: string;
   totalTokens: number;
   attempts?: number;
   failureClass?: RunnerResult["failureClass"];
 }): RunnerResult {
   const attempts = options.attempts ?? 1;
+  const leafArtifactDir =
+    options.leafArtifactDir ??
+    (attempts === 1
+      ? options.artifactDir
+      : path.join(options.artifactDir, `attempt-${String(attempts)}`));
   return {
     runner: options.runner,
     passed: options.passed,
@@ -1193,6 +1202,7 @@ function createRunnerResult(options: {
     attempt: attempts,
     durationMs: 24_800,
     artifactDir: options.artifactDir,
+    leafArtifactDir,
     attempts: Array.from({ length: attempts }, (_, index) => ({
       runner: options.runner,
       passed: options.passed,
@@ -1200,6 +1210,10 @@ function createRunnerResult(options: {
       attempt: index + 1,
       durationMs: 24_800,
       artifactDir:
+        index === 0
+          ? options.artifactDir
+          : path.join(options.artifactDir, `attempt-${String(index + 1)}`),
+      leafArtifactDir:
         index === 0
           ? options.artifactDir
           : path.join(options.artifactDir, `attempt-${String(index + 1)}`),

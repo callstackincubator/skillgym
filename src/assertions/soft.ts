@@ -1,6 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { AssertionError } from "node:assert";
 import nodeAssert from "node:assert/strict";
+import { attachExplainQuestions, getAttachedExplainQuestions } from "./explain.js";
 import { commandAssertions } from "./commands.js";
 import { fileReadAssertions } from "./file-reads.js";
 import { outputAssertions } from "./output.js";
@@ -16,7 +17,11 @@ import type {
 } from "./types.js";
 
 interface SoftAssertionCollector {
-  failures: AssertionError[];
+  failures: CollectedAssertionFailure[];
+}
+
+interface CollectedAssertionFailure {
+  error: AssertionError;
 }
 
 type VoidFunction = (...args: any[]) => void;
@@ -124,7 +129,7 @@ function captureSoftAssertion<T>(callback: () => T): T {
       throw error;
     }
 
-    collector.failures.push(error);
+    collector.failures.push({ error });
     return undefined as T;
   }
 }
@@ -144,14 +149,16 @@ function mergeCollectedSoftAssertions(hardFailure: AssertionError): AssertionErr
     return hardFailure;
   }
 
-  return createAggregateAssertionError([...collector.failures.splice(0), hardFailure]);
+  return createAggregateAssertionError([...collector.failures.splice(0), { error: hardFailure }]);
 }
 
-function createAggregateAssertionError(failures: readonly AssertionError[]): AssertionError {
+function createAggregateAssertionError(
+  failures: readonly CollectedAssertionFailure[],
+): AssertionError {
   const count = failures.length;
   const message = [
     `${count} assertion failure${count === 1 ? "" : "s"} collected during test case execution:`,
-    ...failures.map((failure, index) => `${index + 1}. ${failure.message}`),
+    ...failures.map((failure, index) => `${index + 1}. ${failure.error.message}`),
   ].join("\n");
 
   const error = new AssertionError({
@@ -164,10 +171,15 @@ function createAggregateAssertionError(failures: readonly AssertionError[]): Ass
   error.stack = [
     `${error.name}: ${message}`,
     ...failures.map((failure, index) => {
-      const stack = failure.stack ?? `${failure.name}: ${failure.message}`;
+      const stack = failure.error.stack ?? `${failure.error.name}: ${failure.error.message}`;
       return `Assertion ${index + 1}\n${stack}`;
     }),
   ].join("\n\n");
+
+  const explainQuestions = failures.flatMap((failure) =>
+    getAttachedExplainQuestions(failure.error),
+  );
+  attachExplainQuestions(error, explainQuestions);
 
   return error;
 }

@@ -45,6 +45,7 @@ Assertion authoring and the built-in grouped `assert` API are documented in `ass
 
 - `test-cases.md`: test suite and test case authoring
 - `assertions.md`: assertion reference and matcher semantics
+- `explain.md`: deferred explain workflow and artifact shapes
 - `workspaces.md`: shared and isolated workspace behavior
 - `reporters.md`: reporter lifecycle, loading, and standard reporter behavior
 - `session-report.md`: normalized report schema

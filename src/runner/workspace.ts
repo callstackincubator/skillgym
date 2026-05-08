@@ -276,6 +276,7 @@ export function createExecutionFailureResult(
     status: "failed",
     durationMs: options.durationMs,
     artifactDir: options.artifactDir,
+    leafArtifactDir: options.artifactDir,
     report: fallbackReport,
     error: serializedError,
     failureType: options.failureType ?? "runner-crash",
