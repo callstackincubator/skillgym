@@ -1,8 +1,0 @@
-{
-  "name": "cleanup-install-versions-root",
-  "private": true,
-  "engines": {
-    "node": ">=22.12.0"
-  },
-  "packageManager": "pnpm@9.0.0"
-}
