@@ -269,7 +269,7 @@ assert.fileReads.includes(report, /SKILL\.md$/, {
 });
 ```
 
-When at least one explainable assertion fails, skillgym writes `explain.json` into the failed run artifact directory. Running `skillgym explain <artifactDir>` resumes the original runner session, asks each persisted question, and writes `explanations.json` with the answers.
+When at least one explainable assertion fails, skillgym writes `explain.json` into the failed leaf artifact directory. Running `skillgym explain <artifactDir>` resumes the original runner session, asks each persisted question, and writes `explanations.json` with the answers.
 
 For historical isolated-workspace runs, deferred explain currently depends on the recorded workspace still being resumable by the underlying runner.
 
