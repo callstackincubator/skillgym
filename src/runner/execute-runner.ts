@@ -132,6 +132,7 @@ export async function executeRunner(
       status: "passed",
       durationMs: Date.now() - startedMs,
       artifactDir,
+      leafArtifactDir: artifactDir,
       report,
     };
   } catch (error) {

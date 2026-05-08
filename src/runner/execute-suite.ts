@@ -457,6 +457,8 @@ async function executePlannedExecution(
   let result = createAggregateRunnerResult({
     runner: item.runner.info,
     artifactDir,
+    leafArtifactDir:
+      terminalFailure?.leafArtifactDir ?? repetitions.at(-1)?.leafArtifactDir ?? artifactDir,
     repeatTarget: options.repeat,
     repetitions,
     successfulRepetitions,
@@ -481,6 +483,7 @@ async function executePlannedExecution(
       result = createAggregateRunnerResult({
         runner: item.runner.info,
         artifactDir,
+        leafArtifactDir: snapshotFailure.leafArtifactDir,
         repeatTarget: options.repeat,
         repetitions,
         successfulRepetitions,
@@ -611,6 +614,7 @@ function resolveAttemptArtifactDir(artifactDir: string, attempt: number): string
 function createAggregateRunnerResult(options: {
   runner: RunnerInfo;
   artifactDir: string;
+  leafArtifactDir: string;
   repeatTarget: number;
   repetitions: RepetitionResult[];
   successfulRepetitions: RepetitionResult[];
@@ -637,6 +641,7 @@ function createAggregateRunnerResult(options: {
       options.terminalFailure?.status ?? options.successfulRepetitions.at(-1)?.status ?? "passed",
     durationMs: aggregateSource.durationMs,
     artifactDir: options.artifactDir,
+    leafArtifactDir: options.leafArtifactDir,
     report: aggregateSource.report,
     error: options.terminalFailure?.error,
     failureType: options.terminalFailure?.failureType,

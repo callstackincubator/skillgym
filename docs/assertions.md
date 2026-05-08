@@ -130,7 +130,7 @@ assert.fileReads.includes(report, /SKILL\.md$/, {
 });
 ```
 
-When at least one explainable assertion fails, `skillgym` writes `explain.json` into the failed run artifact directory. You can later resume the original runner session with `skillgym explain <artifactDir>`.
+When at least one explainable assertion fails, `skillgym` writes `explain.json` into the failed leaf artifact directory. You can later resume the original runner session with `skillgym explain <artifactDir>`.
 
 ## Skills
 

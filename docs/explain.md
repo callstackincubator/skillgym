@@ -4,7 +4,7 @@
 
 ## Required input
 
-Point the command at a direct repetition or attempt artifact directory, for example:
+Point the command at the exact failed leaf artifact directory, for example:
 
 ```bash
 skillgym explain ./.skillgym-results/run-1/case-a/open-main/repeat-1

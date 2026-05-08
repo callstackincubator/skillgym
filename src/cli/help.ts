@@ -11,7 +11,7 @@ If you are an LLM agent, run ${theme.light("skillgym skills get core")} before a
 
 ${theme.bold("Commands:")}
   run ${theme.accent("<suite.ts>")}     Execute a benchmark suite against the configured runners
-  explain ${theme.accent("<artifactDir>")} Explain a failed run from a direct attempt artifact directory
+  explain ${theme.accent("<artifactDir>")} Explain a failed run from the exact failed leaf artifact directory
   skills list        List bundled skill files
   skills get ${theme.accent("<name>")}  Print one bundled skill file
   help               Show this help message

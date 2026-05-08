@@ -74,6 +74,7 @@ test("executeSuite provisions isolated workspaces from suite template and remove
         status: "passed",
         durationMs: 10,
         artifactDir: options.artifactDir,
+        leafArtifactDir: options.artifactDir,
         report: createSessionReport({ runner, prompt: "hello" }),
       };
     },
@@ -190,6 +191,7 @@ test("executeSuite resolves suite-relative bootstrap script args before running 
           status: "passed",
           durationMs: 10,
           artifactDir: options.artifactDir,
+          leafArtifactDir: options.artifactDir,
           report: createSessionReport({ runner, prompt: "hello" }),
         };
       },

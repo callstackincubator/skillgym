@@ -78,6 +78,7 @@ test("executeRunner forwards showRunnerOutput to adapter runs", async () => {
   );
 
   expect(result.passed).toBe(true);
+  expect(result.leafArtifactDir).toBe(result.artifactDir);
   expect(seenInputs).toHaveLength(1);
   expect(seenInputs[0]?.showRunnerOutput).toBe(true);
   expect(seenInputs[0]?.runner).toEqual(runner);
@@ -123,6 +124,7 @@ test("executeRunner marks run as failed when adapter export collection fails", a
   expect(result.failureType).toBe("runner-crash");
   expect(result.failureOrigin).toBe("collection");
   expect(result.failureLogPath).toBeUndefined();
+  expect(result.leafArtifactDir).toBe(result.artifactDir);
   expect(result.error).toMatchObject({
     name: "Error",
     message: "OpenCode export returned invalid JSON: Unterminated string",
@@ -160,6 +162,7 @@ test("executeRunner marks AssertionError failures separately from runner crashes
   expect(result.passed).toBe(false);
   expect(result.failureType).toBe("assertion");
   expect(result.failureOrigin).toBe("assertion");
+  expect(result.leafArtifactDir).toBe(result.artifactDir);
   expect(result.failureClass).toEqual({ id: "assertion", label: "Assertion failure" });
   expect(result.error?.message).toBe("expected a skill read");
   expect(result.report.usage.totalTokens).toBe(120);
@@ -195,6 +198,7 @@ test("executeRunner preserves assertion failure classes attached with assert.cla
   expect(result.passed).toBe(false);
   expect(result.failureType).toBe("assertion");
   expect(result.failureOrigin).toBe("assertion");
+  expect(result.leafArtifactDir).toBe(result.artifactDir);
   expect(result.failureClass).toEqual({ id: "missing-flag", label: "Missing required flag" });
   expect(result.error?.message).toContain("expected the agent to pass --json");
 });
@@ -225,6 +229,7 @@ test("executeRunner treats non-AssertionError exceptions from assert as run fail
   expect(result.passed).toBe(false);
   expect(result.failureType).toBe("runner-crash");
   expect(result.failureOrigin).toBe("assert-hook");
+  expect(result.leafArtifactDir).toBe(result.artifactDir);
   expect(result.error?.message).toBe("assert hook crashed intentionally");
   expect(result.report.usage.totalTokens).toBe(120);
 });
@@ -256,6 +261,7 @@ test("executeRunner flushes collected soft assertion failures after assert hook 
   expect(result.passed).toBe(false);
   expect(result.failureType).toBe("assertion");
   expect(result.failureOrigin).toBe("assertion");
+  expect(result.leafArtifactDir).toBe(result.artifactDir);
   expect(result.error?.message).toContain(
     "2 assertion failures collected during test case execution",
   );
@@ -289,6 +295,7 @@ test("executeRunner merges soft failures with a later hard AssertionError", asyn
 
   expect(result.passed).toBe(false);
   expect(result.failureType).toBe("assertion");
+  expect(result.leafArtifactDir).toBe(result.artifactDir);
   expect(result.error?.message).toContain(
     "2 assertion failures collected during test case execution",
   );
@@ -337,6 +344,8 @@ test("executeRunner clears soft assertion state between runs", async () => {
 
   expect(failed.passed).toBe(false);
   expect(passed.passed).toBe(true);
+  expect(failed.leafArtifactDir).toBe(failed.artifactDir);
+  expect(passed.leafArtifactDir).toBe(passed.artifactDir);
 });
 
 test("executeRunner marks timeout failures separately from runner crashes", async () => {
@@ -372,6 +381,7 @@ test("executeRunner marks timeout failures separately from runner crashes", asyn
   expect(result.passed).toBe(false);
   expect(result.failureType).toBe("timeout");
   expect(result.failureOrigin).toBe("runner");
+  expect(result.leafArtifactDir).toBe(result.artifactDir);
   expect(result.failureLogPath).toBe(path.join(result.artifactDir, "stderr.log"));
   expect(result.error?.message).toBe("Command timed out after 5000ms: opencode run prompt");
 });
@@ -415,6 +425,7 @@ test("executeRunner marks max-steps failures separately from other runner crashe
   expect(result.passed).toBe(false);
   expect(result.failureType).toBe("runner-crash");
   expect(result.failureOrigin).toBe("max-steps");
+  expect(result.leafArtifactDir).toBe(result.artifactDir);
   expect(result.failureLogPath).toBe(path.join(result.artifactDir, "stderr.log"));
   expect(result.error?.message).toContain("Exceeded maxSteps: observed 2 steps with limit 1");
 });
@@ -443,6 +454,7 @@ test("executeRunner creates a missing snapshot baseline and passes", async () =>
   await store.save();
 
   expect(result.passed).toBe(true);
+  expect(result.leafArtifactDir).toBe(result.artifactDir);
   const saved = await readFile(snapshotsPath, "utf8");
   expect(saved).toContain('"alpha::open-main"');
   expect(saved).toContain('"value": 120');
@@ -475,6 +487,7 @@ test("executeRunner fails when snapshot absolute tolerance is exceeded", async (
   expect(result.passed).toBe(false);
   expect(result.failureType).toBe("runner-crash");
   expect(result.failureOrigin).toBe("snapshot");
+  expect(result.leafArtifactDir).toBe(result.artifactDir);
   expect(result.error?.message).toContain("Snapshot mismatch for totalTokens");
   expect(result.error?.message).toContain("alpha / open-main");
 });
@@ -503,6 +516,7 @@ test("executeRunner fails when snapshot metric is unavailable", async () => {
   expect(result.passed).toBe(false);
   expect(result.failureType).toBe("runner-crash");
   expect(result.failureOrigin).toBe("snapshot");
+  expect(result.leafArtifactDir).toBe(result.artifactDir);
   expect(result.error?.message).toContain(
     "Snapshot check requires provider token metric totalTokens",
   );
@@ -538,6 +552,7 @@ test("executeRunner writes explain.json for hard explainable assertion failures"
   );
 
   expect(result.passed).toBe(false);
+  expect(result.leafArtifactDir).toBe(result.artifactDir);
   const explainJson = JSON.parse(
     await readFile(path.join(result.artifactDir, "explain.json"), "utf8"),
   ) as {
@@ -603,6 +618,7 @@ test("executeRunner writes explain.json with collected soft and hard assertion q
   );
 
   expect(result.passed).toBe(false);
+  expect(result.leafArtifactDir).toBe(result.artifactDir);
   const explainJson = JSON.parse(
     await readFile(path.join(result.artifactDir, "explain.json"), "utf8"),
   ) as { questions: Array<{ question: string }> };
@@ -637,6 +653,7 @@ test("executeRunner skips explain.json when assertion failure has no explainable
   );
 
   expect(result.passed).toBe(false);
+  expect(result.leafArtifactDir).toBe(result.artifactDir);
   await expect(readFile(path.join(result.artifactDir, "explain.json"), "utf8")).rejects.toThrow();
 });
 

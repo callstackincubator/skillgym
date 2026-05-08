@@ -72,7 +72,10 @@ function formatAnnotationMessage(result: RunnerResult): string {
     lines.push(`error: ${result.error.name}: ${result.error.message}`);
   }
 
-  lines.push(`artifacts: ${result.artifactDir}`);
+  lines.push(`artifacts: ${result.leafArtifactDir}`);
+  if (result.leafArtifactDir !== result.artifactDir) {
+    lines.push(`artifact root: ${result.artifactDir}`);
+  }
 
   if (result.failureLogPath !== undefined) {
     lines.push(`log: ${result.failureLogPath}`);
@@ -179,8 +182,12 @@ function formatFailureSummaryItem(caseId: string, result: RunnerResult): string 
   const segments = [
     `\`${caseId} > ${result.runner.id}\``,
     `${result.failureType ?? "unknown"}`,
-    `artifacts: \`${result.artifactDir}\``,
+    `artifacts: \`${result.leafArtifactDir}\``,
   ];
+
+  if (result.leafArtifactDir !== result.artifactDir) {
+    segments.push(`artifact root: \`${result.artifactDir}\``);
+  }
 
   const retryCount = countRetries(result);
   const repeatLabel = formatRepeatLabel(result);

@@ -113,7 +113,7 @@ npx skillgym skills list
 npx skillgym skills get core
 ```
 
-Explain a failed run by resuming the original runner session from a direct attempt artifact directory:
+Explain a failed run by resuming the original runner session from the exact failed leaf artifact directory:
 
 ```bash
 npx skillgym explain ./.skillgym-results/run-1/case-a/open-main/repeat-1
