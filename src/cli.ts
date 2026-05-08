@@ -57,7 +57,7 @@ async function main(): Promise<void> {
         throw new Error("Missing artifact directory. Usage: skillgym explain <artifactDir>");
       }
 
-      await explainCommand({ artifactDir });
+      await explainCommand({ artifactDir, rerun: parsed.options.rerun === true });
       return;
     }
     case "help":

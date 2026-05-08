@@ -41,6 +41,8 @@ test("cli help prints full MOTD banner and help sections", async () => {
   expect(result.stdout).toContain("skillgym skills get core");
   expect(result.stdout).toContain("Commands:");
   expect(result.stdout).toContain("explain <artifactDir>");
+  expect(result.stdout).toContain("Explain Options:");
+  expect(result.stdout).toContain("--rerun");
   expect(result.stdout).toContain("skills list");
   expect(result.stdout).toContain("skills get <name>");
   expect(result.stdout).toContain("Run Options:");
@@ -190,12 +192,18 @@ test("explainCommand writes explanations.json from persisted explain questions",
     })),
   }));
 
-  const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+  const output: string[] = [];
+  const stdout = {
+    isTTY: false,
+    write(value: string) {
+      output.push(value);
+      return true;
+    },
+  };
   try {
-    const { explainCommand } = await import("../src/cli/explain.js");
-    await explainCommand({ artifactDir });
+    const { explainCommandWithWriter } = await import("../src/cli/explain.js");
+    await explainCommandWithWriter({ artifactDir }, stdout);
   } finally {
-    logSpy.mockRestore();
     vi.doUnmock("../src/config.js");
     vi.doUnmock("../src/adapters/index.js");
     vi.resetModules();
@@ -206,8 +214,19 @@ test("explainCommand writes explanations.json from persisted explain questions",
       artifactDir,
       cwd: tempDir,
       sessionId: "ses_123",
+      questions: [
+        expect.objectContaining({
+          question: "Why did you skip SKILL.md?",
+        }),
+      ],
     }),
   );
+  expect(output.join("")).toContain("skillgym");
+  expect(output.join("")).toContain("Question 1");
+  expect(output.join("")).toContain("Why did you skip SKILL.md?");
+  expect(output.join("")).toContain("Agent");
+  expect(output.join("")).toContain("Because the prompt looked sufficient.");
+  expect(output.join("")).toContain("Saved explanations");
 
   const explanations = JSON.parse(
     await readFile(path.join(artifactDir, "explanations.json"), "utf8"),
@@ -227,19 +246,162 @@ test("explainCommand writes explanations.json from persisted explain questions",
   ]);
 });
 
-test("explainCommand refuses to overwrite existing explanations.json", async () => {
+test("explainCommand reuses existing explanations.json by default", async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), "skillgym-cli-"));
   tempDirs.push(tempDir);
   const artifactDir = path.join(tempDir, "alpha", "open-main", "repeat-1");
   await mkdir(artifactDir, { recursive: true });
-  await writeFile(path.join(artifactDir, "explanations.json"), "{}\n", "utf8");
+  await writeFile(
+    path.join(artifactDir, "explanations.json"),
+    `${JSON.stringify({
+      suitePath: path.join(tempDir, "suite.ts"),
+      caseId: "alpha",
+      runnerId: "open-main",
+      cwd: tempDir,
+      sessionId: "ses_123",
+      createdAt: "2026-05-07T10:00:02.000Z",
+      questions: [
+        {
+          question: "Why did you skip SKILL.md?",
+          source: { filePath: path.join(tempDir, "suite.ts"), line: "12", column: "5" },
+          answer: "Because the prompt looked sufficient.",
+          sessionId: "ses_123",
+          rawArtifacts: {},
+        },
+      ],
+    })}\n`,
+    "utf8",
+  );
 
   vi.resetModules();
-  const { explainCommand } = await import("../src/cli/explain.js");
+  const { explainCommandWithWriter } = await import("../src/cli/explain.js");
+  const output: string[] = [];
+  const stdout = {
+    isTTY: false,
+    write(value: string) {
+      output.push(value);
+      return true;
+    },
+  };
 
-  await expect(explainCommand({ artifactDir })).rejects.toThrow(
-    "Explain output already exists for this artifact directory.",
+  await explainCommandWithWriter({ artifactDir }, stdout);
+
+  expect(output.join("")).toContain("Reusing existing explanations artifact");
+  expect(output.join("")).toContain("Pass --rerun to refresh it.");
+  expect(output.join("")).toContain("Because the prompt looked sufficient.");
+  expect(output.join("")).toContain("Saved explanations");
+});
+
+test("explainCommand reruns and overwrites an existing explanations.json artifact", async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), "skillgym-cli-"));
+  tempDirs.push(tempDir);
+  const artifactDir = path.join(tempDir, "alpha", "open-main", "repeat-1");
+  await mkdir(artifactDir, { recursive: true });
+  await writeFile(
+    path.join(artifactDir, "report.json"),
+    `${JSON.stringify({
+      runner: {
+        id: "open-main",
+        pathKey: "open-main",
+        agent: { type: "opencode", model: "openai/gpt-5" },
+      },
+      prompt: "prompt",
+      usage: {
+        inputChars: 0,
+        outputChars: 0,
+        reasoningChars: 0,
+        source: { input: "chars", output: "chars", reasoning: "chars" },
+      },
+      files: { observedReads: [], observedSkillReads: [] },
+      detectedSkills: [],
+      events: [],
+      finalOutput: "",
+      rawArtifacts: {},
+    })}\n`,
+    "utf8",
   );
+  await writeFile(
+    path.join(artifactDir, "explain.json"),
+    `${JSON.stringify({
+      suitePath: path.join(tempDir, "suite.ts"),
+      caseId: "alpha",
+      runnerId: "open-main",
+      cwd: tempDir,
+      sessionId: "ses_123",
+      questions: [
+        {
+          question: "Why did you skip SKILL.md?",
+          source: { filePath: path.join(tempDir, "suite.ts"), line: "12", column: "5" },
+        },
+      ],
+    })}\n`,
+    "utf8",
+  );
+  await writeFile(path.join(artifactDir, "explanations.json"), '{"questions":[]}\n', "utf8");
+
+  const explain = vi.fn(async () => ({
+    answers: [
+      {
+        question: {
+          question: "Why did you skip SKILL.md?",
+          source: { filePath: path.join(tempDir, "suite.ts"), line: "12", column: "5" },
+        },
+        answer: "Fresh answer from rerun.",
+        sessionId: "ses_123",
+        startedAt: "2026-05-07T10:00:00.000Z",
+        endedAt: "2026-05-07T10:00:01.000Z",
+        durationMs: 1_000,
+        rawArtifacts: {},
+      },
+    ],
+  }));
+
+  vi.resetModules();
+  vi.doMock("../src/config.js", () => ({
+    loadConfig: vi.fn(async () => ({
+      config: {
+        runners: {
+          "open-main": { agent: { type: "opencode", model: "openai/gpt-5" } },
+        },
+      },
+    })),
+  }));
+  vi.doMock("../src/adapters/index.js", () => ({
+    getAdapter: vi.fn(() => ({
+      run: vi.fn(),
+      collect: vi.fn(),
+      normalize: vi.fn(),
+      explain,
+    })),
+  }));
+
+  const output: string[] = [];
+  const stdout = {
+    isTTY: false,
+    write(value: string) {
+      output.push(value);
+      return true;
+    },
+  };
+  try {
+    const { explainCommandWithWriter } = await import("../src/cli/explain.js");
+    await explainCommandWithWriter({ artifactDir, rerun: true }, stdout);
+  } finally {
+    vi.doUnmock("../src/config.js");
+    vi.doUnmock("../src/adapters/index.js");
+    vi.resetModules();
+  }
+
+  expect(explain).toHaveBeenCalledOnce();
+  expect(output.join("")).toContain(
+    "Re-running explain and overwriting existing explanations artifact.",
+  );
+  expect(output.join("")).toContain("Fresh answer from rerun.");
+
+  const explanations = JSON.parse(
+    await readFile(path.join(artifactDir, "explanations.json"), "utf8"),
+  ) as { questions: Array<{ answer: string }> };
+  expect(explanations.questions[0]?.answer).toBe("Fresh answer from rerun.");
 });
 
 test("cli parser preserves repeated tag flags", () => {

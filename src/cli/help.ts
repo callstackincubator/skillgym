@@ -16,6 +16,9 @@ ${theme.bold("Commands:")}
   skills get ${theme.accent("<name>")}  Print one bundled skill file
   help               Show this help message
 
+${theme.bold("Explain Options:")}
+  --rerun             Re-run explain and overwrite an existing ${theme.light("explanations.json")} artifact
+
 ${theme.bold("Run Options:")}
   --config ${theme.accent("<path>")}        Load an explicit skillgym config file
   --cwd ${theme.accent("<path>")}           Override the workspace directory for the run
@@ -44,5 +47,6 @@ ${theme.bold("Examples:")}
   ${theme.dim("$")} ${theme.light("skillgym run ./examples/basic-suite.ts --repeat 5 --repeat-failure 2")}
   ${theme.dim("$")} ${theme.light("skillgym run ./examples/basic-suite.ts --update-snapshots")}
   ${theme.dim("$")} ${theme.light("skillgym explain ./.skillgym-results/run-1/case-a/open-main/repeat-1")}
+  ${theme.dim("$")} ${theme.light("skillgym explain ./.skillgym-results/run-1/case-a/open-main/repeat-1 --rerun")}
 `);
 }
