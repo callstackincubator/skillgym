@@ -11,9 +11,13 @@ If you are an LLM agent, run ${theme.light("skillgym skills get core")} before a
 
 ${theme.bold("Commands:")}
   run ${theme.accent("<suite.ts>")}     Execute a benchmark suite against the configured runners
+  explain ${theme.accent("<artifactDir>")} Explain a failed run from the exact failed leaf artifact directory
   skills list        List bundled skill files
   skills get ${theme.accent("<name>")}  Print one bundled skill file
   help               Show this help message
+
+${theme.bold("Explain Options:")}
+  --rerun             Re-run explain and overwrite an existing ${theme.light("explanations.json")} artifact
 
 ${theme.bold("Run Options:")}
   --config ${theme.accent("<path>")}        Load an explicit skillgym config file
@@ -42,5 +46,7 @@ ${theme.bold("Examples:")}
   ${theme.dim("$")} ${theme.light("skillgym run ./examples/basic-suite.ts --schedule parallel --max-parallel 4")}
   ${theme.dim("$")} ${theme.light("skillgym run ./examples/basic-suite.ts --repeat 5 --repeat-failure 2")}
   ${theme.dim("$")} ${theme.light("skillgym run ./examples/basic-suite.ts --update-snapshots")}
+  ${theme.dim("$")} ${theme.light("skillgym explain ./.skillgym-results/run-1/case-a/open-main/repeat-1")}
+  ${theme.dim("$")} ${theme.light("skillgym explain ./.skillgym-results/run-1/case-a/open-main/repeat-1 --rerun")}
 `);
 }

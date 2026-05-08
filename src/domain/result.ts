@@ -7,6 +7,7 @@ interface BaseRunnerResult {
   status: RunnerResultStatus;
   durationMs: number;
   artifactDir: string;
+  leafArtifactDir: string;
   report: SessionReport;
   error?: SerializedError;
   failureType?: RunnerFailureType;

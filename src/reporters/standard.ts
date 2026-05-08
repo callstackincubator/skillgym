@@ -29,6 +29,7 @@ interface FailureEntry {
   caseId: string;
   runner: RunnerInfo;
   artifactDir: string;
+  leafArtifactDir: string;
   attempts?: RunnerResult["attempts"];
   repetitions?: RunnerResult["repetitions"];
   successfulRepetitions?: RunnerResult["successfulRepetitions"];
@@ -109,7 +110,6 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
         `${colors.dim("Workspace ")}${colors.bold(event.context.workspaceMode === "shared" ? event.context.cwd : `${event.context.workspaceMode} per run`)}`,
         stdout,
       );
-      writeLine(`${colors.dim("Output    ")}${colors.bold(event.context.outputDir)}`, stdout);
       writeLine(`${colors.dim("Cases     ")}${String(event.context.selectedCaseCount)}`, stdout);
       if (event.context.tagFilter !== undefined) {
         writeLine(`${colors.dim("Tags      ")}${event.context.tagFilter.join(", ")}`, stdout);
@@ -263,6 +263,14 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
         stdout,
       );
       writeLine(formatSummaryDetailLine("Output", event.result.outputDir, colors), stdout);
+
+      if (failures.length > 0) {
+        writeLine("", stdout);
+        writeLine(
+          colors.yellow("Explain failed runs with `skillgym explain <artifactDir>`."),
+          stdout,
+        );
+      }
     },
     onError() {
       if (interactiveState === undefined) {
@@ -411,7 +419,6 @@ function formatFailureBlock(
     lines.push(colors.dim(`Repeats: ${repeatLabel}`));
   }
 
-  lines.push(colors.dim(`Artifacts: ${failure.artifactDir}`));
   return lines.join("\n");
 }
 
@@ -424,7 +431,7 @@ function formatFailureGroup(
   ];
 
   for (const failure of group.failures) {
-    lines.push(colors.dim(`- ${failure.caseId} > ${failure.runner.id}: ${failure.artifactDir}`));
+    lines.push(colors.dim(`- ${failure.caseId} > ${failure.runner.id}`));
   }
 
   return lines.join("\n");
@@ -630,6 +637,7 @@ function collectFinalFailures(result: SuiteRunResult): FailureEntry[] {
           caseId: caseResult.caseId,
           runner: runnerResult.runner,
           artifactDir: runnerResult.artifactDir,
+          leafArtifactDir: runnerResult.leafArtifactDir,
           attempts: runnerResult.repetitions?.at(-1)?.attempts ?? runnerResult.attempts,
           error: runnerResult.error,
           failureType: runnerResult.failureType,

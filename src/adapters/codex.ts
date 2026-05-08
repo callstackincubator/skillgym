@@ -3,6 +3,8 @@ import { cp, readdir, readFile, stat } from "node:fs/promises";
 import os from "node:os";
 import type {
   CodexAgentConfig,
+  ExplainInput,
+  ExplainResult,
   RawRunArtifacts,
   RunHandle,
   RunInput,
@@ -45,14 +47,77 @@ export class CodexAdapter extends BaseAdapter implements RunnerAdapter {
     return handle;
   }
 
+  async explain(input: ExplainInput): Promise<ExplainResult> {
+    const answers = [];
+    const baseInput = createExplainRunInput(input);
+    const codexHome = getCodexHome(baseInput);
+    const codexSqliteHome = getCodexSqliteHome(baseInput);
+    await Promise.all([
+      ensureDir(codexHome),
+      ensureDir(codexSqliteHome),
+      seedCodexRuntime(baseInput),
+    ]);
+
+    for (const [index, question] of input.questions.entries()) {
+      const questionInput = createExplainQuestionInput(
+        baseInput,
+        input.artifactDir,
+        index,
+        question.question,
+      );
+      const command = this.options.command ?? "npx";
+      const args = [
+        ...(this.options.commandArgs ?? []),
+        "codex",
+        "exec",
+        "resume",
+        input.sessionId,
+        question.question,
+        "--json",
+      ];
+      const handle = await this.runCommand(command, args, questionInput, {
+        env: {
+          ...this.options.env,
+          CODEX_HOME: codexHome,
+          CODEX_SQLITE_HOME: codexSqliteHome,
+        },
+      });
+      const artifacts = await this.collectWithRuntimeRoot(handle, questionInput, input.artifactDir);
+      const report = await this.normalize(questionInput, artifacts);
+
+      answers.push({
+        question,
+        answer: report.finalOutput,
+        sessionId: report.sessionId,
+        startedAt: report.startedAt,
+        endedAt: report.endedAt,
+        durationMs: report.durationMs,
+        rawArtifacts: report.rawArtifacts,
+      });
+    }
+
+    return { answers };
+  }
+
   async collect(handle: RunHandle, input: RunInput): Promise<RawRunArtifacts> {
+    return this.collectWithRuntimeRoot(handle, input, input.artifactsDir);
+  }
+
+  private async collectWithRuntimeRoot(
+    handle: RunHandle,
+    input: RunInput,
+    runtimeArtifactsDir: string,
+  ): Promise<RawRunArtifacts> {
     const stdout = await readFile(handle.stdoutPath, "utf8");
     const stderr = await readFile(handle.stderrPath, "utf8");
     const stdoutRecords = parseJsonLines(stdout);
     const sessionPath = await this.findLatestSessionAfter(
       handle.startedAt,
-      getCodexSessionsDir(input),
+      getCodexSessionsDir({ ...input, artifactsDir: runtimeArtifactsDir }),
     );
+    const sessionId =
+      extractCodexSessionId(stdoutRecords) ??
+      (sessionPath === undefined ? undefined : extractCodexSessionIdFromPath(sessionPath));
 
     if (sessionPath === undefined && stdoutRecords.length === 0) {
       return {
@@ -63,6 +128,7 @@ export class CodexAdapter extends BaseAdapter implements RunnerAdapter {
         startedAt: handle.startedAt,
         endedAt: handle.endedAt,
         durationMs: handle.durationMs,
+        sessionId,
       };
     }
 
@@ -78,6 +144,7 @@ export class CodexAdapter extends BaseAdapter implements RunnerAdapter {
       startedAt: handle.startedAt,
       endedAt: handle.endedAt,
       durationMs: handle.durationMs,
+      sessionId,
       sessionPath,
       exportPath,
       rawSession: sessionPath === undefined ? stdoutRecords : parseJsonLines(sessionText),
@@ -272,6 +339,7 @@ export class CodexAdapter extends BaseAdapter implements RunnerAdapter {
 
     return {
       runner: input.runner,
+      sessionId: artifacts.sessionId,
       prompt: input.prompt,
       usage: {
         inputTokens,
@@ -327,6 +395,34 @@ export class CodexAdapter extends BaseAdapter implements RunnerAdapter {
   }
 }
 
+function createExplainRunInput(input: ExplainInput): RunInput {
+  return {
+    runner: input.runner,
+    prompt: "",
+    cwd: input.cwd,
+    timeoutMs: input.timeoutMs,
+    artifactsDir: input.artifactDir,
+    showRunnerOutput: input.showRunnerOutput,
+  };
+}
+
+function createExplainQuestionInput(
+  input: RunInput,
+  artifactDir: string,
+  index: number,
+  question: string,
+): RunInput {
+  return {
+    ...input,
+    prompt: question,
+    artifactsDir: path.join(
+      artifactDir,
+      "explain",
+      `question-${String(index + 1).padStart(2, "0")}`,
+    ),
+  };
+}
+
 function getCodexHome(input: RunInput): string {
   return path.join(input.artifactsDir, "codex-home");
 }
@@ -337,6 +433,37 @@ function getCodexSqliteHome(input: RunInput): string {
 
 function getCodexSessionsDir(input: RunInput): string {
   return path.join(getCodexHome(input), "sessions");
+}
+
+function extractCodexSessionId(records: unknown[]): string | undefined {
+  for (const record of records) {
+    if (!isRecord(record)) {
+      continue;
+    }
+
+    const type = readString(record, "type");
+    if (type === "thread.started") {
+      const threadId = readString(record, "thread_id");
+      if (threadId !== undefined) {
+        return threadId;
+      }
+    }
+
+    if (type === "session_meta") {
+      const threadId = readString(record, "thread_id") ?? readString(record, "session_id");
+      if (threadId !== undefined) {
+        return threadId;
+      }
+    }
+  }
+
+  return undefined;
+}
+
+function extractCodexSessionIdFromPath(filePath: string): string | undefined {
+  const fileName = path.basename(filePath, ".jsonl");
+  const lastDash = fileName.lastIndexOf("-");
+  return lastDash === -1 ? undefined : fileName.slice(lastDash + 1);
 }
 
 async function seedCodexRuntime(input: RunInput): Promise<void> {

@@ -1,4 +1,5 @@
 import type nodeAssert from "node:assert/strict";
+import type { ExplainOptions } from "./explain.js";
 import type { FailureClass } from "../domain/result.js";
 import type { SessionReport, ToolCallEvent } from "../domain/session-report.js";
 
@@ -30,10 +31,12 @@ export interface ToolCallMatcher {
 export interface SkillAssertionOptions {
   minConfidence?: SkillConfidence;
   message?: string;
+  explain?: ExplainOptions;
 }
 
 export interface AssertionOptions {
   message?: string;
+  explain?: ExplainOptions;
 }
 
 export interface SkillAssertions {

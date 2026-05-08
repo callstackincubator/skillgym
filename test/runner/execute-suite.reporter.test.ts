@@ -373,6 +373,7 @@ test("executeSuite retries only failed executions and preserves attempt artifact
     passed: true,
     attempt: 2,
     artifactDir: path.join(result.outputDir, "flaky", runnerPathKey),
+    leafArtifactDir: path.join(result.outputDir, "flaky", runnerPathKey, "repeat-1", "attempt-2"),
     repeatTarget: 1,
     completedRepetitions: 1,
     successfulRepetitions: 1,
@@ -1328,6 +1329,7 @@ function createRunnerResult(options: {
     status: options.passed ? "passed" : "failed",
     durationMs: options.durationMs,
     artifactDir: options.artifactDir,
+    leafArtifactDir: options.artifactDir,
     error: options.passed
       ? undefined
       : {
@@ -1426,6 +1428,9 @@ function createSnapshotAdapter(runner: RunnerInfo, totalTokens: number): RunnerA
           },
         },
       });
+    },
+    async explain() {
+      throw new Error("not used in snapshot adapter tests");
     },
   };
 }

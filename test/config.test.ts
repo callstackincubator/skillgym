@@ -568,6 +568,7 @@ function createRunnerResult(options: {
     status: "passed",
     durationMs: 10,
     artifactDir: options.artifactDir,
+    leafArtifactDir: options.artifactDir,
     report: createSessionReport({ runner: options.runner }),
   };
 }

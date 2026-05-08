@@ -1,6 +1,8 @@
 import path from "node:path";
 import { copyFile, readFile } from "node:fs/promises";
 import type {
+  ExplainInput,
+  ExplainResult,
   OpenCodeAgentConfig,
   RawRunArtifacts,
   RunHandle,
@@ -97,7 +99,59 @@ export class OpenCodeAdapter extends BaseAdapter implements RunnerAdapter {
     return handle;
   }
 
+  async explain(input: ExplainInput): Promise<ExplainResult> {
+    const answers = [];
+    const baseInput = createExplainRunInput(input);
+    await prepareOpenCodeRuntime(baseInput);
+
+    for (const [index, question] of input.questions.entries()) {
+      const questionInput = createExplainQuestionInput(
+        baseInput,
+        input.artifactDir,
+        index,
+        question.question,
+      );
+      const command = this.options.command ?? "opencode";
+      const args = [
+        ...(this.options.commandArgs ?? []),
+        "run",
+        ...(this.options.model === undefined ? [] : ["--model", this.options.model]),
+        "--session",
+        input.sessionId,
+        "--format",
+        "json",
+        "--thinking",
+        question.question,
+      ];
+      const handle = await this.runCommand(command, args, questionInput, {
+        env: getOpenCodeEnv(baseInput, this.options.env),
+      });
+      const artifacts = await this.collectWithRuntimeRoot(handle, questionInput, input.artifactDir);
+      const report = await this.normalize(questionInput, artifacts);
+
+      answers.push({
+        question,
+        answer: report.finalOutput,
+        sessionId: report.sessionId,
+        startedAt: report.startedAt,
+        endedAt: report.endedAt,
+        durationMs: report.durationMs,
+        rawArtifacts: report.rawArtifacts,
+      });
+    }
+
+    return { answers };
+  }
+
   async collect(handle: RunHandle, input: RunInput): Promise<RawRunArtifacts> {
+    return this.collectWithRuntimeRoot(handle, input, input.artifactsDir);
+  }
+
+  private async collectWithRuntimeRoot(
+    handle: RunHandle,
+    input: RunInput,
+    runtimeArtifactsDir: string,
+  ): Promise<RawRunArtifacts> {
     const stdout = await readFile(handle.stdoutPath, "utf8");
     const stderr = await readFile(handle.stderrPath, "utf8");
     const runError = extractOpenCodeRunError(stdout) ?? extractOpenCodeRunError(stderr);
@@ -116,7 +170,12 @@ export class OpenCodeAdapter extends BaseAdapter implements RunnerAdapter {
 
     const exportCommand = this.options.command ?? "opencode";
     const exportArgs = [...(this.options.commandArgs ?? []), "export", sessionId];
-    const exportResult = await this.collectExportWithRetry(exportCommand, exportArgs, input);
+    const exportResult = await this.collectExportWithRetry(
+      exportCommand,
+      exportArgs,
+      input,
+      runtimeArtifactsDir,
+    );
 
     const exportPath = path.join(input.artifactsDir, "session.export.json");
     await writeJson(exportPath, exportResult.parsed);
@@ -140,6 +199,7 @@ export class OpenCodeAdapter extends BaseAdapter implements RunnerAdapter {
     command: string,
     args: string[],
     input: RunInput,
+    runtimeArtifactsDir: string,
   ): Promise<{ parsed: OpenCodeExport & { messages: OpenCodeMessage[] } }> {
     let lastError: Error | undefined;
 
@@ -158,7 +218,15 @@ export class OpenCodeAdapter extends BaseAdapter implements RunnerAdapter {
           ...input,
           artifactsDir: path.join(input.artifactsDir, "export-command"),
         },
-        { env: getOpenCodeEnv(input, this.options.env) },
+        {
+          env: getOpenCodeEnv(
+            {
+              ...input,
+              artifactsDir: runtimeArtifactsDir,
+            },
+            this.options.env,
+          ),
+        },
       );
       const exportStdout = await readFile(exportHandle.stdoutPath, "utf8");
 
@@ -329,6 +397,34 @@ export class OpenCodeAdapter extends BaseAdapter implements RunnerAdapter {
 
 function getOpenCodeRuntimeRoot(input: RunInput): string {
   return path.join(input.artifactsDir, "opencode-xdg");
+}
+
+function createExplainRunInput(input: ExplainInput): RunInput {
+  return {
+    runner: input.runner,
+    prompt: "",
+    cwd: input.cwd,
+    timeoutMs: input.timeoutMs,
+    artifactsDir: input.artifactDir,
+    showRunnerOutput: input.showRunnerOutput,
+  };
+}
+
+function createExplainQuestionInput(
+  input: RunInput,
+  artifactDir: string,
+  index: number,
+  question: string,
+): RunInput {
+  return {
+    ...input,
+    prompt: question,
+    artifactsDir: path.join(
+      artifactDir,
+      "explain",
+      `question-${String(index + 1).padStart(2, "0")}`,
+    ),
+  };
 }
 
 function extractOpenCodeRunError(text: string): string | undefined {

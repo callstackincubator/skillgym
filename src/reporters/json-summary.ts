@@ -23,6 +23,7 @@ interface SummaryRunnerResult {
   retryCount: number;
   durationMs: number;
   artifactDir: string;
+  leafArtifactDir: string;
   usage: RunnerResult["report"]["usage"];
   attempts?: SummaryAttemptResult[];
   repetitions?: SummaryRepetitionResult[];
@@ -40,6 +41,7 @@ interface SummaryRepetitionResult {
   retryCount: number;
   durationMs: number;
   artifactDir: string;
+  leafArtifactDir: string;
   usage: RunnerResult["report"]["usage"];
   attempts?: SummaryAttemptResult[];
   error?: SummaryError;
@@ -54,6 +56,7 @@ interface SummaryAttemptResult {
   attempt: number;
   durationMs: number;
   artifactDir: string;
+  leafArtifactDir: string;
   usage: RunnerResult["report"]["usage"];
   error?: SummaryError;
   failureType?: RunnerResult["failureType"];
@@ -93,6 +96,7 @@ function summarizeRunnerResult(result: RunnerResult): SummaryRunnerResult {
     retryCount: countRetries(result),
     durationMs: result.durationMs,
     artifactDir: result.artifactDir,
+    leafArtifactDir: result.leafArtifactDir,
     usage: result.report.usage,
   };
 
@@ -145,6 +149,7 @@ function summarizeRepetitionResult(
     retryCount: Math.max(0, (result.attempts?.length ?? 1) - 1),
     durationMs: result.durationMs,
     artifactDir: result.artifactDir,
+    leafArtifactDir: result.leafArtifactDir,
     usage: result.report.usage,
   };
 
@@ -180,6 +185,7 @@ function summarizeAttemptResult(
     attempt: result.attempt,
     durationMs: result.durationMs,
     artifactDir: result.artifactDir,
+    leafArtifactDir: result.leafArtifactDir,
     usage: result.report.usage,
   };
 

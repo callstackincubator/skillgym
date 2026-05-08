@@ -6,6 +6,7 @@ import type {
   OpenCodeAgentConfig,
   RunnerInfo,
 } from "./runner.js";
+import type { ExplainQuestionArtifact } from "./explain.js";
 import type { SessionReport } from "./session-report.js";
 
 export interface RunInput {
@@ -44,8 +45,33 @@ export interface RawRunArtifacts {
   rawSession?: unknown;
 }
 
+export interface ExplainInput {
+  runner: RunnerInfo;
+  cwd: string;
+  timeoutMs: number;
+  artifactDir: string;
+  sessionId: string;
+  questions: readonly ExplainQuestionArtifact[];
+  showRunnerOutput?: boolean;
+}
+
+export interface ExplainQuestionResult {
+  question: ExplainQuestionArtifact;
+  answer: string;
+  sessionId?: string;
+  startedAt?: string;
+  endedAt?: string;
+  durationMs?: number;
+  rawArtifacts: SessionReport["rawArtifacts"];
+}
+
+export interface ExplainResult {
+  answers: ExplainQuestionResult[];
+}
+
 export interface RunnerAdapter {
   run(input: RunInput): Promise<RunHandle>;
   collect(handle: RunHandle, input: RunInput): Promise<RawRunArtifacts>;
   normalize(input: RunInput, artifacts: RawRunArtifacts): Promise<SessionReport>;
+  explain(input: ExplainInput): Promise<ExplainResult>;
 }

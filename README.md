@@ -113,6 +113,12 @@ npx skillgym skills list
 npx skillgym skills get core
 ```
 
+Explain a failed run by resuming the original runner session from the exact failed leaf artifact directory:
+
+```bash
+npx skillgym explain ./.skillgym-results/run-1/case-a/open-main/repeat-1
+```
+
 By default, `skillgym` uses the built-in `standard` reporter.
 
 TypeScript config, suite, and reporter modules work out of the box on Node `>=22.18.0` using Node's built-in TypeScript stripping.
@@ -253,7 +259,22 @@ assert.output.notEmpty(report);
 
 `assert.soft.rejects(...)` and `assert.soft.doesNotReject(...)` are still hard assertions in the first implementation.
 
+Grouped assertions can also persist follow-up questions for later debugging:
+
+```ts
+assert.fileReads.includes(report, /SKILL\.md$/, {
+  explain: {
+    question: "Why did you continue without reading SKILL.md first?",
+  },
+});
+```
+
+When at least one explainable assertion fails, skillgym writes `explain.json` into the failed leaf artifact directory. Running `skillgym explain <artifactDir>` resumes the original runner session, asks each persisted question, and writes `explanations.json` with the answers.
+
+For historical isolated-workspace runs, deferred explain currently depends on the recorded workspace still being resumable by the underlying runner.
+
 See the [assertion reference](docs/assertions.md).
+See [Deferred Explain](docs/explain.md).
 
 ## Snapshots
 

@@ -36,6 +36,7 @@ test("json-summary reporter omits session internals and prints summary on suite 
             attempt: 2,
             durationMs: 18_200,
             artifactDir: ".skillgym-results/run-1/case-a/open-main",
+            leafArtifactDir: ".skillgym-results/run-1/case-a/open-main/attempt-2",
             attempts: [
               {
                 runner,
@@ -44,6 +45,7 @@ test("json-summary reporter omits session internals and prints summary on suite 
                 attempt: 1,
                 durationMs: 20_000,
                 artifactDir: ".skillgym-results/run-1/case-a/open-main",
+                leafArtifactDir: ".skillgym-results/run-1/case-a/open-main",
                 failureType: "assertion",
                 failureOrigin: "assertion",
                 failureClass: {
@@ -88,7 +90,8 @@ test("json-summary reporter omits session internals and prints summary on suite 
                 status: "failed",
                 attempt: 2,
                 durationMs: 18_200,
-                artifactDir: ".skillgym-results/run-1/case-a/open-main",
+                artifactDir: ".skillgym-results/run-1/case-a/open-main/attempt-2",
+                leafArtifactDir: ".skillgym-results/run-1/case-a/open-main/attempt-2",
                 failureType: "assertion",
                 failureOrigin: "assertion",
                 failureClass: {
@@ -274,6 +277,7 @@ test("json-summary reporter omits session internals and prints summary on suite 
   expect(runnerResult.retryCount).toBe(1);
   expect(runnerResult.durationMs).toBe(18_200);
   expect(runnerResult.artifactDir).toBe(".skillgym-results/run-1/case-a/open-main");
+  expect(runnerResult.leafArtifactDir).toBe(".skillgym-results/run-1/case-a/open-main/attempt-2");
   expect(runnerResult.failureType).toBe("assertion");
   expect(runnerResult.failureOrigin).toBe("assertion");
   expect(runnerResult.failureClass).toEqual({
@@ -296,6 +300,7 @@ test("json-summary reporter omits session internals and prints summary on suite 
       attempt: 1,
       durationMs: 20_000,
       artifactDir: ".skillgym-results/run-1/case-a/open-main",
+      leafArtifactDir: ".skillgym-results/run-1/case-a/open-main",
       usage: {
         inputTokens: 900,
         outputTokens: 180,
@@ -320,7 +325,8 @@ test("json-summary reporter omits session internals and prints summary on suite 
       status: "failed",
       attempt: 2,
       durationMs: 18_200,
-      artifactDir: ".skillgym-results/run-1/case-a/open-main",
+      artifactDir: ".skillgym-results/run-1/case-a/open-main/attempt-2",
+      leafArtifactDir: ".skillgym-results/run-1/case-a/open-main/attempt-2",
       usage: {
         inputTokens: 1000,
         outputTokens: 200,
@@ -408,6 +414,7 @@ test("json-summary reporter is silent until suite finishes", async () => {
       status: "passed",
       durationMs: 1000,
       artifactDir: ".out/c/r",
+      leafArtifactDir: ".out/c/r",
       report: {
         runner,
         prompt: "",

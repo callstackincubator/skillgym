@@ -2,6 +2,8 @@ import path from "node:path";
 import { readFile } from "node:fs/promises";
 import type {
   ClaudeCodeAgentConfig,
+  ExplainInput,
+  ExplainResult,
   RawRunArtifacts,
   RunHandle,
   RunInput,
@@ -37,18 +39,60 @@ export class ClaudeCodeAdapter extends BaseAdapter implements RunnerAdapter {
   }
 
   async run(input: RunInput): Promise<RunHandle> {
-    const command = this.options.command ?? "claude";
-    const args = [
+    return this.runPrompt(input, [
       ...(this.options.commandArgs ?? []),
       "-p",
       "--output-format",
       "stream-json",
       "--verbose",
       "--dangerously-skip-permissions",
-      "--no-session-persistence",
       ...(this.options.model ? ["--model", this.options.model] : []),
       input.prompt,
-    ];
+    ]);
+  }
+
+  async explain(input: ExplainInput): Promise<ExplainResult> {
+    const answers = [];
+    const baseInput = createExplainRunInput(input);
+
+    for (const [index, question] of input.questions.entries()) {
+      const questionInput = createExplainQuestionInput(
+        baseInput,
+        input.artifactDir,
+        index,
+        question.question,
+      );
+      const handle = await this.runPrompt(questionInput, [
+        ...(this.options.commandArgs ?? []),
+        "-p",
+        "-r",
+        input.sessionId,
+        "--output-format",
+        "stream-json",
+        "--verbose",
+        "--dangerously-skip-permissions",
+        ...(this.options.model ? ["--model", this.options.model] : []),
+        question.question,
+      ]);
+      const artifacts = await this.collect(handle, questionInput);
+      const report = await this.normalize(questionInput, artifacts);
+
+      answers.push({
+        question,
+        answer: report.finalOutput,
+        sessionId: report.sessionId,
+        startedAt: report.startedAt,
+        endedAt: report.endedAt,
+        durationMs: report.durationMs,
+        rawArtifacts: report.rawArtifacts,
+      });
+    }
+
+    return { answers };
+  }
+
+  private async runPrompt(input: RunInput, args: string[]): Promise<RunHandle> {
+    const command = this.options.command ?? "claude";
     const handle = await this.runCommand(command, args, input, {
       env: this.options.env,
     });
@@ -256,6 +300,34 @@ export class ClaudeCodeAdapter extends BaseAdapter implements RunnerAdapter {
       },
     };
   }
+}
+
+function createExplainRunInput(input: ExplainInput): RunInput {
+  return {
+    runner: input.runner,
+    prompt: "",
+    cwd: input.cwd,
+    timeoutMs: input.timeoutMs,
+    artifactsDir: input.artifactDir,
+    showRunnerOutput: input.showRunnerOutput,
+  };
+}
+
+function createExplainQuestionInput(
+  input: RunInput,
+  artifactDir: string,
+  index: number,
+  question: string,
+): RunInput {
+  return {
+    ...input,
+    prompt: question,
+    artifactsDir: path.join(
+      artifactDir,
+      "explain",
+      `question-${String(index + 1).padStart(2, "0")}`,
+    ),
+  };
 }
 
 function extractSessionId(records: unknown[]): string | undefined {
