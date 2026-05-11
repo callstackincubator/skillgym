@@ -11,6 +11,8 @@ export type { ScheduleMode } from "./domain/schedule.js";
 export type {
   Case,
   Suite,
+  Case as TestCase,
+  Suite as TestSuite,
   AssertionContext,
   SuiteWorkspaceConfig,
   WorkspaceBootstrapConfig,
