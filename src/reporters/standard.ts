@@ -1,5 +1,6 @@
 import path from "node:path";
 import process from "node:process";
+import { existsSync } from "node:fs";
 import cliSpinners from "cli-spinners";
 import { printBanner } from "../cli/branding.js";
 import pc from "picocolors";
@@ -261,7 +262,7 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
         stdout,
       );
 
-      if (failures.length > 0) {
+      if (failures.some(hasExplainArtifact)) {
         writeLine("", stdout);
         writeLine(
           colors.yellow("Explain failed executions with `skillgym explain <artifactDir>`."),
@@ -278,6 +279,10 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
       interactiveState = undefined;
     },
   };
+}
+
+function hasExplainArtifact(failure: FailureEntry): boolean {
+  return existsSync(path.join(failure.executionArtifactDir, "explain.json"));
 }
 
 function formatCaseRow(result: CaseResult, symbols: ReturnType<typeof getSymbols>): string {
