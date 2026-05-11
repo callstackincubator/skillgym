@@ -1,5 +1,13 @@
 # skillgym
 
+## 0.8.1
+
+### Patch Changes
+
+- [#33](https://github.com/callstackincubator/skillgym/pull/33) [`dcb7863`](https://github.com/callstackincubator/skillgym/commit/dcb7863d9cb6d3a5ae900a0479d3ef63bd65ba48) Thanks [@V3RON](https://github.com/V3RON)! - Raise the process max listener limit during a suite run based on `maxParallel`, then restore the original limit afterward.
+
+- [#32](https://github.com/callstackincubator/skillgym/pull/32) [`4793b75`](https://github.com/callstackincubator/skillgym/commit/4793b7507ae8d569a2b80c816725c44274acedd0) Thanks [@V3RON](https://github.com/V3RON)! - Restore `TestCase` and `TestSuite` as public type aliases from the package root so existing suite files keep compiling after the vocabulary normalization.
+
 ## 0.7.0
 
 ### Minor Changes
