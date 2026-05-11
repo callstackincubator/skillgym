@@ -177,6 +177,9 @@ test("standard reporter prints runner-grouped results and failure artifacts", as
   expect(output).not.toContain("Artifacts:");
   expect(output).not.toContain("Artifact Root:");
   expect(output).not.toContain("Explain failed executions with `skillgym explain <artifactDir>`.");
+  expect(output).toContain(
+    "No explain questions were recorded for this failure. Add `explain.question` to relevant assertions to enable deferred explain.",
+  );
 });
 
 test("standard reporter shows explain hint when a failed execution has explain.json", async () => {
@@ -838,6 +841,9 @@ test("standard reporter prints friendly runner crash message with log path", asy
   expect(output).toContain("Log: .skillgym-results/run-1/case-a/code-main/stderr.log");
   expect(output).not.toContain("Artifacts:");
   expect(output).not.toContain("Explain failed executions with `skillgym explain <artifactDir>`.");
+  expect(output).toContain(
+    "No explain questions were recorded for this failure. Add `explain.question` to relevant assertions to enable deferred explain.",
+  );
 });
 
 test("standard reporter points workspace bootstrap failures to bootstrap logs", async () => {
@@ -941,6 +947,9 @@ test("standard reporter points workspace bootstrap failures to bootstrap logs", 
   expect(output).toContain("Log: .skillgym-results/run-1/case-a/open-main/bootstrap.stderr.log");
   expect(output).not.toContain("Artifacts:");
   expect(output).not.toContain("Explain failed executions with `skillgym explain <artifactDir>`.");
+  expect(output).toContain(
+    "No explain questions were recorded for this failure. Add `explain.question` to relevant assertions to enable deferred explain.",
+  );
 });
 
 test("standard reporter renders max-steps failures with a clear message", async () => {

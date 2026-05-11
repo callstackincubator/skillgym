@@ -268,6 +268,14 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
           colors.yellow("Explain failed executions with `skillgym explain <artifactDir>`."),
           stdout,
         );
+      } else if (failures.length > 0) {
+        writeLine("", stdout);
+        writeLine(
+          colors.yellow(
+            "No explain questions were recorded for this failure. Add `explain.question` to relevant assertions to enable deferred explain.",
+          ),
+          stdout,
+        );
       }
     },
     onError() {
