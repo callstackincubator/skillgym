@@ -35,14 +35,6 @@ function classifyCliError(message: string): CliErrorPresentation {
 // Keep user-facing translations declarative so new internal errors can be mapped
 // by adding one small rule instead of extending formatting control flow.
 const cliErrorRules: CliErrorRule[] = [
-  exactRule("missing-suite-path", "Missing suite path. Usage: skillgym run <suite.ts>", () => ({
-    title: "missing suite path",
-    detail: "`skillgym run` needs a suite file to execute.",
-    fixes: [
-      "Pass a suite path, for example `skillgym run ./examples/basic-suite.ts`.",
-      "Run `skillgym help` to see the available flags.",
-    ],
-  })),
   exactRule(
     "missing-config",
     "No skillgym config found. Create skillgym.config.ts with a non-empty runners map.",

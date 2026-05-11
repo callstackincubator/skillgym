@@ -57,6 +57,7 @@
   },
   "dependencies": {
     "cli-spinners": "^3.4.0",
+    "commander": "^13.1.0",
     "nano-spawn": "^2.1.0",
     "picocolors": "^1.1.1",
     "pretty-ms": "^9.2.0",
