@@ -1,3 +1,5 @@
+import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { afterEach, expect, test, vi } from "vitest";
 import type {
@@ -174,6 +176,106 @@ test("standard reporter prints runner-grouped results and failure artifacts", as
   expect(output).not.toContain("Run did not complete because the runner crashed");
   expect(output).not.toContain("Artifacts:");
   expect(output).not.toContain("Artifact Root:");
+  expect(output).not.toContain("Explain failed executions with `skillgym explain <artifactDir>`.");
+  expect(output).toContain(
+    "No explain questions were recorded for this failure. Add `explain.question` to relevant assertions to enable deferred explain.",
+  );
+});
+
+test("standard reporter shows explain hint when a failed execution has explain.json", async () => {
+  const writes: string[] = [];
+  const reporter = createStandardReporter({
+    stdout: {
+      isTTY: false,
+      columns: 120,
+      write(chunk: string) {
+        writes.push(chunk);
+        return true;
+      },
+    },
+    isInteractive: false,
+    isUnicode: true,
+  });
+
+  const executionArtifactDir = await fs.mkdtemp(
+    path.join(os.tmpdir(), "skillgym-standard-reporter-"),
+  );
+  await fs.writeFile(
+    path.join(executionArtifactDir, "explain.json"),
+    JSON.stringify({ questions: ["why"] }),
+  );
+
+  const runner = createRunnerInfo("code-main", { type: "codex", model: "gpt-5.4" });
+  const context = {
+    isInteractive: false,
+    cwd: "/workspace",
+    workspaceMode: "shared" as const,
+    suitePath: "examples/basic-suite.ts",
+    suiteRunArtifactDir: ".skillgym-results/run-1",
+    selectedCaseCount: 1,
+    selectedRunnerCount: 1,
+    selectedExecutionCount: 1,
+    scheduleMode: "serial" as const,
+    maxParallel: 1,
+    declaredTags: [],
+  };
+  const suiteResult: SuiteRunResult = {
+    suitePath: context.suitePath,
+    startedAt: "2026-04-02T12:00:00.000Z",
+    endedAt: "2026-04-02T12:01:42.000Z",
+    durationMs: 102_000,
+    suiteRunArtifactDir: context.suiteRunArtifactDir,
+    declaredTags: [],
+    selectedTags: [],
+    cases: [
+      createCaseResult({
+        caseId: "case-a",
+        runnerResults: [
+          createRunnerResult({
+            runner,
+            passed: false,
+            executionArtifactDir,
+            totalTokens: 12_000,
+          }),
+        ],
+      }),
+    ],
+    runners: [
+      createRunnerSummary({
+        runner,
+        passedCases: 0,
+        totalCases: 1,
+        averageDurationMs: 19_300,
+        averageTotalTokens: 13_500,
+      }),
+    ],
+  };
+
+  await reporter.onSuiteStart?.({
+    context,
+    cases: [],
+    runners: [runner],
+    startedAt: suiteResult.startedAt,
+  });
+  await reporter.onRunnerFinish?.({
+    context,
+    case: { id: "case-a", prompt: "", assert() {} },
+    runner,
+    result: suiteResult.cases[0]!.runnerResults[0]!,
+    caseIndex: 1,
+    totalCases: 1,
+  });
+  await reporter.onCaseFinish?.({
+    context,
+    case: { id: "case-a", prompt: "", assert() {} },
+    result: suiteResult.cases[0]!,
+    caseIndex: 1,
+    totalCases: 1,
+  });
+  await reporter.onSuiteFinish?.({ context, result: suiteResult });
+
+  const output = writes.join("");
+
   expect(output).toContain("Explain failed executions with `skillgym explain <artifactDir>`.");
 });
 
@@ -738,7 +840,10 @@ test("standard reporter prints friendly runner crash message with log path", asy
   expect(output).toContain("AssertionError: expected skill to be loaded before command execution");
   expect(output).toContain("Log: .skillgym-results/run-1/case-a/code-main/stderr.log");
   expect(output).not.toContain("Artifacts:");
-  expect(output).toContain("Explain failed executions with `skillgym explain <artifactDir>`.");
+  expect(output).not.toContain("Explain failed executions with `skillgym explain <artifactDir>`.");
+  expect(output).toContain(
+    "No explain questions were recorded for this failure. Add `explain.question` to relevant assertions to enable deferred explain.",
+  );
 });
 
 test("standard reporter points workspace bootstrap failures to bootstrap logs", async () => {
@@ -841,7 +946,10 @@ test("standard reporter points workspace bootstrap failures to bootstrap logs", 
   expect(output).toContain("Error: Workspace bootstrap failed: sh ./bootstrap.sh (exit 4)");
   expect(output).toContain("Log: .skillgym-results/run-1/case-a/open-main/bootstrap.stderr.log");
   expect(output).not.toContain("Artifacts:");
-  expect(output).toContain("Explain failed executions with `skillgym explain <artifactDir>`.");
+  expect(output).not.toContain("Explain failed executions with `skillgym explain <artifactDir>`.");
+  expect(output).toContain(
+    "No explain questions were recorded for this failure. Add `explain.question` to relevant assertions to enable deferred explain.",
+  );
 });
 
 test("standard reporter renders max-steps failures with a clear message", async () => {
