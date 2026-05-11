@@ -1453,6 +1453,47 @@ test("executeSuite snapshots use the average of successful repetitions", async (
   expect(saved.entries["alpha::open"]?.value).toBe(150);
 });
 
+test("executeSuite raises process max listeners for parallel runs and restores it", async () => {
+  const suiteRunArtifactDir = await createTempDir();
+  const originalMaxListeners = process.getMaxListeners();
+  const observedMaxListeners: number[] = [];
+  const cases: Case[] = [
+    { id: "alpha", prompt: "a", assert() {} },
+    { id: "beta", prompt: "b", assert() {} },
+  ];
+
+  try {
+    await executeSuite("./suite.ts", cases, {
+      cwd: suiteRunArtifactDir,
+      outputDir: suiteRunArtifactDir,
+      schedule: "parallel",
+      maxParallel: originalMaxListeners + 2,
+      isInteractive: false,
+      config: {
+        runners: {
+          open: { agent: { type: "opencode", model: "openai/gpt-5" } },
+          code: { agent: { type: "codex", model: "gpt-5" } },
+        },
+      },
+      executeRunnerFn: async (case_, runner, _adapter, options) => {
+        observedMaxListeners.push(process.getMaxListeners());
+        return createRunnerResult({
+          caseId: case_.id,
+          runner,
+          passed: true,
+          durationMs: 10,
+          executionArtifactDir: options.artifactDir,
+        });
+      },
+    });
+  } finally {
+    expect(process.getMaxListeners()).toBe(originalMaxListeners);
+  }
+
+  expect(observedMaxListeners).not.toHaveLength(0);
+  expect(Math.min(...observedMaxListeners)).toBe((originalMaxListeners + 2) * 2);
+});
+
 function createRunnerResultForKey(
   caseId: string,
   runnerId: string,

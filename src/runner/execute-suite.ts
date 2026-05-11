@@ -189,6 +189,7 @@ export async function executeSuite(
   const plannedExecutions = createPlannedExecutions(selectedCases, selectedRunners, options.config);
   const caseStates = createPlannedCaseStates(selectedCases.length);
   const rejectedRunners = new Map<string, RunnerResult>();
+  const restoreMaxListeners = raiseProcessMaxListeners(resolveProcessMaxListeners(maxParallel));
 
   try {
     await options.reporter?.onSuiteStart?.({
@@ -271,7 +272,26 @@ export async function executeSuite(
   } catch (error) {
     await options.reporter?.onError?.({ context, error });
     throw error;
+  } finally {
+    restoreMaxListeners();
   }
+}
+
+function resolveProcessMaxListeners(maxParallel: number): number {
+  return Math.max(process.getMaxListeners(), maxParallel * 2);
+}
+
+function raiseProcessMaxListeners(target: number): () => void {
+  const previous = process.getMaxListeners();
+
+  if (target <= previous) {
+    return () => {};
+  }
+
+  process.setMaxListeners(target);
+  return () => {
+    process.setMaxListeners(previous);
+  };
 }
 
 export function classifyExpectedFailure(case_: Case, result: RunnerResult): RunnerResult {
