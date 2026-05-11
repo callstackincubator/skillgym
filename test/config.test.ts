@@ -2,7 +2,7 @@ import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
-import type { RunnerResult, TestCase } from "../src/index.js";
+import type { RunnerResult, Case } from "../src/index.js";
 import {
   loadConfig,
   parseConfig,
@@ -514,18 +514,18 @@ describe("config", () => {
 
   test("executeSuite applies per-case timeout over config defaults and runs every case against selected runners", async () => {
     const workspaceDir = path.join(tempDir, "workspace");
-    const outputDir = path.join(tempDir, "results");
+    const suiteRunArtifactDir = path.join(tempDir, "results");
     await mkdir(workspaceDir, { recursive: true });
 
     const seen: Array<{ caseId: string; runnerId: string; timeoutMs: number }> = [];
-    const cases: TestCase[] = [
+    const cases: Case[] = [
       { id: "from-config", prompt: "a", assert() {} },
       { id: "from-case", prompt: "b", timeoutMs: 7000, assert() {} },
     ];
 
     const result = await executeSuite("./suite.ts", cases, {
       cwd: workspaceDir,
-      outputDir,
+      suiteRunArtifactDir,
       config: {
         defaults: {
           timeoutMs: 45000,
@@ -536,11 +536,11 @@ describe("config", () => {
         },
       },
       isInteractive: false,
-      executeRunnerFn: async (testCase, runner, _adapter, options) => {
-        seen.push({ caseId: testCase.id, runnerId: runner.id, timeoutMs: options.timeoutMs });
+      executeRunnerFn: async (case_, runner, _adapter, options) => {
+        seen.push({ caseId: case_.id, runnerId: runner.id, timeoutMs: options.timeoutMs });
         return createRunnerResult({
           runner,
-          artifactDir: options.artifactDir,
+          executionArtifactDir: options.artifactDir,
         });
       },
     });
@@ -560,15 +560,15 @@ describe("config", () => {
 
 function createRunnerResult(options: {
   runner: ReturnType<typeof createRunnerInfo>;
-  artifactDir: string;
+  executionArtifactDir: string;
 }): RunnerResult {
   return {
     runner: options.runner,
     passed: true,
     status: "passed",
     durationMs: 10,
-    artifactDir: options.artifactDir,
-    leafArtifactDir: options.artifactDir,
+    executionArtifactDir: options.executionArtifactDir,
+    artifactDir: options.executionArtifactDir,
     report: createSessionReport({ runner: options.runner }),
   };
 }

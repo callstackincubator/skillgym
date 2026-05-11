@@ -1,4 +1,4 @@
-import type { AssertionContext } from "../domain/test-case.js";
+import type { AssertionContext } from "../domain/case.js";
 import type { SessionEvent, SessionReport } from "../domain/session-report.js";
 
 export function createAssertionContext(report: SessionReport): AssertionContext {

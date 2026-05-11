@@ -216,7 +216,7 @@ function renderExplainHeader(
 ): void {
   writeLine(`${theme.dim("Case      ")}${theme.bold(options.caseId)}`, stdout);
   writeLine(`${theme.dim("Runner    ")}${accent(options.runnerId)}`, stdout);
-  writeLine(`${theme.dim("Artifacts ")}${theme.bold(options.artifactDir)}`, stdout);
+  writeLine(`${theme.dim("Artifact Directory ")}${theme.bold(options.artifactDir)}`, stdout);
   writeLine(`${theme.dim("Questions ")}${String(options.questionCount)}`, stdout);
   writeLine("", stdout);
 }

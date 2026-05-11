@@ -5,7 +5,7 @@ import type { RunnerAdapter } from "../domain/adapter.js";
 import type { RunnerFailureOrigin, RunnerResult } from "../domain/result.js";
 import type { RunnerInfo } from "../domain/runner.js";
 import type { SessionReport } from "../domain/session-report.js";
-import type { TestCase } from "../domain/test-case.js";
+import type { Case } from "../domain/case.js";
 import { getAttachedExplainQuestions } from "../assertions/explain.js";
 import { createAssertionContext } from "../assertions/context.js";
 import { getAttachedFailureClass } from "../failure-classification.js";
@@ -16,7 +16,7 @@ import { isCommandTimeoutError, isMaxStepsExceededError } from "../utils/process
 import { createExecutionFailureResult } from "./workspace.js";
 
 export async function executeRunner(
-  testCase: TestCase,
+  case_: Case,
   runner: RunnerInfo,
   adapter: RunnerAdapter,
   options: {
@@ -37,7 +37,7 @@ export async function executeRunner(
 
   const input = {
     runner,
-    prompt: testCase.prompt,
+    prompt: case_.prompt,
     cwd: options.cwd,
     timeoutMs: options.timeoutMs,
     maxSteps: options.maxSteps,
@@ -57,7 +57,7 @@ export async function executeRunner(
       return await writeAndReturnFailure(error, {
         suitePath: options.suitePath,
         cwd: options.cwd,
-        testCase,
+        case: case_,
         runner,
         artifactDir,
         durationMs: Date.now() - startedMs,
@@ -73,7 +73,7 @@ export async function executeRunner(
       return await writeAndReturnFailure(error, {
         suitePath: options.suitePath,
         cwd: options.cwd,
-        testCase,
+        case: case_,
         runner,
         artifactDir,
         durationMs: Date.now() - startedMs,
@@ -84,7 +84,7 @@ export async function executeRunner(
     if (options.snapshots !== undefined) {
       try {
         applySnapshotCheck(
-          testCase.id,
+          case_.id,
           runner,
           report,
           options.snapshots.store,
@@ -94,7 +94,7 @@ export async function executeRunner(
         return await writeAndReturnFailure(error, {
           suitePath: options.suitePath,
           cwd: options.cwd,
-          testCase,
+          case: case_,
           runner,
           artifactDir,
           durationMs: Date.now() - startedMs,
@@ -107,17 +107,16 @@ export async function executeRunner(
     const ctx = createAssertionContext(report);
 
     try {
-      await runWithSoftAssertions(() => testCase.assert(report, ctx));
+      await runWithSoftAssertions(() => case_.assert(report, ctx));
     } catch (error) {
       const isAssertionFailure = error instanceof AssertionError;
       return await writeAndReturnFailure(error, {
         suitePath: options.suitePath,
         cwd: options.cwd,
-        testCase,
+        case: case_,
         runner,
         artifactDir,
         durationMs: Date.now() - startedMs,
-        failureType: isAssertionFailure ? "assertion" : "runner-crash",
         failureOrigin: isAssertionFailure ? "assertion" : "assert-hook",
         failureClass: getAttachedFailureClass(error),
         report,
@@ -131,24 +130,20 @@ export async function executeRunner(
       passed: true,
       status: "passed",
       durationMs: Date.now() - startedMs,
+      executionArtifactDir: artifactDir,
       artifactDir,
-      leafArtifactDir: artifactDir,
       report,
     };
   } catch (error) {
     return await writeAndReturnFailure(error, {
       suitePath: options.suitePath,
       cwd: options.cwd,
-      testCase,
+      case: case_,
       runner,
       artifactDir,
       durationMs: Date.now() - startedMs,
-      failureType: isMaxStepsExceededError(error)
-        ? "runner-crash"
-        : isCommandTimeoutError(error)
-          ? "timeout"
-          : undefined,
       failureOrigin: isMaxStepsExceededError(error) ? "max-steps" : "runner",
+      failureClass: isCommandTimeoutError(error) ? { id: "timeout", label: "Timeout" } : undefined,
       failureLogPath: path.join(artifactDir, "stderr.log"),
     });
   }
@@ -185,11 +180,10 @@ async function writeAndReturnFailure(
   options: {
     suitePath: string;
     cwd: string;
-    testCase: TestCase;
+    case: Case;
     runner: RunnerInfo;
     artifactDir: string;
     durationMs: number;
-    failureType?: RunnerResult["failureType"];
     failureOrigin?: RunnerFailureOrigin;
     failureClass?: RunnerResult["failureClass"];
     failureLogPath?: string;
@@ -202,7 +196,7 @@ async function writeAndReturnFailure(
   await writeExplainArtifactIfNeeded(error, {
     suitePath: options.suitePath,
     cwd: options.cwd,
-    caseId: options.testCase.id,
+    caseId: options.case.id,
     runnerId: options.runner.id,
     artifactDir: options.artifactDir,
     report: result.report,

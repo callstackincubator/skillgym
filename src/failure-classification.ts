@@ -1,4 +1,4 @@
-import type { FailureClass, RunnerFailureOrigin, RunnerFailureType } from "./domain/result.js";
+import type { FailureClass, RunnerFailureOrigin } from "./domain/result.js";
 
 const FAILURE_CLASS_SYMBOL = Symbol.for("skillgym.failureClass");
 
@@ -34,19 +34,10 @@ export function getAttachedFailureClass(error: unknown): FailureClass | undefine
 
 export function resolveFailureClass(options: {
   failureClass?: FailureClassInput;
-  failureType?: RunnerFailureType;
   failureOrigin?: RunnerFailureOrigin;
 }): FailureClass | undefined {
   if (options.failureClass !== undefined) {
     return normalizeFailureClass(options.failureClass);
-  }
-
-  if (options.failureType === "assertion") {
-    return { id: "assertion", label: "Assertion failure" };
-  }
-
-  if (options.failureType === "timeout") {
-    return { id: "timeout", label: "Timeout" };
   }
 
   switch (options.failureOrigin) {
@@ -58,8 +49,8 @@ export function resolveFailureClass(options: {
       return { id: "model-rejected", label: "Rejected model" };
     case "workspace-bootstrap":
       return { id: "workspace-bootstrap", label: "Workspace bootstrap" };
-    case "workspace-setup":
-      return { id: "workspace-setup", label: "Workspace setup" };
+    case "workspace":
+      return { id: "workspace", label: "Workspace" };
     case "collection":
       return { id: "collection", label: "Artifact collection" };
     case "normalization":
@@ -71,8 +62,6 @@ export function resolveFailureClass(options: {
     case "assertion":
       return { id: "assertion", label: "Assertion failure" };
     case undefined:
-      return options.failureType === "runner-crash"
-        ? { id: "runner-crash", label: "Runner crash" }
-        : undefined;
+      return undefined;
   }
 }

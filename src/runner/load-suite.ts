@@ -1,17 +1,17 @@
 import path from "node:path";
-import type { SuiteWorkspaceConfig, TestCase, TestSuite } from "../domain/test-case.js";
+import type { Case, Suite, SuiteWorkspaceConfig } from "../domain/case.js";
 import { importFromPath } from "../utils/import.js";
 import { validateSuiteWorkspaceConfig } from "./workspace.js";
 
 interface ImportedSuite {
-  default?: TestSuite;
+  default?: Suite;
   workspace?: SuiteWorkspaceConfig;
 }
 
 export interface LoadedSuite {
   filePath: string;
   dirPath: string;
-  cases: TestCase[];
+  cases: Case[];
   workspace?: SuiteWorkspaceConfig;
 }
 
@@ -32,7 +32,7 @@ export async function loadSuite(filePath: string): Promise<LoadedSuite> {
     return {
       filePath: absolutePath,
       dirPath: path.dirname(absolutePath),
-      cases: normalizeTestCases(suite),
+      cases: normalizeCases(suite),
       workspace: imported.workspace,
     };
   }
@@ -44,15 +44,15 @@ export async function loadSuite(filePath: string): Promise<LoadedSuite> {
   return {
     filePath: absolutePath,
     dirPath: path.dirname(absolutePath),
-    cases: normalizeTestCases(Object.values(suite)),
+    cases: normalizeCases(Object.values(suite)),
     workspace: imported.workspace,
   };
 }
 
-function normalizeTestCases(cases: TestCase[]): TestCase[] {
-  return cases.map((testCase) => ({
-    ...testCase,
-    tags: normalizeTags(testCase.tags, `case ${testCase.id}`),
+function normalizeCases(cases: Case[]): Case[] {
+  return cases.map((case_) => ({
+    ...case_,
+    tags: normalizeTags(case_.tags, `case ${case_.id}`),
   }));
 }
 

@@ -7,14 +7,14 @@
 - `shared`: run directly in a real working directory
 - `isolated`: create a fresh workspace per case x runner execution
 
-Use isolated workspaces when suites need different filesystem setups or when runs should not mutate the original source tree.
+Use isolated workspaces when suites need different filesystem setups or when executions should not mutate the original source tree.
 
 ## Suite-level workspace config
 
 Suites can export a named `workspace` object next to the default suite export.
 
 ```ts
-import type { SuiteWorkspaceConfig, TestCase } from "skillgym";
+import type { SuiteWorkspaceConfig, Case } from "skillgym";
 
 export const workspace: SuiteWorkspaceConfig = {
   mode: "isolated",
@@ -29,7 +29,7 @@ export const workspace: SuiteWorkspaceConfig = {
   },
 };
 
-const suite: TestCase[] = [
+const suite: Case[] = [
   {
     id: "example",
     prompt: "Describe the prepared workspace.",
@@ -55,7 +55,7 @@ export const workspace = {
 
 Behavior:
 
-- runs execute directly in the shared directory
+- executions run directly in the shared directory
 - `cwd` is optional
 - if omitted, shared mode falls back to config `run.cwd`, then `process.cwd()`
 - `templateDir` and `bootstrap` are not allowed
@@ -109,8 +109,8 @@ Runtime environment variables:
 
 Cleanup behavior is fixed:
 
-- successful isolated runs delete their workspace
-- failed isolated runs preserve their workspace
+- successful isolated executions delete their workspace
+- failed isolated executions preserve their workspace
 
 Preserved workspaces live under `outputDir/workspaces`.
 

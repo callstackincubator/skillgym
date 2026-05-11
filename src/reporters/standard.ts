@@ -7,7 +7,6 @@ import type {
   CaseResult,
   FailureClass,
   RunnerFailureOrigin,
-  RunnerFailureType,
   RunnerResult,
   SerializedError,
   SuiteRunResult,
@@ -28,14 +27,13 @@ import { extractUserStackFrame, formatStackFrameLocation } from "./stack-frame.j
 interface FailureEntry {
   caseId: string;
   runner: RunnerInfo;
+  executionArtifactDir: string;
   artifactDir: string;
-  leafArtifactDir: string;
-  attempts?: RunnerResult["attempts"];
+  sessions?: RunnerResult["sessions"];
   repetitions?: RunnerResult["repetitions"];
   successfulRepetitions?: RunnerResult["successfulRepetitions"];
   stoppedAtRepetition?: RunnerResult["stoppedAtRepetition"];
   error?: SerializedError;
-  failureType?: RunnerFailureType;
   failureOrigin?: RunnerFailureOrigin;
   failureClass?: FailureClass;
   failureLogPath?: string;
@@ -107,7 +105,7 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
       printBanner({ kind: "compact", stdout });
       writeLine(`${colors.dim("Suite     ")}${accent(event.context.suitePath)}`, stdout);
       writeLine(
-        `${colors.dim("Workspace ")}${colors.bold(event.context.workspaceMode === "shared" ? event.context.cwd : `${event.context.workspaceMode} per run`)}`,
+        `${colors.dim("Workspace ")}${colors.bold(event.context.workspaceMode === "shared" ? event.context.cwd : `${event.context.workspaceMode} per execution`)}`,
         stdout,
       );
       writeLine(`${colors.dim("Cases     ")}${String(event.context.selectedCaseCount)}`, stdout);
@@ -116,7 +114,7 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
       }
       writeLine(`${colors.dim("Runners   ")}${String(event.context.selectedRunnerCount)}`, stdout);
       writeLine(
-        `${colors.dim("Runs      ")}${String(event.context.selectedExecutionCount)}`,
+        `${colors.dim("Executions")}${String(event.context.selectedExecutionCount)}`,
         stdout,
       );
       writeLine(`${colors.dim("Parallel  ")}${String(event.context.maxParallel)}`, stdout);
@@ -128,7 +126,7 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
       ) {
         writeLine(
           colors.yellow(
-            `${symbols.warning} Concurrent schedule: ${event.context.scheduleMode} runs may overlap in the same workspace.`,
+            `${symbols.warning} Concurrent schedule: ${event.context.scheduleMode} executions may overlap in the same workspace.`,
           ),
           stdout,
         );
@@ -152,7 +150,7 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
         return;
       }
 
-      const key = createRunKey(event.testCase.id, event.runner.id);
+      const key = createRunKey(event.case.id, event.runner.id);
       setInteractiveRunResult(interactiveState, key, { status: "running", retryCount: 0 });
       interactiveState.spinnerFrameIndex = 0;
       renderInteractiveRunList(interactiveState, stdout, colors, symbols, spinner.frames);
@@ -160,14 +158,10 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
     },
     onRunnerFinish(event) {
       if (interactive && interactiveState !== undefined) {
-        setInteractiveRunResult(
-          interactiveState,
-          createRunKey(event.testCase.id, event.runner.id),
-          {
-            status: event.result.status,
-            retryCount: countRetries(event.result),
-          },
-        );
+        setInteractiveRunResult(interactiveState, createRunKey(event.case.id, event.runner.id), {
+          status: event.result.status,
+          retryCount: countRetries(event.result),
+        });
         if (!hasRunningEntries(interactiveState)) {
           stopSpinner(interactiveState);
         }
@@ -242,9 +236,9 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
       );
       writeLine(
         formatSummaryCountLine(
-          "Runs",
-          countPassedRuns(event.result.cases),
-          countTotalRuns(event.result.cases),
+          "Executions",
+          countPassedExecutions(event.result.cases),
+          countTotalExecutions(event.result.cases),
           colors,
         ),
         stdout,
@@ -262,12 +256,15 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
         ),
         stdout,
       );
-      writeLine(formatSummaryDetailLine("Output", event.result.outputDir, colors), stdout);
+      writeLine(
+        formatSummaryDetailLine("Output", event.result.suiteRunArtifactDir, colors),
+        stdout,
+      );
 
       if (failures.length > 0) {
         writeLine("", stdout);
         writeLine(
-          colors.yellow("Explain failed runs with `skillgym explain <artifactDir>`."),
+          colors.yellow("Explain failed executions with `skillgym explain <artifactDir>`."),
           stdout,
         );
       }
@@ -362,7 +359,7 @@ function formatFailureMessage(failure: FailureEntry): string {
     return "Expected failure passed unexpectedly.";
   }
 
-  if (failure.failureType === "assertion") {
+  if (failure.failureOrigin === "assertion") {
     if (failure.error === undefined) {
       return "Assertion failed.";
     }
@@ -373,13 +370,13 @@ function formatFailureMessage(failure: FailureEntry): string {
       : `${failure.error.name}: ${failure.error.message}\n${pc.dim(`at ${location}`)}`;
   }
 
-  if (failure.failureType === "timeout") {
+  if (failure.failureClass?.id === "timeout") {
     return failure.error === undefined
       ? "Run timed out."
       : `${failure.error.name}: ${failure.error.message}`;
   }
 
-  if (failure.failureType === "runner-crash") {
+  if (failure.failureOrigin !== undefined) {
     return formatCrashMessage(failure);
   }
 
@@ -400,12 +397,12 @@ function formatFailureBlock(
     formatFailureMessage(failure),
   ];
 
-  if (failure.failureLogPath !== undefined && failure.failureType !== "assertion") {
+  if (failure.failureLogPath !== undefined && failure.failureOrigin !== "assertion") {
     lines.push(colors.dim(`Log: ${failure.failureLogPath}`));
   }
 
-  if (failure.attempts !== undefined && failure.attempts.length > 1) {
-    lines.push(colors.dim(`Attempts: ${String(failure.attempts.length)}`));
+  if (failure.sessions !== undefined && failure.sessions.length > 1) {
+    lines.push(colors.dim(`Sessions: ${String(failure.sessions.length)}`));
   }
 
   const repeatLabel = formatRepeatLabelFromCounts(
@@ -484,12 +481,12 @@ function getCrashDetail(origin: RunnerFailureOrigin | undefined): string {
   switch (origin) {
     case "workspace-bootstrap":
       return "Workspace bootstrap failed.";
-    case "workspace-setup":
-      return "Workspace setup failed.";
+    case "workspace":
+      return "Workspace failed before the runner started.";
     case "assert-hook":
       return "Run finished, but the suite assert hook crashed.";
     case "max-steps":
-      return "Run stopped: exceeded maxSteps (best-effort). Raw output was preserved in the run artifacts for debugging.";
+      return "Run stopped: exceeded maxSteps (best-effort). Raw output was preserved in the execution artifacts for debugging.";
     case "model-rejected":
       return "Runner rejected the configured model.";
     case "collection":
@@ -556,11 +553,11 @@ function countPassedCases(cases: CaseResult[]): number {
   return cases.filter((caseResult) => caseResult.passed).length;
 }
 
-function countPassedRuns(cases: CaseResult[]): number {
+function countPassedExecutions(cases: CaseResult[]): number {
   return cases.reduce((sum, caseResult) => sum + countPassedRunnerResults(caseResult), 0);
 }
 
-function countTotalRuns(cases: CaseResult[]): number {
+function countTotalExecutions(cases: CaseResult[]): number {
   return cases.reduce((sum, caseResult) => sum + caseResult.runnerResults.length, 0);
 }
 
@@ -636,11 +633,10 @@ function collectFinalFailures(result: SuiteRunResult): FailureEntry[] {
         {
           caseId: caseResult.caseId,
           runner: runnerResult.runner,
+          executionArtifactDir: runnerResult.executionArtifactDir,
           artifactDir: runnerResult.artifactDir,
-          leafArtifactDir: runnerResult.leafArtifactDir,
-          attempts: runnerResult.repetitions?.at(-1)?.attempts ?? runnerResult.attempts,
+          sessions: runnerResult.repetitions?.at(-1)?.sessions ?? runnerResult.sessions,
           error: runnerResult.error,
-          failureType: runnerResult.failureType,
           failureOrigin: runnerResult.failureOrigin,
           failureClass: runnerResult.failureClass,
           failureLogPath: runnerResult.failureLogPath,
@@ -656,10 +652,10 @@ function collectFinalFailures(result: SuiteRunResult): FailureEntry[] {
 }
 
 function createInteractiveState(event: SuiteStartEvent): InteractiveState {
-  const entries = event.cases.flatMap((testCase) => {
+  const entries = event.cases.flatMap((case_) => {
     return event.runners.map((runner) => ({
-      key: createRunKey(testCase.id, runner.id),
-      caseId: testCase.id,
+      key: createRunKey(case_.id, runner.id),
+      caseId: case_.id,
       runner,
       status: "queued" as const,
       retryCount: 0,
@@ -802,12 +798,12 @@ function formatInteractiveRetryLabel(
 function countRetries(result: RunnerResult): number {
   if (result.repetitions !== undefined) {
     return result.repetitions.reduce(
-      (sum, repetition) => sum + Math.max(0, (repetition.attempts?.length ?? 1) - 1),
+      (sum, repetition) => sum + Math.max(0, (repetition.sessions?.length ?? 1) - 1),
       0,
     );
   }
 
-  return Math.max(0, (result.attempts?.length ?? 1) - 1);
+  return Math.max(0, (result.sessions?.length ?? 1) - 1);
 }
 
 function formatRetryCountLabel(retryCount: number): string {

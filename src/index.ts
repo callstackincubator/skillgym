@@ -9,18 +9,17 @@ export type {
 } from "./domain/runner.js";
 export type { ScheduleMode } from "./domain/schedule.js";
 export type {
-  TestCase,
-  TestSuite,
+  Case,
+  Suite,
   AssertionContext,
   SuiteWorkspaceConfig,
   WorkspaceBootstrapConfig,
-} from "./domain/test-case.js";
+} from "./domain/case.js";
 export type {
   FailureClass,
   RepetitionResult,
-  RunnerAttemptResult,
+  RunnerSessionResult,
   RunnerFailureOrigin,
-  RunnerFailureType,
   RunnerResult,
   RunnerResultStatus,
   CaseResult,

@@ -1,18 +1,18 @@
 ---
 name: workspaces
-description: Skillgym workspace setup for benchmark runs. Covers shared vs isolated mode, template directories, bootstrap commands, cleanup rules, and path resolution.
+description: Skillgym shared and isolated workspaces for benchmark executions. Covers workspace modes, template directories, bootstrap commands, cleanup rules, and path resolution.
 ---
 
 # skillgym workspaces
 
-Use this skill when benchmark runs need specific filesystem state.
+Use this skill when benchmark executions need specific filesystem state.
 
 ## Workspace modes
 
 - `shared`: run directly in a real working directory
 - `isolated`: create a fresh workspace per case x runner execution
 
-Use isolated workspaces when runs should not mutate the original checkout or when each execution needs a prepared template.
+Use isolated workspaces when executions should not mutate the original checkout or when each execution needs a prepared template.
 
 ## Shared mode
 
@@ -25,7 +25,7 @@ export const workspace = {
 
 Behavior:
 
-- runs execute directly in that directory
+- executions run directly in that directory
 - `cwd` is optional
 - if omitted, Skillgym falls back to config `run.cwd`, then `process.cwd()`
 
@@ -47,14 +47,14 @@ Behavior:
 - each case x runner execution gets its own workspace
 - `templateDir` copies a starter project into that workspace
 - `bootstrap` runs before the agent starts
-- successful isolated runs are deleted
-- failed isolated runs are preserved under `outputDir/workspaces`
+- successful isolated executions are deleted
+- failed isolated executions are preserved under `outputDir/workspaces`
 
 ## When to use isolated mode
 
 - the agent edits files
 - a case depends on seed files or a fixture repo
-- concurrent runs could interfere with each other
+- concurrent executions could interfere with each other
 - you need reproducible filesystem setup per execution
 
 ## Runtime environment for bootstrap

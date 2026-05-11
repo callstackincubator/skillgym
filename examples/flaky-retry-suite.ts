@@ -1,11 +1,11 @@
 import { access, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { assert, type TestCase } from "skillgym";
+import { assert, type Case } from "skillgym";
 
 const markerPath = path.join(os.tmpdir(), "skillgym-flaky-retry-example-6.marker");
 
-const suite: TestCase[] = [
+const suite: Case[] = [
   {
     id: "retry-once",
     prompt: "Reply exactly: skillgym retry example",

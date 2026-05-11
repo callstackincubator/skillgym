@@ -2,7 +2,7 @@ import { mkdtemp, mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/
 import os from "node:os";
 import path from "node:path";
 import { afterEach, expect, test } from "vitest";
-import type { TestCase } from "../../src/index.js";
+import type { Case } from "../../src/index.js";
 import { executeSuite } from "../../src/runner/execute-suite.js";
 import { loadSuite } from "../../src/runner/load-suite.js";
 import { createRunnerInfo } from "../../src/runner/runner-info.js";
@@ -39,7 +39,7 @@ test("loadSuite reads named workspace export", async () => {
 
 test("executeSuite provisions isolated workspaces from suite template and removes them on success", async () => {
   const tempDir = await createTempDir();
-  const outputDir = path.join(tempDir, "results");
+  const suiteRunArtifactDir = path.join(tempDir, "results");
   const templateDir = path.join(tempDir, "template");
   await mkdir(templateDir, { recursive: true });
   await writeFile(path.join(templateDir, "README.md"), "template\n", "utf8");
@@ -47,12 +47,12 @@ test("executeSuite provisions isolated workspaces from suite template and remove
   await writeFile(path.join(templateDir, ".git", "HEAD"), "ref: refs/heads/main\n", "utf8");
 
   const seenCwds: string[] = [];
-  const cases: TestCase[] = [{ id: "alpha", prompt: "hello", assert() {} }];
+  const cases: Case[] = [{ id: "alpha", prompt: "hello", assert() {} }];
   const runner = createRunnerInfo("open", { type: "opencode", model: "openai/gpt-5" });
 
   const result = await executeSuite("./suite.ts", cases, {
     cwd: tempDir,
-    outputDir,
+    suiteRunArtifactDir,
     suiteWorkspace: {
       mode: "isolated",
       templateDir,
@@ -62,7 +62,7 @@ test("executeSuite provisions isolated workspaces from suite template and remove
         open: { agent: { type: "opencode", model: "openai/gpt-5" } },
       },
     },
-    executeRunnerFn: async (_testCase, _runner, _adapter, options) => {
+    executeRunnerFn: async (_case, _runner, _adapter, options) => {
       seenCwds.push(options.cwd);
       expect(await readFile(path.join(options.cwd, "README.md"), "utf8")).toBe("template\n");
       expect(await readFile(path.join(options.cwd, ".git", "HEAD"), "utf8")).toContain(
@@ -73,13 +73,13 @@ test("executeSuite provisions isolated workspaces from suite template and remove
         passed: true,
         status: "passed",
         durationMs: 10,
+        executionArtifactDir: options.artifactDir,
         artifactDir: options.artifactDir,
-        leafArtifactDir: options.artifactDir,
         report: createSessionReport({ runner, prompt: "hello" }),
       };
     },
   });
-  const runOutputDir = result.outputDir;
+  const runOutputDir = result.suiteRunArtifactDir;
 
   expect(result.cases[0]?.passed).toBe(true);
   expect(seenCwds).toHaveLength(1);
@@ -95,7 +95,7 @@ test("executeSuite provisions isolated workspaces from suite template and remove
 
 test("executeSuite preserves failed isolated workspaces and writes bootstrap logs", async () => {
   const tempDir = await createTempDir();
-  const outputDir = path.join(tempDir, "results");
+  const suiteRunArtifactDir = path.join(tempDir, "results");
   const scriptPath = path.join(tempDir, "bootstrap.sh");
   await writeFile(
     scriptPath,
@@ -106,7 +106,7 @@ test("executeSuite preserves failed isolated workspaces and writes bootstrap log
 
   const result = await executeSuite("./suite.ts", [{ id: "alpha", prompt: "hello", assert() {} }], {
     cwd: tempDir,
-    outputDir,
+    suiteRunArtifactDir,
     suiteWorkspace: {
       mode: "isolated",
       bootstrap: {
@@ -123,7 +123,7 @@ test("executeSuite preserves failed isolated workspaces and writes bootstrap log
       throw new Error("runner should not start when bootstrap fails");
     },
   });
-  const runOutputDir = result.outputDir;
+  const runOutputDir = result.suiteRunArtifactDir;
 
   expect(result.cases[0]?.runnerResults[0]?.passed).toBe(false);
   expect(result.cases[0]?.runnerResults[0]?.error?.message).toContain("Workspace bootstrap failed");
@@ -138,10 +138,13 @@ test("executeSuite preserves failed isolated workspaces and writes bootstrap log
   const preservedWorkspace = path.join(workspaceRoot, entries[0]!);
   expect((await stat(preservedWorkspace)).isDirectory()).toBe(true);
 
-  const artifactDir = path.join(runOutputDir, "alpha", runner.pathKey, "repeat-1");
-  const stdout = await readFile(path.join(artifactDir, "bootstrap.stdout.log"), "utf8");
-  const stderr = await readFile(path.join(artifactDir, "bootstrap.stderr.log"), "utf8");
-  const workspaceMetadata = await readFile(path.join(artifactDir, "workspace.json"), "utf8");
+  const executionArtifactDir = path.join(runOutputDir, "alpha", runner.pathKey, "repeat-1");
+  const stdout = await readFile(path.join(executionArtifactDir, "bootstrap.stdout.log"), "utf8");
+  const stderr = await readFile(path.join(executionArtifactDir, "bootstrap.stderr.log"), "utf8");
+  const workspaceMetadata = await readFile(
+    path.join(executionArtifactDir, "workspace.json"),
+    "utf8",
+  );
 
   expect(stdout).toContain("bootstrap-start");
   expect(stderr).toContain("alpha");
@@ -150,7 +153,7 @@ test("executeSuite preserves failed isolated workspaces and writes bootstrap log
 
 test("executeSuite resolves suite-relative bootstrap script args before running in isolated workspace", async () => {
   const tempDir = await createTempDir();
-  const outputDir = path.join(tempDir, "results");
+  const suiteRunArtifactDir = path.join(tempDir, "results");
   const suiteDir = path.join(tempDir, "suite-dir");
   const scriptPath = path.join(suiteDir, "bootstrap.sh");
   await mkdir(suiteDir, { recursive: true });
@@ -167,7 +170,7 @@ test("executeSuite resolves suite-relative bootstrap script args before running 
     [{ id: "alpha", prompt: "hello", assert() {} }],
     {
       cwd: tempDir,
-      outputDir,
+      suiteRunArtifactDir,
       suiteWorkspace: {
         mode: "isolated",
         bootstrap: {
@@ -180,7 +183,7 @@ test("executeSuite resolves suite-relative bootstrap script args before running 
           open: { agent: { type: "opencode", model: "openai/gpt-5" } },
         },
       },
-      executeRunnerFn: async (_testCase, _runner, _adapter, options) => {
+      executeRunnerFn: async (_case, _runner, _adapter, options) => {
         seenCwd = options.cwd;
         expect(await readFile(path.join(options.cwd, "bootstrap-output.txt"), "utf8")).toContain(
           "suite-relative",
@@ -190,8 +193,8 @@ test("executeSuite resolves suite-relative bootstrap script args before running 
           passed: true,
           status: "passed",
           durationMs: 10,
+          executionArtifactDir: options.artifactDir,
           artifactDir: options.artifactDir,
-          leafArtifactDir: options.artifactDir,
           report: createSessionReport({ runner, prompt: "hello" }),
         };
       },

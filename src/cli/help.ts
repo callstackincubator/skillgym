@@ -11,7 +11,7 @@ If you are an LLM agent, run ${theme.light("skillgym skills get core")} before a
 
 ${theme.bold("Commands:")}
   run ${theme.accent("<suite.ts>")}     Execute a benchmark suite against the configured runners
-  explain ${theme.accent("<artifactDir>")} Explain a failed run from the exact failed leaf artifact directory
+  explain ${theme.accent("<artifactDir>")} Explain a failed execution from the exact failed artifact directory
   skills list        List bundled skill files
   skills get ${theme.accent("<name>")}  Print one bundled skill file
   help               Show this help message
@@ -21,8 +21,8 @@ ${theme.bold("Explain Options:")}
 
 ${theme.bold("Run Options:")}
   --config ${theme.accent("<path>")}        Load an explicit skillgym config file
-  --cwd ${theme.accent("<path>")}           Override the workspace directory for the run
-  --output-dir ${theme.accent("<path>")}    Override where run artifacts are written
+  --cwd ${theme.accent("<path>")}           Override the workspace directory for the execution
+  --output-dir ${theme.accent("<path>")}    Override where execution artifacts are written
   --schedule ${theme.accent("<mode>")}      Choose ${theme.light("serial")}, ${theme.light("parallel")}, or ${theme.light("isolated-by-runner")}
   --max-parallel ${theme.accent("<n>")}     Cap concurrent executions for non-serial schedules
   --repeat ${theme.accent("<n>")}           Require ${theme.light("n")} successful repetitions per case x runner
@@ -33,7 +33,7 @@ ${theme.bold("Run Options:")}
   --runner ${theme.accent("<runner-id>")}   Filter the configured runner set by runner id
   --reporter ${theme.accent("<value>")}     Use ${theme.light("standard")}, ${theme.light("json")}, ${theme.light("github-actions")}, or override run.reporter
   --snapshots ${theme.accent("<path>")}     Override the configured snapshot file path
-  --update-snapshots       Refresh snapshot baselines for the executed runs
+  --update-snapshots       Refresh snapshot baselines for the selected executions
 
 ${theme.bold("Examples:")}
   ${theme.dim("$")} ${theme.light("skillgym skills get core")}

@@ -1,18 +1,18 @@
 # Test Cases
 
-This document describes how to define benchmark suites and individual test cases.
+This document describes how to define benchmark suites and individual cases.
 
 ## Suite exports
 
 A suite module must export a default suite value. The suite can be either:
 
-- an array of `TestCase` values
-- an object map of named `TestCase` values
+- an array of `Case` values
+- an object map of named `Case` values
 
 ```ts
-import { assert, type TestCase } from "skillgym";
+import { assert, type Case } from "skillgym";
 
-const suite: TestCase[] = [
+const suite: Case[] = [
   {
     id: "always-passes",
     prompt: "Say only: skillgym ready",
@@ -26,9 +26,9 @@ export default suite;
 ```
 
 ```ts
-import { assert, type TestSuite } from "skillgym";
+import { assert, type Suite } from "skillgym";
 
-const suite: TestSuite = {
+const suite: Suite = {
   "always-passes": {
     id: "always-passes",
     prompt: "Say only: skillgym ready",
@@ -41,12 +41,12 @@ const suite: TestSuite = {
 export default suite;
 ```
 
-## TestCase shape
+## Case shape
 
 `skillgym` exports this public shape:
 
 ```ts
-export interface TestCase {
+export interface Case {
   id: string;
   prompt: string;
   tags?: string[];
@@ -63,18 +63,18 @@ Field meanings:
 - `prompt`: the exact prompt sent to the runner
 - `tags`: optional labels for selecting cases with `--tag`; multiple selected tags use OR matching
 - `timeoutMs`: optional per-case timeout override
-- `expectedFail`: mark assertion failures as expected benchmark signal, not suite-health failures
+- `expectedFail`: mark assertion failures as expected benchmark signal, not suite-failing results
 - `classifyFailure(result)`: optional post-processing hook for assigning or overriding structured failure classes
 - `assert(report, ctx)`: pass or fail logic for that execution
 
-`TestCase` does not include runner selection. Each case runs against the selected configured runners.
+`Case` does not include runner selection. Each case runs against the selected configured runners.
 
 ## Tags
 
 Tags let you run subsets of a suite without changing case order:
 
 ```ts
-const suite: TestCase[] = [
+const suite: Case[] = [
   {
     id: "login-smoke",
     tags: ["smoke", "auth"],
@@ -94,14 +94,14 @@ skillgym run ./suite.ts --tag smoke,auth
 
 You can also set defaults in config with `run.tags: ["smoke"]`. CLI `--tag` values override config tags.
 
-## Assertions in a test case
+## Assertions in a case
 
 The `assert` function decides pass or fail:
 
 - if `assert(report, ctx)` completes normally, that execution passes
 - if it throws, that execution fails
 - if `expectedFail: true` is set, an assertion failure is reported as `status: "expected-failed"` and `passed: true`
-- if `expectedFail: true` is set and assertions pass, the run is reported as `status: "unexpected-passed"` and `passed: false`
+- if `expectedFail: true` is set and assertions pass, the execution is reported as `status: "unexpected-passed"` and `passed: false`
 
 You can use both:
 
@@ -109,9 +109,9 @@ You can use both:
 - `skillgym` grouped helpers such as `assert.skills.has` and `assert.commands.includes`
 
 ```ts
-import { assert, type TestCase } from "skillgym";
+import { assert, type Case } from "skillgym";
 
-const suite: TestCase[] = [
+const suite: Case[] = [
   {
     id: "find-skills-expo",
     prompt: "Find a skill for upgrading Expo SDK and tell me how to install it.",
@@ -128,19 +128,19 @@ See `assertions.md` for the full assertion reference.
 
 ## Failure classification hooks
 
-Use failure classification when you want to group multiple failing runs under one shared cause, such as a pseudo command, wrong CLI alias, missing required flag, or wrong command family.
+Use failure classification when you want to group multiple failing executions under one shared cause, such as a pseudo command, wrong CLI alias, missing required flag, or wrong command family.
 
 There are two integration points:
 
 - `assert.classify(...)` attaches a failure class directly where an assertion is made
-- `classifyFailure(result)` lets the test case assign or override the final class after the run result is available
+- `classifyFailure(result)` lets the case assign or override the final class after the result is available
 
 Example:
 
 ```ts
-import { assert, type TestCase } from "skillgym";
+import { assert, type Case } from "skillgym";
 
-const suite: TestCase[] = [
+const suite: Case[] = [
   {
     id: "cursor-alias-check",
     prompt: 'Say you would run: cursr agent "open README.md".',
@@ -171,12 +171,12 @@ Notes:
 
 ## Expected failures
 
-Use `expectedFail: true` for benchmark cases that intentionally capture a known model or agent gap. Expected failures only apply to assertion failures. Runner crashes, timeouts, workspace setup failures, collection failures, normalization failures, snapshot failures, and `run.maxSteps` failures still fail suite health because they indicate infrastructure or benchmark integrity problems.
+Use `expectedFail: true` for benchmark cases that intentionally capture a known model or agent gap. Expected failures only apply to assertion failures. Runner crashes, timeouts, workspace failures, collection failures, normalization failures, snapshot failures, and `run.maxSteps` failures still fail the suite because they indicate infrastructure or benchmark integrity problems.
 
 ```ts
-import { assert, type TestCase } from "skillgym";
+import { assert, type Case } from "skillgym";
 
-const suite: TestCase[] = [
+const suite: Case[] = [
   {
     id: "known-missing-skill-selection",
     prompt: "Use the correct installed skill before editing files.",
@@ -192,7 +192,7 @@ Expected assertion failures exit successfully and appear in `results.json` with 
 
 ## AssertionContext helpers
 
-The second argument to `assert` is a convenience wrapper around the normalized report:
+The second argument to `assert` is a convenience wrapper around the session report:
 
 ```ts
 export interface AssertionContext {
@@ -220,7 +220,7 @@ These helpers are convenience APIs only. The source of truth is always the `Sess
 A suite can also export a named `workspace` object to control where executions run.
 
 ```ts
-import type { SuiteWorkspaceConfig, TestCase } from "skillgym";
+import type { SuiteWorkspaceConfig, Case } from "skillgym";
 
 export const workspace: SuiteWorkspaceConfig = {
   mode: "isolated",
@@ -231,7 +231,7 @@ export const workspace: SuiteWorkspaceConfig = {
   },
 };
 
-const suite: TestCase[] = [
+const suite: Case[] = [
   {
     id: "workspace-check",
     prompt: "Describe the prepared workspace.",
@@ -269,7 +269,7 @@ Rules:
 - relative suite workspace paths resolve from the suite file directory
 - isolated workspaces start empty when `templateDir` is omitted
 - `templateDir` copies the full directory contents, including dotfiles and `.git`
-- failed isolated runs preserve their workspace under `outputDir/workspaces`
+- failed isolated executions preserve their workspace under `outputDir/workspaces`
 
 See `workspaces.md` for behavior, path resolution, cleanup, and bootstrap details.
 
@@ -277,12 +277,12 @@ See `workspaces.md` for behavior, path resolution, cleanup, and bootstrap detail
 
 - a case execution passes when its `assert` function completes without throwing
 - a case execution fails when `assert` throws
-- `passed` is expectation-aware suite health; use `status` to distinguish `passed`, `failed`, `expected-failed`, and `unexpected-passed`
+- `passed` is expectation-aware at the suite level; use `status` to distinguish `passed`, `failed`, `expected-failed`, and `unexpected-passed`
 - a case execution also fails when the runner crashes, times out, or exceeds `run.maxSteps`
 - `run.maxSteps` is a best-effort streamed model-round limit, not a hard portable turn cap
 - `max-steps` failures preserve raw stdout/stderr artifacts for debugging
 - `max-steps` failures do not produce a partial normalized session report
-- failure messages are preserved in the run artifacts
+- failure messages are preserved in the execution artifacts
 
 ## Examples
 

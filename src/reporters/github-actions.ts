@@ -48,7 +48,7 @@ function formatAnnotationCommand(caseId: string, result: RunnerResult): string {
 }
 
 function formatAnnotationMessage(result: RunnerResult): string {
-  const lines = [`failure type: ${result.failureType ?? "unknown"}`];
+  const lines = [`failure class: ${result.failureClass?.id ?? "unknown"}`];
   const retryCount = countRetries(result);
   const repeatLabel = formatRepeatLabel(result);
 
@@ -72,9 +72,9 @@ function formatAnnotationMessage(result: RunnerResult): string {
     lines.push(`error: ${result.error.name}: ${result.error.message}`);
   }
 
-  lines.push(`artifacts: ${result.leafArtifactDir}`);
-  if (result.leafArtifactDir !== result.artifactDir) {
-    lines.push(`artifact root: ${result.artifactDir}`);
+  lines.push(`artifact directory: ${result.artifactDir}`);
+  if (result.artifactDir !== result.executionArtifactDir) {
+    lines.push(`execution artifact directory: ${result.executionArtifactDir}`);
   }
 
   if (result.failureLogPath !== undefined) {
@@ -109,17 +109,17 @@ function escapeCommandMessage(value: string): string {
 
 function formatJobSummary(result: SuiteRunResult): string {
   const passedCases = countPassedCases(result.cases);
-  const passedRuns = countPassedRuns(result.cases);
-  const totalRuns = countTotalRuns(result.cases);
+  const passedExecutions = countPassedExecutions(result.cases);
+  const totalExecutions = countTotalExecutions(result.cases);
   const failures = listFailures(result);
   const lines = [
     "## SkillGym Summary",
     "",
     `- Suite: \`${result.suitePath}\``,
     `- Cases: ${passedCases} passed, ${result.cases.length - passedCases} failed`,
-    `- Runs: ${passedRuns} passed, ${totalRuns - passedRuns} failed`,
+    `- Executions: ${passedExecutions} passed, ${totalExecutions - passedExecutions} failed`,
     `- Duration: ${formatDuration(result.durationMs)}`,
-    `- Output: \`${result.outputDir}\``,
+    `- Output: \`${result.suiteRunArtifactDir}\``,
     ...(result.selectedTags.length > 0
       ? [`- Tags: ${result.selectedTags.map((t) => `\`${t}\``).join(", ")}`]
       : []),
@@ -181,12 +181,12 @@ function getRunnerCases(
 function formatFailureSummaryItem(caseId: string, result: RunnerResult): string {
   const segments = [
     `\`${caseId} > ${result.runner.id}\``,
-    `${result.failureType ?? "unknown"}`,
-    `artifacts: \`${result.leafArtifactDir}\``,
+    `${result.failureClass?.id ?? "unknown"}`,
+    `artifact directory: \`${result.artifactDir}\``,
   ];
 
-  if (result.leafArtifactDir !== result.artifactDir) {
-    segments.push(`artifact root: \`${result.artifactDir}\``);
+  if (result.artifactDir !== result.executionArtifactDir) {
+    segments.push(`execution artifact directory: \`${result.executionArtifactDir}\``);
   }
 
   const retryCount = countRetries(result);
@@ -227,12 +227,12 @@ function formatRetryLabel(result: RunnerResult): string | undefined {
 function countRetries(result: RunnerResult): number {
   if (result.repetitions !== undefined) {
     return result.repetitions.reduce(
-      (sum, repetition) => sum + Math.max(0, (repetition.attempts?.length ?? 1) - 1),
+      (sum, repetition) => sum + Math.max(0, (repetition.sessions?.length ?? 1) - 1),
       0,
     );
   }
 
-  return Math.max(0, (result.attempts?.length ?? 1) - 1);
+  return Math.max(0, (result.sessions?.length ?? 1) - 1);
 }
 
 function formatRepeatLabel(result: RunnerResult): string | undefined {
@@ -265,13 +265,13 @@ function countPassedCases(cases: CaseResult[]): number {
   return cases.filter((caseResult) => caseResult.passed).length;
 }
 
-function countPassedRuns(cases: CaseResult[]): number {
+function countPassedExecutions(cases: CaseResult[]): number {
   return cases.reduce(
     (sum, caseResult) => sum + caseResult.runnerResults.filter((result) => result.passed).length,
     0,
   );
 }
 
-function countTotalRuns(cases: CaseResult[]): number {
+function countTotalExecutions(cases: CaseResult[]): number {
   return cases.reduce((sum, caseResult) => sum + caseResult.runnerResults.length, 0);
 }

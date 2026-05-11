@@ -5,7 +5,7 @@ const reporter: BenchmarkReporter = {
     console.log(`Running ${event.context.suitePath}`);
   },
   onSuiteFinish(event) {
-    console.log(`Output dir: ${event.result.outputDir}`);
+    console.log(`Suite-run artifact directory: ${event.result.suiteRunArtifactDir}`);
   },
 };
 

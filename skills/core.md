@@ -23,15 +23,15 @@ Typical agent loop:
 1. Read the target suite or create one.
 2. Write or refine prompts and assertions.
 3. Run one suite, case, or runner slice.
-4. Inspect failures from the output directory and normalized report.
-5. Tighten assertions or workspace setup until the benchmark captures the intended behavior.
+4. Inspect failures from the output directory and session report.
+5. Tighten assertions or workspace mode, template, or bootstrap until the benchmark captures the intended behavior.
 
 ## Minimum suite shape
 
 ```ts
-import { assert, type TestCase } from "skillgym";
+import { assert, type Case } from "skillgym";
 
-const suite: TestCase[] = [
+const suite: Case[] = [
   {
     id: "uses-correct-skill",
     prompt: "Find the right skill and explain how to install it.",
@@ -67,7 +67,7 @@ skillgym run <suite.ts> --update-snapshots
 
 - A configured runner is one agent target.
 - Each selected case runs once per selected runner.
-- Assertions evaluate the normalized session report after the run finishes.
+- Assertions evaluate the session report after the execution finishes.
 - Output artifacts are written under the configured `outputDir`.
 - Expected assertion failures can be benchmark-successful; infrastructure failures are still real failures.
 
@@ -75,7 +75,7 @@ skillgym run <suite.ts> --update-snapshots
 
 Read the focused skills only when the task needs them:
 
-- `skillgym skills get test-cases`
+- `skillgym skills get cases`
   Use when creating or reshaping suite files, tags, expected failures, or per-case timeouts.
 - `skillgym skills get assertions`
   Use when writing pass/fail logic against skills, commands, tool calls, output, or failure classes.
@@ -96,8 +96,8 @@ Read the focused skills only when the task needs them:
 
 ## Common mistakes
 
-- asserting on vague output instead of checking the normalized report
-- trying to select runners inside `TestCase` instead of config plus CLI filters
+- asserting on vague output instead of checking the session report
+- trying to select runners inside `Case` instead of config plus CLI filters
 - using shared workspaces for stateful tasks that need isolation
 - treating snapshot mismatches like functional failures instead of cost regressions
 - writing one huge suite before proving one small representative case

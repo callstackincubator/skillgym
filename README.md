@@ -8,7 +8,7 @@
 
 ## Why it's useful
 
-When you evaluate agent skills manually, it is hard to tell whether the agent actually selected the right skill, used it at the right time, and behaved correctly end to end. `skillgym` gives you a repeatable way to run real sessions, preserve session artifacts, verify outcomes with TypeScript assertions, and catch token regressions with snapshots.
+When you evaluate agent skills manually, it is hard to tell whether the agent actually selected the right skill, used it at the right time, and behaved correctly end to end. `skillgym` gives you a repeatable way to run real sessions, preserve session artifacts, verify results with TypeScript assertions, and catch token regressions with snapshots.
 
 ## Supported runners
 
@@ -75,10 +75,10 @@ export default config;
 Create a suite file such as `./skillgym/basic-suite.ts`:
 
 ```ts
-import type { TestSuite } from "skillgym";
+import type { Suite } from "skillgym";
 import { assert } from "skillgym";
 
-const suite: TestSuite = [
+const suite: Suite = [
   {
     id: "always-passes",
     prompt: "Say only: skillgym ready",
@@ -113,7 +113,7 @@ npx skillgym skills list
 npx skillgym skills get core
 ```
 
-Explain a failed run by resuming the original runner session from the exact failed leaf artifact directory:
+Explain a failed execution by resuming the original runner session from the exact failed artifact directory:
 
 ```bash
 npx skillgym explain ./.skillgym-results/run-1/case-a/open-main/repeat-1
@@ -137,7 +137,7 @@ TypeScript runtime limitations:
 - a `skillgym.config.*` file with a non-empty `runners` map
 - at least one configured runner with `agent.type` and `agent.model`
 - the corresponding CLI installed and working in your environment
-- a suite file that exports test cases
+- a suite file that exports cases
 
 Config is discovered upward from the suite file directory. CLI flags override config values.
 
@@ -148,21 +148,21 @@ Use `agent.model` instead of `commandArgs` when you need to select the agent mod
 
 A runner is one configured agent target. It tells `skillgym` which CLI to launch and which model to use for a run.
 
-Each test case runs once per selected runner. For example, 3 cases and 2 runners produce 6 executions.
+Each case runs once per selected runner. For example, 3 cases and 2 runners produce 6 executions.
 
 ## Configuration
 
 Most important config properties:
 
-- `run.cwd`: working directory used for shared-workspace runs
-- `run.outputDir`: where artifacts, reports, and preserved workspaces are written
+- `run.cwd`: working directory used for shared-workspace executions
+- `run.outputDir`: suite-run artifact directory where artifacts, reports, and preserved workspaces are written
 - `run.reporter`: built-in `standard` reporter or a custom reporter module path
 - `run.schedule`: execution scheduling mode for case x runner pairs
 - `run.maxParallel`: maximum concurrent executions for non-serial schedules, defaulting to available CPU parallelism
 - `run.repeat`: require this many successful repetitions per case x runner execution
-- `run.repeatFailure`: retry the current repetition up to this many additional attempts after failure
+- `run.repeatFailure`: retry the current repetition up to this many additional sessions after failure
 - `run.retryFailed`: compatibility alias for `run.repeatFailure`
-- `run.maxSteps`: best-effort limit on streamed agent steps before skillgym terminates the run
+- `run.maxSteps`: best-effort limit on streamed agent steps before skillgym terminates the execution
 - `run.workspace`: default workspace mode for the suite
 - `defaults.timeoutMs`: default per-case timeout
 - `runners.<id>.agent.type`: which agent integration to use, currently `opencode`, `codex`, `claude-code`, or `cursor-agent`
@@ -181,15 +181,15 @@ The execution unit is one case x runner pair. `skillgym` expands the suite into 
 
 For concurrent schedules, `run.maxParallel` defaults to `os.availableParallelism()`. This limits how many SkillGym executions are active at once; it does not pin or limit CPU cores used by an individual agent process.
 
-Concurrent schedules do not copy or isolate the workspace by themselves. Overlapping runs may still interact through the same filesystem state and live runner output unless you use isolated workspaces. OpenCode, Codex, and Claude Code runtime state are isolated per run under each artifact directory.
+Concurrent schedules do not copy or isolate the workspace by themselves. Overlapping executions may still interact through the same filesystem state and live runner output unless you use isolated workspaces. OpenCode, Codex, and Claude Code runtime state are isolated per execution under each artifact directory.
 
-`run.repeat` is useful when you want stability sampling instead of a single lucky pass. Each case x runner execution keeps running until it records the requested number of successful classified outcomes, or stops early when one repetition still fails after exhausting `run.repeatFailure` retries.
+`run.repeat` is useful when you want stability sampling instead of a single lucky pass. Each case x runner execution keeps running until it records the requested number of successful classified results, or stops early when one repetition still fails after exhausting `run.repeatFailure` retries.
 
-`run.repeatFailure` retries only the current repetition when it still counts as failed after result classification. SkillGym keeps all repetition and retry artifacts, averages visible duration and token metrics across the final outcomes of completed successful repetitions, and preserves the full nested detail in `results.json`.
+`run.repeatFailure` retries only the current repetition when it still counts as failed after result classification. SkillGym keeps all repetition and retry artifacts, averages visible duration and token metrics across the final results of completed successful repetitions, and preserves the full nested detail in `results.json`.
 
-Artifacts for repeated runs are grouped under the stable case x runner directory using `repeat-N` directories, with retry attempts nested as `attempt-N` inside the repetition that needed recovery.
+Artifacts for repeated executions are grouped under the stable case x runner directory using `repeat-N` directories, with retry sessions nested as `session-N` inside the repetition that needed recovery.
 
-`run.maxSteps` is enforced on a best-effort basis by monitoring each runner's streamed JSONL output. A step is one observed model round, not one token and not necessarily one tool call, but the exact boundary is still runner-defined, so the same prompt may consume different numbers of steps across agents. When the observed step count exceeds the configured limit, skillgym kills the agent process, fails the run with origin `max-steps`, and preserves raw stdout/stderr artifacts for debugging. No partial normalized report is produced for that failure.
+`run.maxSteps` is enforced on a best-effort basis by monitoring each runner's streamed JSONL output. A step is one observed model round, not one token and not necessarily one tool call, but the exact boundary is still runner-defined, so the same prompt may consume different numbers of steps across agents. When the observed step count exceeds the configured limit, skillgym kills the agent process, fails the execution with origin `max-steps`, and preserves raw stdout/stderr artifacts for debugging. No partial session report is produced for that failure.
 
 ## Workspaces
 
@@ -200,7 +200,7 @@ A workspace is the directory where an execution runs.
 - `shared`: run directly in one real directory
 - `isolated`: create a fresh temporary workspace per case x runner execution
 
-Use `shared` when you want the agent to work against your real project checkout. Use `isolated` when you want clean filesystem state per execution or need to prepare each run from a template.
+Use `shared` when you want the agent to work against your real project checkout. Use `isolated` when you want clean filesystem state per execution or need to prepare each execution from a template.
 
 You can configure workspaces in `skillgym.config.*` with `run.workspace`, or per suite with a named `workspace` export. Suite-level workspace config overrides config-level `run.workspace`.
 
@@ -217,7 +217,7 @@ export const workspace = {
 };
 ```
 
-In isolated mode, each execution gets its own workspace. `templateDir` copies a starter project into that workspace, and `bootstrap` runs before the agent starts. Successful isolated runs are cleaned up; failed ones are preserved under `outputDir/workspaces` for debugging.
+In isolated mode, each execution gets its own workspace. `templateDir` copies a starter project into that workspace, and `bootstrap` runs before the agent starts. Successful isolated executions are cleaned up; failed ones are preserved under `outputDir/workspaces` for debugging.
 
 See [Workspaces](docs/workspaces.md) for the full workspace reference.
 
@@ -225,7 +225,7 @@ See [Workspaces](docs/workspaces.md) for the full workspace reference.
 
 `assert` extends Node's `node:assert/strict` helpers, so standard methods like `assert.ok`, `assert.equal`, and `assert.match` still work.
 
-`assert.soft.*` mirrors the same sync assertion surface and collects failures until the current test case finishes, so one run can report multiple assertion mismatches together.
+`assert.soft.*` mirrors the same sync assertion surface and collects failures until the current case finishes, so one execution can report multiple assertion mismatches together.
 
 Built-in grouped assertions cover:
 
@@ -269,16 +269,16 @@ assert.fileReads.includes(report, /SKILL\.md$/, {
 });
 ```
 
-When at least one explainable assertion fails, skillgym writes `explain.json` into the failed leaf artifact directory. Running `skillgym explain <artifactDir>` resumes the original runner session, asks each persisted question, and writes `explanations.json` with the answers.
+When at least one explainable assertion fails, skillgym writes `explain.json` into the failed artifact directory. Running `skillgym explain <artifactDir>` resumes the original runner session, asks each persisted question, and writes `explanations.json` with the answers.
 
-For historical isolated-workspace runs, deferred explain currently depends on the recorded workspace still being resumable by the underlying runner.
+For historical isolated-workspace executions, deferred explain currently depends on the recorded workspace still being resumable by the underlying runner.
 
 See the [assertion reference](docs/assertions.md).
 See [Deferred Explain](docs/explain.md).
 
 ## Snapshots
 
-Snapshot checks can fail runs when token usage regresses beyond a configured tolerance.
+Snapshot checks can fail executions when token usage regresses beyond a configured tolerance.
 
 ```bash
 npx skillgym run ./examples/basic-suite.ts --update-snapshots
@@ -294,7 +294,7 @@ The [skill selection suite](examples/skill-selection-suite.ts) targets a real in
 npx skillgym run ./examples/skill-selection-suite.ts
 ```
 
-The [workspace isolation suite](examples/workspace-isolation-suite.ts) demonstrates isolated workspace setup with a template directory and bootstrap command:
+The [workspace isolation suite](examples/workspace-isolation-suite.ts) demonstrates an isolated workspace with a template directory and bootstrap command:
 
 ```bash
 npx skillgym run ./examples/workspace-isolation-suite.ts
@@ -311,7 +311,7 @@ npx skillgym run ./examples/failure-classification-suite.ts
 The documentation site is at [incubator.callstack.com/skillgym](https://incubator.callstack.com/skillgym/). Repository docs:
 
 - [Docs Overview](docs/readme.md)
-- [Test Cases](docs/test-cases.md)
+- [Test Cases](docs/cases.md)
 - [Assertions](docs/assertions.md)
 - [Workspaces](docs/workspaces.md)
 - [Reporters](docs/reporters.md)

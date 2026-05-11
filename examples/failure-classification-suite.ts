@@ -1,6 +1,6 @@
-import { assert, type TestCase } from "skillgym";
+import { assert, type Case } from "skillgym";
 
-const suite: TestCase[] = [
+const suite: Case[] = [
   {
     id: "wrong-cli-alias-echo",
     prompt: [

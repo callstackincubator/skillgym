@@ -22,7 +22,7 @@ export type SuiteWorkspaceConfig =
       bootstrap?: WorkspaceBootstrapConfig;
     };
 
-export interface TestCase {
+export interface Case {
   id: string;
   prompt: string;
   tags?: string[];
@@ -40,4 +40,4 @@ export interface AssertionContext {
   finalOutput(): string;
 }
 
-export type TestSuite = TestCase[] | Record<string, TestCase>;
+export type Suite = Case[] | Record<string, Case>;

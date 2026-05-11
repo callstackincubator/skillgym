@@ -15,20 +15,19 @@ interface SummaryRunnerResult {
   runner: RunnerResult["runner"];
   passed: boolean;
   status: RunnerResult["status"];
-  attempt?: number;
+  session?: number;
   repeatTarget?: number;
   completedRepetitions?: number;
   successfulRepetitions?: number;
   stoppedAtRepetition?: number;
   retryCount: number;
   durationMs: number;
+  executionArtifactDir: string;
   artifactDir: string;
-  leafArtifactDir: string;
   usage: RunnerResult["report"]["usage"];
-  attempts?: SummaryAttemptResult[];
+  sessions?: SummarySessionResult[];
   repetitions?: SummaryRepetitionResult[];
   error?: SummaryError;
-  failureType?: RunnerResult["failureType"];
   failureOrigin?: RunnerResult["failureOrigin"];
   failureClass?: FailureClass;
 }
@@ -37,29 +36,27 @@ interface SummaryRepetitionResult {
   repetition: number;
   passed: boolean;
   status: RunnerResult["status"];
-  attempt?: number;
+  session?: number;
   retryCount: number;
   durationMs: number;
+  executionArtifactDir: string;
   artifactDir: string;
-  leafArtifactDir: string;
   usage: RunnerResult["report"]["usage"];
-  attempts?: SummaryAttemptResult[];
+  sessions?: SummarySessionResult[];
   error?: SummaryError;
-  failureType?: RunnerResult["failureType"];
   failureOrigin?: RunnerResult["failureOrigin"];
   failureClass?: FailureClass;
 }
 
-interface SummaryAttemptResult {
+interface SummarySessionResult {
   passed: boolean;
   status: RunnerResult["status"];
-  attempt: number;
+  session: number;
   durationMs: number;
+  executionArtifactDir: string;
   artifactDir: string;
-  leafArtifactDir: string;
   usage: RunnerResult["report"]["usage"];
   error?: SummaryError;
-  failureType?: RunnerResult["failureType"];
   failureOrigin?: RunnerResult["failureOrigin"];
   failureClass?: FailureClass;
 }
@@ -76,7 +73,7 @@ interface SummarySuiteResult {
   startedAt: string;
   endedAt: string;
   durationMs: number;
-  outputDir: string;
+  suiteRunArtifactDir: string;
   declaredTags: string[];
   selectedTags: string[];
   cases: SummaryCaseResult[];
@@ -88,20 +85,20 @@ function summarizeRunnerResult(result: RunnerResult): SummaryRunnerResult {
     runner: result.runner,
     passed: result.passed,
     status: result.status,
-    attempt: result.attempt,
+    session: result.session,
     repeatTarget: result.repeatTarget,
     completedRepetitions: result.completedRepetitions,
     successfulRepetitions: result.successfulRepetitions,
     stoppedAtRepetition: result.stoppedAtRepetition,
     retryCount: countRetries(result),
     durationMs: result.durationMs,
+    executionArtifactDir: result.executionArtifactDir,
     artifactDir: result.artifactDir,
-    leafArtifactDir: result.leafArtifactDir,
     usage: result.report.usage,
   };
 
-  if (result.attempts !== undefined) {
-    summary.attempts = result.attempts.map(summarizeAttemptResult);
+  if (result.sessions !== undefined) {
+    summary.sessions = result.sessions.map(summarizeSessionResult);
   }
 
   if (result.repetitions !== undefined) {
@@ -110,10 +107,6 @@ function summarizeRunnerResult(result: RunnerResult): SummaryRunnerResult {
 
   if (result.error !== undefined) {
     summary.error = { name: result.error.name, message: result.error.message };
-  }
-
-  if (result.failureType !== undefined) {
-    summary.failureType = result.failureType;
   }
 
   if (result.failureOrigin !== undefined) {
@@ -130,12 +123,12 @@ function summarizeRunnerResult(result: RunnerResult): SummaryRunnerResult {
 function countRetries(result: RunnerResult): number {
   if (result.repetitions !== undefined) {
     return result.repetitions.reduce(
-      (sum, repetition) => sum + Math.max(0, (repetition.attempts?.length ?? 1) - 1),
+      (sum, repetition) => sum + Math.max(0, (repetition.sessions?.length ?? 1) - 1),
       0,
     );
   }
 
-  return Math.max(0, (result.attempts?.length ?? 1) - 1);
+  return Math.max(0, (result.sessions?.length ?? 1) - 1);
 }
 
 function summarizeRepetitionResult(
@@ -145,24 +138,20 @@ function summarizeRepetitionResult(
     repetition: result.repetition,
     passed: result.passed,
     status: result.status,
-    attempt: result.attempt,
-    retryCount: Math.max(0, (result.attempts?.length ?? 1) - 1),
+    session: result.session,
+    retryCount: Math.max(0, (result.sessions?.length ?? 1) - 1),
     durationMs: result.durationMs,
+    executionArtifactDir: result.executionArtifactDir,
     artifactDir: result.artifactDir,
-    leafArtifactDir: result.leafArtifactDir,
     usage: result.report.usage,
   };
 
-  if (result.attempts !== undefined) {
-    summary.attempts = result.attempts.map(summarizeAttemptResult);
+  if (result.sessions !== undefined) {
+    summary.sessions = result.sessions.map(summarizeSessionResult);
   }
 
   if (result.error !== undefined) {
     summary.error = { name: result.error.name, message: result.error.message };
-  }
-
-  if (result.failureType !== undefined) {
-    summary.failureType = result.failureType;
   }
 
   if (result.failureOrigin !== undefined) {
@@ -176,25 +165,21 @@ function summarizeRepetitionResult(
   return summary;
 }
 
-function summarizeAttemptResult(
-  result: NonNullable<RunnerResult["attempts"]>[number],
-): SummaryAttemptResult {
-  const summary: SummaryAttemptResult = {
+function summarizeSessionResult(
+  result: NonNullable<RunnerResult["sessions"]>[number],
+): SummarySessionResult {
+  const summary: SummarySessionResult = {
     passed: result.passed,
     status: result.status,
-    attempt: result.attempt,
+    session: result.session,
     durationMs: result.durationMs,
+    executionArtifactDir: result.executionArtifactDir,
     artifactDir: result.artifactDir,
-    leafArtifactDir: result.leafArtifactDir,
     usage: result.report.usage,
   };
 
   if (result.error !== undefined) {
     summary.error = { name: result.error.name, message: result.error.message };
-  }
-
-  if (result.failureType !== undefined) {
-    summary.failureType = result.failureType;
   }
 
   if (result.failureOrigin !== undefined) {
@@ -223,7 +208,7 @@ function summarizeSuiteResult(result: SuiteRunResult): SummarySuiteResult {
     startedAt: result.startedAt,
     endedAt: result.endedAt,
     durationMs: result.durationMs,
-    outputDir: result.outputDir,
+    suiteRunArtifactDir: result.suiteRunArtifactDir,
     declaredTags: result.declaredTags,
     selectedTags: result.selectedTags,
     cases: result.cases.map(summarizeCaseResult),

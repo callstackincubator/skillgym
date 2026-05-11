@@ -20,7 +20,7 @@ test("json-summary reporter omits session internals and prints summary on suite 
     startedAt: "2026-04-02T12:00:00.000Z",
     endedAt: "2026-04-02T12:01:00.000Z",
     durationMs: 60_000,
-    outputDir: ".skillgym-results/run-1",
+    suiteRunArtifactDir: ".skillgym-results/run-1",
     declaredTags: ["smoke", "gestures"],
     selectedTags: ["smoke"],
     cases: [
@@ -33,20 +33,19 @@ test("json-summary reporter omits session internals and prints summary on suite 
             runner,
             passed: false,
             status: "failed",
-            attempt: 2,
+            session: 2,
             durationMs: 18_200,
-            artifactDir: ".skillgym-results/run-1/case-a/open-main",
-            leafArtifactDir: ".skillgym-results/run-1/case-a/open-main/attempt-2",
-            attempts: [
+            executionArtifactDir: ".skillgym-results/run-1/case-a/open-main",
+            artifactDir: ".skillgym-results/run-1/case-a/open-main/session-2",
+            sessions: [
               {
                 runner,
                 passed: false,
                 status: "failed",
-                attempt: 1,
+                session: 1,
                 durationMs: 20_000,
+                executionArtifactDir: ".skillgym-results/run-1/case-a/open-main",
                 artifactDir: ".skillgym-results/run-1/case-a/open-main",
-                leafArtifactDir: ".skillgym-results/run-1/case-a/open-main",
-                failureType: "assertion",
                 failureOrigin: "assertion",
                 failureClass: {
                   id: "missing-flag",
@@ -58,7 +57,7 @@ test("json-summary reporter omits session internals and prints summary on suite 
                 },
                 report: {
                   runner,
-                  sessionId: "sess-attempt-1",
+                  sessionId: "sess-session-1",
                   prompt: "Do the thing",
                   usage: {
                     inputTokens: 900,
@@ -88,11 +87,10 @@ test("json-summary reporter omits session internals and prints summary on suite 
                 runner,
                 passed: false,
                 status: "failed",
-                attempt: 2,
+                session: 2,
                 durationMs: 18_200,
-                artifactDir: ".skillgym-results/run-1/case-a/open-main/attempt-2",
-                leafArtifactDir: ".skillgym-results/run-1/case-a/open-main/attempt-2",
-                failureType: "assertion",
+                executionArtifactDir: ".skillgym-results/run-1/case-a/open-main/session-2",
+                artifactDir: ".skillgym-results/run-1/case-a/open-main/session-2",
                 failureOrigin: "assertion",
                 failureClass: {
                   id: "missing-flag",
@@ -151,7 +149,6 @@ test("json-summary reporter omits session internals and prints summary on suite 
                 },
               },
             ],
-            failureType: "assertion",
             failureOrigin: "assertion",
             failureClass: {
               id: "missing-flag",
@@ -229,7 +226,7 @@ test("json-summary reporter omits session internals and prints summary on suite 
     cwd: "/workspace",
     workspaceMode: "shared" as const,
     suitePath: result.suitePath,
-    outputDir: result.outputDir,
+    suiteRunArtifactDir: result.suiteRunArtifactDir,
     selectedCaseCount: 1,
     selectedRunnerCount: 1,
     selectedExecutionCount: 1,
@@ -254,7 +251,7 @@ test("json-summary reporter omits session internals and prints summary on suite 
   expect(output.suitePath).toBe("examples/basic-suite.ts");
   expect(output.startedAt).toBe("2026-04-02T12:00:00.000Z");
   expect(output.durationMs).toBe(60_000);
-  expect(output.outputDir).toBe(".skillgym-results/run-1");
+  expect(output.suiteRunArtifactDir).toBe(".skillgym-results/run-1");
   expect(output.declaredTags).toEqual(["smoke", "gestures"]);
   expect(output.selectedTags).toEqual(["smoke"]);
 
@@ -273,12 +270,11 @@ test("json-summary reporter omits session internals and prints summary on suite 
   expect(runnerResult.runner.id).toBe("open-main");
   expect(runnerResult.passed).toBe(false);
   expect(runnerResult.status).toBe("failed");
-  expect(runnerResult.attempt).toBe(2);
+  expect(runnerResult.session).toBe(2);
   expect(runnerResult.retryCount).toBe(1);
   expect(runnerResult.durationMs).toBe(18_200);
-  expect(runnerResult.artifactDir).toBe(".skillgym-results/run-1/case-a/open-main");
-  expect(runnerResult.leafArtifactDir).toBe(".skillgym-results/run-1/case-a/open-main/attempt-2");
-  expect(runnerResult.failureType).toBe("assertion");
+  expect(runnerResult.executionArtifactDir).toBe(".skillgym-results/run-1/case-a/open-main");
+  expect(runnerResult.artifactDir).toBe(".skillgym-results/run-1/case-a/open-main/session-2");
   expect(runnerResult.failureOrigin).toBe("assertion");
   expect(runnerResult.failureClass).toEqual({
     id: "missing-flag",
@@ -293,14 +289,14 @@ test("json-summary reporter omits session internals and prints summary on suite 
   // usage preserved
   expect(runnerResult.usage.inputTokens).toBe(1000);
   expect(runnerResult.usage.totalTokens).toBe(1200);
-  expect(runnerResult.attempts).toEqual([
+  expect(runnerResult.sessions).toEqual([
     {
       passed: false,
       status: "failed",
-      attempt: 1,
+      session: 1,
       durationMs: 20_000,
+      executionArtifactDir: ".skillgym-results/run-1/case-a/open-main",
       artifactDir: ".skillgym-results/run-1/case-a/open-main",
-      leafArtifactDir: ".skillgym-results/run-1/case-a/open-main",
       usage: {
         inputTokens: 900,
         outputTokens: 180,
@@ -313,7 +309,6 @@ test("json-summary reporter omits session internals and prints summary on suite 
         source: { input: "provider", output: "provider", reasoning: "derived" },
       },
       error: { name: "AssertionError", message: "expected skill to be loaded" },
-      failureType: "assertion",
       failureOrigin: "assertion",
       failureClass: {
         id: "missing-flag",
@@ -323,10 +318,10 @@ test("json-summary reporter omits session internals and prints summary on suite 
     {
       passed: false,
       status: "failed",
-      attempt: 2,
+      session: 2,
       durationMs: 18_200,
-      artifactDir: ".skillgym-results/run-1/case-a/open-main/attempt-2",
-      leafArtifactDir: ".skillgym-results/run-1/case-a/open-main/attempt-2",
+      executionArtifactDir: ".skillgym-results/run-1/case-a/open-main/session-2",
+      artifactDir: ".skillgym-results/run-1/case-a/open-main/session-2",
       usage: {
         inputTokens: 1000,
         outputTokens: 200,
@@ -339,7 +334,6 @@ test("json-summary reporter omits session internals and prints summary on suite 
         source: { input: "provider", output: "provider", reasoning: "derived" },
       },
       error: { name: "AssertionError", message: "expected skill to be loaded" },
-      failureType: "assertion",
       failureOrigin: "assertion",
       failureClass: {
         id: "missing-flag",
@@ -382,7 +376,7 @@ test("json-summary reporter is silent until suite finishes", async () => {
     cwd: "/workspace",
     workspaceMode: "shared" as const,
     suitePath: "suite.ts",
-    outputDir: ".out",
+    suiteRunArtifactDir: ".out",
     selectedCaseCount: 1,
     selectedRunnerCount: 1,
     selectedExecutionCount: 1,
@@ -399,22 +393,22 @@ test("json-summary reporter is silent until suite finishes", async () => {
   });
   await reporter.onRunnerStart?.({
     context,
-    testCase: { id: "c", prompt: "", assert() {} },
+    case: { id: "c", prompt: "", assert() {} },
     runner,
     caseIndex: 1,
     totalCases: 1,
   });
   await reporter.onRunnerFinish?.({
     context,
-    testCase: { id: "c", prompt: "", assert() {} },
+    case: { id: "c", prompt: "", assert() {} },
     runner,
     result: {
       runner,
       passed: true,
       status: "passed",
       durationMs: 1000,
+      executionArtifactDir: ".out/c/r",
       artifactDir: ".out/c/r",
-      leafArtifactDir: ".out/c/r",
       report: {
         runner,
         prompt: "",

@@ -1,13 +1,9 @@
 import path from "node:path";
 import process from "node:process";
-import type { RunnerFailureOrigin, RunnerFailureType, RunnerResult } from "../domain/result.js";
+import type { RunnerFailureOrigin, RunnerResult } from "../domain/result.js";
 import type { RunnerInfo } from "../domain/runner.js";
 import type { SessionReport } from "../domain/session-report.js";
-import type {
-  SuiteWorkspaceConfig,
-  TestCase,
-  WorkspaceBootstrapConfig,
-} from "../domain/test-case.js";
+import type { Case, SuiteWorkspaceConfig, WorkspaceBootstrapConfig } from "../domain/case.js";
 import { resolveFailureClass, type FailureClassInput } from "../failure-classification.js";
 import { serializeError } from "../utils/error.js";
 import {
@@ -37,7 +33,7 @@ interface WorkspaceSetupOptions {
 interface ExecutionWorkspaceOptions {
   artifactDir: string;
   outputDir: string;
-  testCase: TestCase;
+  case: Case;
   runner: RunnerInfo;
   timeoutMs: number;
 }
@@ -144,7 +140,7 @@ export async function prepareWorkspace(
   const workspacePath = path.join(
     options.outputDir,
     "workspaces",
-    sanitizePathSegment(options.testCase.id),
+    sanitizePathSegment(options.case.id),
     options.runner.pathKey,
   );
   let bootstrap: BootstrapResult | undefined;
@@ -230,11 +226,10 @@ export async function finalizeWorkspace(
 export function createExecutionFailureResult(
   error: unknown,
   options: {
-    testCase: TestCase;
+    case: Case;
     runner: RunnerInfo;
     artifactDir: string;
     durationMs: number;
-    failureType?: RunnerFailureType;
     failureOrigin?: RunnerFailureOrigin;
     failureClass?: FailureClassInput;
     failureLogPath?: string;
@@ -244,14 +239,14 @@ export function createExecutionFailureResult(
   const serializedError = serializeError(error);
   const fallbackReport: SessionReport = options.report ?? {
     runner: options.runner,
-    prompt: options.testCase.prompt,
+    prompt: options.case.prompt,
     usage: {
       inputTokens: undefined,
       outputTokens: undefined,
       reasoningTokens: undefined,
       cacheTokens: undefined,
       totalTokens: undefined,
-      inputChars: options.testCase.prompt.length,
+      inputChars: options.case.prompt.length,
       outputChars: 0,
       reasoningChars: 0,
       source: {
@@ -275,15 +270,13 @@ export function createExecutionFailureResult(
     passed: false,
     status: "failed",
     durationMs: options.durationMs,
+    executionArtifactDir: options.artifactDir,
     artifactDir: options.artifactDir,
-    leafArtifactDir: options.artifactDir,
     report: fallbackReport,
     error: serializedError,
-    failureType: options.failureType ?? "runner-crash",
     failureOrigin: options.failureOrigin,
     failureClass: resolveFailureClass({
       failureClass: options.failureClass,
-      failureType: options.failureType ?? "runner-crash",
       failureOrigin: options.failureOrigin,
     }),
     failureLogPath: options.failureLogPath,
@@ -333,7 +326,7 @@ async function runBootstrap(
       ...process.env,
       ...config.env,
       SKILLGYM_WORKSPACE: workspacePath,
-      SKILLGYM_CASE_ID: options.testCase.id,
+      SKILLGYM_CASE_ID: options.case.id,
       SKILLGYM_RUNNER_ID: options.runner.id,
       SKILLGYM_OUTPUT_DIR: options.outputDir,
       SKILLGYM_ARTIFACT_DIR: options.artifactDir,

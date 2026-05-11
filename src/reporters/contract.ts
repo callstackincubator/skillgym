@@ -1,14 +1,14 @@
 import type { CaseResult, RunnerResult, SuiteRunResult } from "../domain/result.js";
 import type { RunnerInfo } from "../domain/runner.js";
 import type { ScheduleMode } from "../domain/schedule.js";
-import type { TestCase } from "../domain/test-case.js";
+import type { Case } from "../domain/case.js";
 
 export interface ReporterContext {
   isInteractive: boolean;
   cwd: string;
   workspaceMode: "shared" | "isolated";
   suitePath: string;
-  outputDir: string;
+  suiteRunArtifactDir: string;
   selectedCaseCount: number;
   selectedRunnerCount: number;
   selectedExecutionCount: number;
@@ -23,42 +23,42 @@ export interface ReporterContext {
 
 export interface SuiteStartEvent {
   context: ReporterContext;
-  cases: TestCase[];
+  cases: Case[];
   runners: RunnerInfo[];
   startedAt: string;
 }
 
 export interface CaseStartEvent {
   context: ReporterContext;
-  testCase: TestCase;
+  case: Case;
   caseIndex: number;
   totalCases: number;
 }
 
 export interface RunnerStartEvent {
   context: ReporterContext;
-  testCase: TestCase;
+  case: Case;
   runner: RunnerInfo;
-  attempt?: number;
-  maxAttempts?: number;
+  session?: number;
+  maxSessions?: number;
   caseIndex: number;
   totalCases: number;
 }
 
 export interface RunnerFinishEvent {
   context: ReporterContext;
-  testCase: TestCase;
+  case: Case;
   runner: RunnerInfo;
   result: RunnerResult;
-  attempt?: number;
-  maxAttempts?: number;
+  session?: number;
+  maxSessions?: number;
   caseIndex: number;
   totalCases: number;
 }
 
 export interface CaseFinishEvent {
   context: ReporterContext;
-  testCase: TestCase;
+  case: Case;
   result: CaseResult;
   caseIndex: number;
   totalCases: number;
