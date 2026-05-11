@@ -203,9 +203,9 @@ export class OpenCodeAdapter extends BaseAdapter implements RunnerAdapter {
   ): Promise<{ parsed: OpenCodeExport & { messages: OpenCodeMessage[] } }> {
     let lastError: Error | undefined;
 
-    for (let attempt = 0; attempt <= OPEN_CODE_EXPORT_RETRY_DELAYS_MS.length; attempt += 1) {
-      if (attempt > 0) {
-        const delayMs = OPEN_CODE_EXPORT_RETRY_DELAYS_MS[attempt - 1];
+    for (let retry = 0; retry <= OPEN_CODE_EXPORT_RETRY_DELAYS_MS.length; retry += 1) {
+      if (retry > 0) {
+        const delayMs = OPEN_CODE_EXPORT_RETRY_DELAYS_MS[retry - 1];
         if (delayMs !== undefined) {
           await sleep(delayMs);
         }

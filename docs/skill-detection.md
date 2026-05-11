@@ -20,7 +20,7 @@ Use when the runner provides a direct signal that a named skill was loaded.
 
 ### `strong`
 
-Use when the transcript or event stream clearly states that the agent is using a specific skill, or when the skill's `SKILL.md` is read directly during the run.
+Use when assistant messages or session events clearly state that the agent is using a specific skill, or when the skill's `SKILL.md` is read directly during the run.
 
 ### `medium`
 

@@ -6,10 +6,10 @@ import { executeSuite } from "../runner/execute-suite.js";
 import { loadSuite } from "../runner/load-suite.js";
 import { resolveEffectiveWorkspace } from "../runner/workspace.js";
 
-export class RunFailuresError extends Error {
+export class ExecutionFailuresError extends Error {
   constructor() {
-    super("One or more runs failed.");
-    this.name = "RunFailuresError";
+    super("One or more executions failed.");
+    this.name = "ExecutionFailuresError";
   }
 }
 
@@ -99,6 +99,6 @@ export async function runCommand(options: {
       caseResult.runnerResults.some((runnerResult) => !runnerResult.passed),
     )
   ) {
-    throw new RunFailuresError();
+    throw new ExecutionFailuresError();
   }
 }

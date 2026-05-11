@@ -1,8 +1,8 @@
-import { assert, type TestCase } from "../src/index.js";
+import { assert, type Case } from "../src/index.js";
 
 const prompt = "Find a skill for upgrading Expo SDK and tell me how to install it.";
 
-const suite: TestCase[] = [
+const suite: Case[] = [
   {
     id: "find-skills-expo-opencode-compatible",
     prompt,

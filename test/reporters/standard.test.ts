@@ -37,7 +37,7 @@ test("standard reporter prints runner-grouped results and failure artifacts", as
     cwd: "/workspace",
     workspaceMode: "shared" as const,
     suitePath: "examples/basic-suite.ts",
-    outputDir: ".skillgym-results/run-1",
+    suiteRunArtifactDir: ".skillgym-results/run-1",
     selectedCaseCount: 2,
     selectedRunnerCount: 2,
     selectedExecutionCount: 4,
@@ -51,7 +51,7 @@ test("standard reporter prints runner-grouped results and failure artifacts", as
     startedAt: "2026-04-02T12:00:00.000Z",
     endedAt: "2026-04-02T12:01:42.000Z",
     durationMs: 102_000,
-    outputDir: context.outputDir,
+    suiteRunArtifactDir: context.suiteRunArtifactDir,
     declaredTags: [],
     selectedTags: ["smoke", "gestures"],
     cases: [
@@ -61,15 +61,15 @@ test("standard reporter prints runner-grouped results and failure artifacts", as
           createRunnerResult({
             runner: openRunner,
             passed: true,
-            artifactDir: "x",
+            executionArtifactDir: "x",
             totalTokens: 16_604,
           }),
           createRunnerResult({
             runner: codeRunner,
             passed: false,
-            artifactDir: ".skillgym-results/run-1/case-a/code-main",
+            executionArtifactDir: ".skillgym-results/run-1/case-a/code-main",
             totalTokens: 12_000,
-            attempts: 2,
+            sessions: 2,
           }),
         ],
       }),
@@ -79,13 +79,13 @@ test("standard reporter prints runner-grouped results and failure artifacts", as
           createRunnerResult({
             runner: openRunner,
             passed: true,
-            artifactDir: "y",
+            executionArtifactDir: "y",
             totalTokens: 17_200,
           }),
           createRunnerResult({
             runner: codeRunner,
             passed: true,
-            artifactDir: "z",
+            executionArtifactDir: "z",
             totalTokens: 15_000,
           }),
         ],
@@ -117,7 +117,7 @@ test("standard reporter prints runner-grouped results and failure artifacts", as
   });
   await reporter.onRunnerFinish?.({
     context,
-    testCase: { id: "case-a", prompt: "", assert() {} },
+    case: { id: "case-a", prompt: "", assert() {} },
     runner: codeRunner,
     result: suiteResult.cases[0]!.runnerResults[1]!,
     caseIndex: 1,
@@ -125,14 +125,14 @@ test("standard reporter prints runner-grouped results and failure artifacts", as
   });
   await reporter.onCaseFinish?.({
     context,
-    testCase: { id: "case-a", prompt: "", assert() {} },
+    case: { id: "case-a", prompt: "", assert() {} },
     result: suiteResult.cases[0]!,
     caseIndex: 1,
     totalCases: 2,
   });
   await reporter.onCaseFinish?.({
     context,
-    testCase: { id: "case-b", prompt: "", assert() {} },
+    case: { id: "case-b", prompt: "", assert() {} },
     result: suiteResult.cases[1]!,
     caseIndex: 2,
     totalCases: 2,
@@ -146,7 +146,7 @@ test("standard reporter prints runner-grouped results and failure artifacts", as
   expect(output).toContain("Suite     examples/basic-suite.ts");
   expect(output).toContain("Runners   2");
   expect(output).toContain("Tags      smoke, gestures");
-  expect(output).toContain("Runs      4");
+  expect(output).toContain("Executions4");
   expect(output).toContain("Parallel  1");
   expect(output).toContain("Runner: open-main");
   expect(output).toContain("Runner: code-main");
@@ -156,7 +156,7 @@ test("standard reporter prints runner-grouped results and failure artifacts", as
   expect(output).toContain("✓ case-a");
   expect(output).toContain("✗ case-a");
   expect(output).toContain("Cases       1 failed | 1 passed (2)");
-  expect(output).toContain("Runs        1 failed | 3 passed (4)");
+  expect(output).toContain("Executions  1 failed | 3 passed (4)");
   expect(output).toContain("Statuses    0 expected failures | 0 unexpected passes");
   expect(output).toContain("Duration    1m 42s");
   expect(output).toContain("9,830 / 1,104 / 0 / 7,233 / 16,604");
@@ -169,15 +169,15 @@ test("standard reporter prints runner-grouped results and failure artifacts", as
   expect(output).toContain("✗ case-a > code-main (codex, gpt-5.4)");
   expect(output).toContain("AssertionError: expected skill to be loaded before command execution");
   expect(output).toContain("at /workspace/examples/basic-suite.ts:14:15");
-  expect(output).toContain("Attempts: 2");
+  expect(output).toContain("Sessions: 2");
   expect(output).not.toContain("skillgym could not complete the run");
   expect(output).not.toContain("Run did not complete because the runner crashed");
   expect(output).not.toContain("Artifacts:");
   expect(output).not.toContain("Artifact Root:");
-  expect(output).toContain("Explain failed runs with `skillgym explain <artifactDir>`.");
+  expect(output).toContain("Explain failed executions with `skillgym explain <artifactDir>`.");
 });
 
-test("standard reporter interactive mode renders queued, running, and finished runs", async () => {
+test("standard reporter interactive mode renders queued, running, and finished executions", async () => {
   vi.useFakeTimers();
   const writes: string[] = [];
   const reporter = createStandardReporter({
@@ -198,7 +198,7 @@ test("standard reporter interactive mode renders queued, running, and finished r
     cwd: "/workspace",
     workspaceMode: "shared" as const,
     suitePath: "examples/basic-suite.ts",
-    outputDir: ".skillgym-results/run-1",
+    suiteRunArtifactDir: ".skillgym-results/run-1",
     selectedCaseCount: 2,
     selectedRunnerCount: 2,
     selectedExecutionCount: 4,
@@ -237,7 +237,7 @@ test("standard reporter interactive mode renders queued, running, and finished r
 
   await reporter.onRunnerStart?.({
     context,
-    testCase: { id: "skill-selection", prompt: "", assert() {} },
+    case: { id: "skill-selection", prompt: "", assert() {} },
     runner: openRunner,
     caseIndex: 1,
     totalCases: 2,
@@ -245,7 +245,7 @@ test("standard reporter interactive mode renders queued, running, and finished r
 
   await reporter.onRunnerStart?.({
     context,
-    testCase: { id: "snapshot-reuse", prompt: "", assert() {} },
+    case: { id: "snapshot-reuse", prompt: "", assert() {} },
     runner: codeRunner,
     caseIndex: 2,
     totalCases: 2,
@@ -273,13 +273,13 @@ test("standard reporter interactive mode renders queued, running, and finished r
 
   await reporter.onRunnerFinish?.({
     context,
-    testCase: { id: "skill-selection", prompt: "", assert() {} },
+    case: { id: "skill-selection", prompt: "", assert() {} },
     runner: openRunner,
     result: createRunnerResult({
       runner: openRunner,
       passed: true,
       status: "expected-failed",
-      artifactDir: "x",
+      executionArtifactDir: "x",
       totalTokens: 10_000,
     }),
     caseIndex: 1,
@@ -288,13 +288,13 @@ test("standard reporter interactive mode renders queued, running, and finished r
 
   await reporter.onRunnerFinish?.({
     context,
-    testCase: { id: "snapshot-reuse", prompt: "", assert() {} },
+    case: { id: "snapshot-reuse", prompt: "", assert() {} },
     runner: codeRunner,
     result: createRunnerResult({
       runner: codeRunner,
       passed: false,
       status: "unexpected-passed",
-      artifactDir: "y",
+      executionArtifactDir: "y",
       totalTokens: 10_000,
     }),
     caseIndex: 2,
@@ -332,7 +332,7 @@ test("standard reporter labels expected failures and unexpected passes", async (
     cwd: "/workspace",
     workspaceMode: "shared" as const,
     suitePath: "examples/basic-suite.ts",
-    outputDir: ".skillgym-results/run-1",
+    suiteRunArtifactDir: ".skillgym-results/run-1",
     selectedCaseCount: 2,
     selectedRunnerCount: 1,
     selectedExecutionCount: 2,
@@ -345,7 +345,7 @@ test("standard reporter labels expected failures and unexpected passes", async (
     startedAt: "2026-04-02T12:00:00.000Z",
     endedAt: "2026-04-02T12:01:42.000Z",
     durationMs: 102_000,
-    outputDir: context.outputDir,
+    suiteRunArtifactDir: context.suiteRunArtifactDir,
     declaredTags: [],
     selectedTags: [],
     cases: [
@@ -356,7 +356,7 @@ test("standard reporter labels expected failures and unexpected passes", async (
             runner,
             passed: true,
             status: "expected-failed",
-            artifactDir: "x",
+            executionArtifactDir: "x",
             totalTokens: 12_000,
           }),
         ],
@@ -368,7 +368,7 @@ test("standard reporter labels expected failures and unexpected passes", async (
             runner,
             passed: false,
             status: "unexpected-passed",
-            artifactDir: "y",
+            executionArtifactDir: "y",
             totalTokens: 12_000,
           }),
         ],
@@ -393,7 +393,7 @@ test("standard reporter labels expected failures and unexpected passes", async (
   });
   await reporter.onRunnerFinish?.({
     context,
-    testCase: { id: "stale-gap", prompt: "", assert() {} },
+    case: { id: "stale-gap", prompt: "", assert() {} },
     runner,
     result: suiteResult.cases[1]!.runnerResults[0]!,
     caseIndex: 2,
@@ -401,14 +401,14 @@ test("standard reporter labels expected failures and unexpected passes", async (
   });
   await reporter.onCaseFinish?.({
     context,
-    testCase: { id: "known-gap", prompt: "", assert() {} },
+    case: { id: "known-gap", prompt: "", assert() {} },
     result: suiteResult.cases[0]!,
     caseIndex: 1,
     totalCases: 2,
   });
   await reporter.onCaseFinish?.({
     context,
-    testCase: { id: "stale-gap", prompt: "", assert() {} },
+    case: { id: "stale-gap", prompt: "", assert() {} },
     result: suiteResult.cases[1]!,
     caseIndex: 2,
     totalCases: 2,
@@ -444,7 +444,7 @@ test("standard reporter shows recovered retries inline without failure blocks", 
     cwd: "/workspace",
     workspaceMode: "shared" as const,
     suitePath: "examples/flaky-retry-suite.ts",
-    outputDir: ".skillgym-results/run-1",
+    suiteRunArtifactDir: ".skillgym-results/run-1",
     selectedCaseCount: 1,
     selectedRunnerCount: 1,
     selectedExecutionCount: 1,
@@ -457,7 +457,7 @@ test("standard reporter shows recovered retries inline without failure blocks", 
     startedAt: "2026-04-02T12:00:00.000Z",
     endedAt: "2026-04-02T12:00:12.000Z",
     durationMs: 12_000,
-    outputDir: context.outputDir,
+    suiteRunArtifactDir: context.suiteRunArtifactDir,
     declaredTags: [],
     selectedTags: [],
     cases: [
@@ -467,9 +467,9 @@ test("standard reporter shows recovered retries inline without failure blocks", 
           createRunnerResult({
             runner,
             passed: true,
-            artifactDir: ".skillgym-results/run-1/retry-once/cursor-main/attempt-2",
+            executionArtifactDir: ".skillgym-results/run-1/retry-once/cursor-main/session-2",
             totalTokens: 12_000,
-            attempts: 2,
+            sessions: 2,
           }),
         ],
       }),
@@ -493,7 +493,7 @@ test("standard reporter shows recovered retries inline without failure blocks", 
   });
   await reporter.onRunnerFinish?.({
     context,
-    testCase: { id: "retry-once", prompt: "", assert() {} },
+    case: { id: "retry-once", prompt: "", assert() {} },
     runner,
     result: suiteResult.cases[0]!.runnerResults[0]!,
     caseIndex: 1,
@@ -501,7 +501,7 @@ test("standard reporter shows recovered retries inline without failure blocks", 
   });
   await reporter.onCaseFinish?.({
     context,
-    testCase: { id: "retry-once", prompt: "", assert() {} },
+    case: { id: "retry-once", prompt: "", assert() {} },
     result: suiteResult.cases[0]!,
     caseIndex: 1,
     totalCases: 1,
@@ -535,7 +535,7 @@ test("standard reporter interactive mode shows retry warning on recovered run", 
     cwd: "/workspace",
     workspaceMode: "shared" as const,
     suitePath: "examples/flaky-retry-suite.ts",
-    outputDir: ".skillgym-results/run-1",
+    suiteRunArtifactDir: ".skillgym-results/run-1",
     selectedCaseCount: 1,
     selectedRunnerCount: 1,
     selectedExecutionCount: 1,
@@ -554,14 +554,14 @@ test("standard reporter interactive mode shows retry warning on recovered run", 
 
   await reporter.onRunnerFinish?.({
     context,
-    testCase: { id: "retry-once", prompt: "", assert() {} },
+    case: { id: "retry-once", prompt: "", assert() {} },
     runner,
     result: createRunnerResult({
       runner,
       passed: true,
-      artifactDir: "x",
+      executionArtifactDir: "x",
       totalTokens: 10_000,
-      attempts: 2,
+      sessions: 2,
     }),
     caseIndex: 1,
     totalCases: 1,
@@ -605,7 +605,7 @@ test("standard reporter prints warning line for overlapping shared-workspace sch
       cwd: "/workspace",
       workspaceMode: "shared",
       suitePath: "examples/basic-suite.ts",
-      outputDir: ".skillgym-results/run-1",
+      suiteRunArtifactDir: ".skillgym-results/run-1",
       selectedCaseCount: 1,
       selectedRunnerCount: 1,
       selectedExecutionCount: 1,
@@ -623,7 +623,7 @@ test("standard reporter prints warning line for overlapping shared-workspace sch
       cwd: "/workspace",
       workspaceMode: "shared",
       suitePath: "examples/basic-suite.ts",
-      outputDir: ".skillgym-results/run-1",
+      suiteRunArtifactDir: ".skillgym-results/run-1",
       selectedCaseCount: 1,
       selectedRunnerCount: 1,
       selectedExecutionCount: 1,
@@ -637,7 +637,7 @@ test("standard reporter prints warning line for overlapping shared-workspace sch
   });
 
   expect(parallelWrites.join("")).toContain(
-    "! Concurrent schedule: parallel runs may overlap in the same workspace.",
+    "! Concurrent schedule: parallel executions may overlap in the same workspace.",
   );
   expect(serialWrites.join("")).not.toContain("Concurrent schedule");
 });
@@ -663,7 +663,7 @@ test("standard reporter prints friendly runner crash message with log path", asy
     cwd: "/workspace",
     workspaceMode: "shared" as const,
     suitePath: "examples/basic-suite.ts",
-    outputDir: ".skillgym-results/run-1",
+    suiteRunArtifactDir: ".skillgym-results/run-1",
     selectedCaseCount: 1,
     selectedRunnerCount: 1,
     selectedExecutionCount: 1,
@@ -676,7 +676,7 @@ test("standard reporter prints friendly runner crash message with log path", asy
     startedAt: "2026-04-02T12:00:00.000Z",
     endedAt: "2026-04-02T12:01:42.000Z",
     durationMs: 102_000,
-    outputDir: context.outputDir,
+    suiteRunArtifactDir: context.suiteRunArtifactDir,
     declaredTags: [],
     selectedTags: [],
     cases: [
@@ -687,10 +687,10 @@ test("standard reporter prints friendly runner crash message with log path", asy
             ...createRunnerResult({
               runner,
               passed: false,
-              artifactDir: ".skillgym-results/run-1/case-a/code-main",
+              executionArtifactDir: ".skillgym-results/run-1/case-a/code-main",
               totalTokens: 12_000,
+              failureClass: { id: "runner-crash", label: "Runner crash" },
             }),
-            failureType: "runner-crash",
             failureOrigin: "runner",
             failureLogPath: ".skillgym-results/run-1/case-a/code-main/stderr.log",
           },
@@ -716,7 +716,7 @@ test("standard reporter prints friendly runner crash message with log path", asy
   });
   await reporter.onRunnerFinish?.({
     context,
-    testCase: { id: "case-a", prompt: "", assert() {} },
+    case: { id: "case-a", prompt: "", assert() {} },
     runner,
     result: suiteResult.cases[0]!.runnerResults[0]!,
     caseIndex: 1,
@@ -724,7 +724,7 @@ test("standard reporter prints friendly runner crash message with log path", asy
   });
   await reporter.onCaseFinish?.({
     context,
-    testCase: { id: "case-a", prompt: "", assert() {} },
+    case: { id: "case-a", prompt: "", assert() {} },
     result: suiteResult.cases[0]!,
     caseIndex: 1,
     totalCases: 1,
@@ -738,7 +738,7 @@ test("standard reporter prints friendly runner crash message with log path", asy
   expect(output).toContain("AssertionError: expected skill to be loaded before command execution");
   expect(output).toContain("Log: .skillgym-results/run-1/case-a/code-main/stderr.log");
   expect(output).not.toContain("Artifacts:");
-  expect(output).toContain("Explain failed runs with `skillgym explain <artifactDir>`.");
+  expect(output).toContain("Explain failed executions with `skillgym explain <artifactDir>`.");
 });
 
 test("standard reporter points workspace bootstrap failures to bootstrap logs", async () => {
@@ -762,7 +762,7 @@ test("standard reporter points workspace bootstrap failures to bootstrap logs", 
     cwd: "/workspace",
     workspaceMode: "isolated" as const,
     suitePath: "examples/basic-suite.ts",
-    outputDir: ".skillgym-results/run-1",
+    suiteRunArtifactDir: ".skillgym-results/run-1",
     selectedCaseCount: 1,
     selectedRunnerCount: 1,
     selectedExecutionCount: 1,
@@ -775,7 +775,7 @@ test("standard reporter points workspace bootstrap failures to bootstrap logs", 
     startedAt: "2026-04-02T12:00:00.000Z",
     endedAt: "2026-04-02T12:01:42.000Z",
     durationMs: 102_000,
-    outputDir: context.outputDir,
+    suiteRunArtifactDir: context.suiteRunArtifactDir,
     declaredTags: [],
     selectedTags: [],
     cases: [
@@ -786,15 +786,15 @@ test("standard reporter points workspace bootstrap failures to bootstrap logs", 
             ...createRunnerResult({
               runner,
               passed: false,
-              artifactDir: ".skillgym-results/run-1/case-a/open-main",
+              executionArtifactDir: ".skillgym-results/run-1/case-a/open-main",
               totalTokens: 12_000,
             }),
             error: {
               name: "Error",
               message: "Workspace bootstrap failed: sh ./bootstrap.sh (exit 4)",
             },
-            failureType: "runner-crash",
             failureOrigin: "workspace-bootstrap",
+            failureClass: { id: "workspace-bootstrap", label: "Workspace bootstrap" },
             failureLogPath: ".skillgym-results/run-1/case-a/open-main/bootstrap.stderr.log",
           },
         ],
@@ -819,7 +819,7 @@ test("standard reporter points workspace bootstrap failures to bootstrap logs", 
   });
   await reporter.onRunnerFinish?.({
     context,
-    testCase: { id: "case-a", prompt: "", assert() {} },
+    case: { id: "case-a", prompt: "", assert() {} },
     runner,
     result: suiteResult.cases[0]!.runnerResults[0]!,
     caseIndex: 1,
@@ -827,7 +827,7 @@ test("standard reporter points workspace bootstrap failures to bootstrap logs", 
   });
   await reporter.onCaseFinish?.({
     context,
-    testCase: { id: "case-a", prompt: "", assert() {} },
+    case: { id: "case-a", prompt: "", assert() {} },
     result: suiteResult.cases[0]!,
     caseIndex: 1,
     totalCases: 1,
@@ -841,7 +841,7 @@ test("standard reporter points workspace bootstrap failures to bootstrap logs", 
   expect(output).toContain("Error: Workspace bootstrap failed: sh ./bootstrap.sh (exit 4)");
   expect(output).toContain("Log: .skillgym-results/run-1/case-a/open-main/bootstrap.stderr.log");
   expect(output).not.toContain("Artifacts:");
-  expect(output).toContain("Explain failed runs with `skillgym explain <artifactDir>`.");
+  expect(output).toContain("Explain failed executions with `skillgym explain <artifactDir>`.");
 });
 
 test("standard reporter renders max-steps failures with a clear message", async () => {
@@ -865,7 +865,7 @@ test("standard reporter renders max-steps failures with a clear message", async 
     cwd: "/workspace",
     workspaceMode: "shared" as const,
     suitePath: "examples/basic-suite.ts",
-    outputDir: ".skillgym-results/run-1",
+    suiteRunArtifactDir: ".skillgym-results/run-1",
     selectedCaseCount: 1,
     selectedRunnerCount: 1,
     selectedExecutionCount: 1,
@@ -878,7 +878,7 @@ test("standard reporter renders max-steps failures with a clear message", async 
     startedAt: "2026-04-02T12:00:00.000Z",
     endedAt: "2026-04-02T12:01:42.000Z",
     durationMs: 102_000,
-    outputDir: context.outputDir,
+    suiteRunArtifactDir: context.suiteRunArtifactDir,
     declaredTags: [],
     selectedTags: [],
     cases: [
@@ -889,7 +889,7 @@ test("standard reporter renders max-steps failures with a clear message", async 
             ...createRunnerResult({
               runner,
               passed: false,
-              artifactDir: ".skillgym-results/run-1/case-a/open-main",
+              executionArtifactDir: ".skillgym-results/run-1/case-a/open-main",
               totalTokens: 12_000,
             }),
             error: {
@@ -897,8 +897,8 @@ test("standard reporter renders max-steps failures with a clear message", async 
               message:
                 'Exceeded maxSteps: observed 2 steps with limit 1 for runner "open-main" (opencode). Agent terminated by skillgym. Raw output preserved.',
             },
-            failureType: "runner-crash",
             failureOrigin: "max-steps",
+            failureClass: { id: "max-steps", label: "Max steps exceeded" },
             failureLogPath: ".skillgym-results/run-1/case-a/open-main/stderr.log",
           },
         ],
@@ -923,7 +923,7 @@ test("standard reporter renders max-steps failures with a clear message", async 
   });
   await reporter.onRunnerFinish?.({
     context,
-    testCase: { id: "case-a", prompt: "", assert() {} },
+    case: { id: "case-a", prompt: "", assert() {} },
     runner,
     result: suiteResult.cases[0]!.runnerResults[0]!,
     caseIndex: 1,
@@ -931,7 +931,7 @@ test("standard reporter renders max-steps failures with a clear message", async 
   });
   await reporter.onCaseFinish?.({
     context,
-    testCase: { id: "case-a", prompt: "", assert() {} },
+    case: { id: "case-a", prompt: "", assert() {} },
     result: suiteResult.cases[0]!,
     caseIndex: 1,
     totalCases: 1,
@@ -941,7 +941,7 @@ test("standard reporter renders max-steps failures with a clear message", async 
   const output = writes.join("");
 
   expect(output).toContain(
-    "Run stopped: exceeded maxSteps (best-effort). Raw output was preserved in the run artifacts for debugging.",
+    "Run stopped: exceeded maxSteps (best-effort). Raw output was preserved in the execution artifacts for debugging.",
   );
   expect(output).toContain(
     "MaxStepsExceededError: Exceeded maxSteps: observed 2 steps with limit 1",
@@ -969,7 +969,7 @@ test("standard reporter suppresses shared-workspace warning for isolated mode", 
       cwd: "/workspace",
       workspaceMode: "isolated",
       suitePath: "examples/basic-suite.ts",
-      outputDir: ".skillgym-results/run-1",
+      suiteRunArtifactDir: ".skillgym-results/run-1",
       selectedCaseCount: 1,
       selectedRunnerCount: 1,
       selectedExecutionCount: 1,
@@ -983,7 +983,7 @@ test("standard reporter suppresses shared-workspace warning for isolated mode", 
   });
 
   expect(writes.join("")).not.toContain("Concurrent schedule");
-  expect(writes.join("")).toContain("Workspace isolated per run");
+  expect(writes.join("")).toContain("Workspace isolated per execution");
 });
 
 test("standard reporter formats model-rejected failures as runner crashes with specific detail", async () => {
@@ -1007,7 +1007,7 @@ test("standard reporter formats model-rejected failures as runner crashes with s
     cwd: "/workspace",
     workspaceMode: "shared" as const,
     suitePath: "examples/basic-suite.ts",
-    outputDir: ".skillgym-results/run-1",
+    suiteRunArtifactDir: ".skillgym-results/run-1",
     selectedCaseCount: 1,
     selectedRunnerCount: 1,
     selectedExecutionCount: 1,
@@ -1020,7 +1020,7 @@ test("standard reporter formats model-rejected failures as runner crashes with s
     startedAt: "2026-04-02T12:00:00.000Z",
     endedAt: "2026-04-02T12:00:01.000Z",
     durationMs: 1_000,
-    outputDir: context.outputDir,
+    suiteRunArtifactDir: context.suiteRunArtifactDir,
     declaredTags: [],
     selectedTags: [],
     cases: [
@@ -1033,15 +1033,15 @@ test("standard reporter formats model-rejected failures as runner crashes with s
             ...createRunnerResult({
               runner,
               passed: false,
-              artifactDir: ".skillgym-results/run-1/case-a/code-main",
+              executionArtifactDir: ".skillgym-results/run-1/case-a/code-main",
               totalTokens: 12_000,
             }),
             error: {
               name: "Error",
               message: 'Runner rejected configured model "gpt-5" during initial execution.',
             },
-            failureType: "runner-crash",
             failureOrigin: "model-rejected",
+            failureClass: { id: "model-rejected", label: "Rejected model" },
           },
         ],
       },
@@ -1059,7 +1059,7 @@ test("standard reporter formats model-rejected failures as runner crashes with s
 
   await reporter.onRunnerFinish?.({
     context,
-    testCase: { id: "case-a", prompt: "", assert() {} },
+    case: { id: "case-a", prompt: "", assert() {} },
     runner,
     result: result.cases[0]!.runnerResults[0]!,
     caseIndex: 1,
@@ -1095,7 +1095,7 @@ test("standard reporter groups failures by custom failure class", async () => {
     cwd: "/workspace",
     workspaceMode: "shared" as const,
     suitePath: "examples/basic-suite.ts",
-    outputDir: ".skillgym-results/run-1",
+    suiteRunArtifactDir: ".skillgym-results/run-1",
     selectedCaseCount: 2,
     selectedRunnerCount: 1,
     selectedExecutionCount: 2,
@@ -1108,7 +1108,7 @@ test("standard reporter groups failures by custom failure class", async () => {
     startedAt: "2026-04-02T12:00:00.000Z",
     endedAt: "2026-04-02T12:01:42.000Z",
     durationMs: 102_000,
-    outputDir: context.outputDir,
+    suiteRunArtifactDir: context.suiteRunArtifactDir,
     declaredTags: [],
     selectedTags: [],
     cases: [
@@ -1119,7 +1119,7 @@ test("standard reporter groups failures by custom failure class", async () => {
             ...createRunnerResult({
               runner,
               passed: false,
-              artifactDir: ".skillgym-results/run-1/case-a/open-main",
+              executionArtifactDir: ".skillgym-results/run-1/case-a/open-main",
               totalTokens: 12_000,
             }),
             failureClass: { id: "wrong-cli-alias", label: "Wrong CLI alias" },
@@ -1133,7 +1133,7 @@ test("standard reporter groups failures by custom failure class", async () => {
             ...createRunnerResult({
               runner,
               passed: false,
-              artifactDir: ".skillgym-results/run-1/case-b/open-main",
+              executionArtifactDir: ".skillgym-results/run-1/case-b/open-main",
               totalTokens: 12_000,
             }),
             failureClass: { id: "wrong-cli-alias", label: "Wrong CLI alias" },
@@ -1155,7 +1155,7 @@ test("standard reporter groups failures by custom failure class", async () => {
   for (const caseResult of suiteResult.cases) {
     await reporter.onRunnerFinish?.({
       context,
-      testCase: { id: caseResult.caseId, prompt: "", assert() {} },
+      case: { id: caseResult.caseId, prompt: "", assert() {} },
       runner,
       result: caseResult.runnerResults[0]!,
       caseIndex: 1,
@@ -1183,40 +1183,40 @@ function createRunnerResult(options: {
   runner: RunnerInfo;
   passed: boolean;
   status?: RunnerResult["status"];
-  artifactDir: string;
-  leafArtifactDir?: string;
+  executionArtifactDir: string;
+  artifactDir?: string;
   totalTokens: number;
-  attempts?: number;
+  sessions?: number;
   failureClass?: RunnerResult["failureClass"];
 }): RunnerResult {
-  const attempts = options.attempts ?? 1;
-  const leafArtifactDir =
-    options.leafArtifactDir ??
-    (attempts === 1
-      ? options.artifactDir
-      : path.join(options.artifactDir, `attempt-${String(attempts)}`));
+  const sessions = options.sessions ?? 1;
+  const artifactDir =
+    options.artifactDir ??
+    (sessions === 1
+      ? options.executionArtifactDir
+      : path.join(options.executionArtifactDir, `session-${String(sessions)}`));
   return {
     runner: options.runner,
     passed: options.passed,
     status: options.status ?? (options.passed ? "passed" : "failed"),
-    attempt: attempts,
+    session: sessions,
     durationMs: 24_800,
-    artifactDir: options.artifactDir,
-    leafArtifactDir,
-    attempts: Array.from({ length: attempts }, (_, index) => ({
+    executionArtifactDir: options.executionArtifactDir,
+    artifactDir,
+    sessions: Array.from({ length: sessions }, (_, index) => ({
       runner: options.runner,
       passed: options.passed,
       status: options.status ?? (options.passed ? "passed" : "failed"),
-      attempt: index + 1,
+      session: index + 1,
       durationMs: 24_800,
+      executionArtifactDir:
+        index === 0
+          ? options.executionArtifactDir
+          : path.join(options.executionArtifactDir, `session-${String(index + 1)}`),
       artifactDir:
         index === 0
-          ? options.artifactDir
-          : path.join(options.artifactDir, `attempt-${String(index + 1)}`),
-      leafArtifactDir:
-        index === 0
-          ? options.artifactDir
-          : path.join(options.artifactDir, `attempt-${String(index + 1)}`),
+          ? options.executionArtifactDir
+          : path.join(options.executionArtifactDir, `session-${String(index + 1)}`),
       error:
         options.passed || options.status === "unexpected-passed"
           ? undefined
@@ -1230,8 +1230,6 @@ function createRunnerResult(options: {
                 "    at executeRunner (/workspace/src/runner/execute-runner.ts:91:7)",
               ].join("\n"),
             },
-      failureType:
-        options.passed || options.status === "unexpected-passed" ? undefined : "assertion",
       failureOrigin:
         options.passed || options.status === "unexpected-passed" ? undefined : "assertion",
       failureClass:
@@ -1274,7 +1272,6 @@ function createRunnerResult(options: {
               "    at executeRunner (/workspace/src/runner/execute-runner.ts:91:7)",
             ].join("\n"),
           },
-    failureType: options.passed || options.status === "unexpected-passed" ? undefined : "assertion",
     failureOrigin:
       options.passed || options.status === "unexpected-passed" ? undefined : "assertion",
     failureClass:

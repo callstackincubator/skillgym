@@ -44,7 +44,7 @@ import type { BenchmarkReporter } from "skillgym";
 
 const reporter: BenchmarkReporter = {
   onSuiteFinish(event) {
-    console.log(event.result.outputDir);
+    console.log(event.result.suiteRunArtifactDir);
   },
 };
 

@@ -74,7 +74,7 @@ assert.commands.includes(report, commandMatcher("pnpm").arg("test").option("--fi
 
 ## Output assertions
 
-Use output assertions when the final agent response matters directly. Use them together with normalized report assertions, not instead of them.
+Use output assertions when the final agent response matters directly. Use them together with session report assertions, not instead of them.
 
 ## Failure classification
 
@@ -86,12 +86,12 @@ assert.classify({ id: "wrong-cli-alias", label: "Wrong CLI alias" }, () => {
 });
 ```
 
-This improves grouped reporting across runs.
+This improves grouped reporting across executions.
 
 ## Good assertion style
 
 - assert the smallest behavior that proves the benchmark intent
-- prefer normalized report fields over fragile prose matching
+- prefer session report fields over fragile prose matching
 - use command and tool-call assertions for workflow checks
 - use output assertions for user-visible wording checks
 - classify repeated failure modes with stable ids

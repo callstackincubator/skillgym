@@ -6,29 +6,28 @@ interface BaseRunnerResult {
   passed: boolean;
   status: RunnerResultStatus;
   durationMs: number;
+  executionArtifactDir: string;
   artifactDir: string;
-  leafArtifactDir: string;
   report: SessionReport;
   error?: SerializedError;
-  failureType?: RunnerFailureType;
   failureOrigin?: RunnerFailureOrigin;
   failureClass?: FailureClass;
   failureLogPath?: string;
 }
 
-export interface RunnerAttemptResult extends BaseRunnerResult {
-  attempt: number;
+export interface RunnerSessionResult extends BaseRunnerResult {
+  session: number;
 }
 
 export interface RepetitionResult extends BaseRunnerResult {
   repetition: number;
-  attempt?: number;
-  attempts?: RunnerAttemptResult[];
+  session?: number;
+  sessions?: RunnerSessionResult[];
 }
 
 export interface RunnerResult extends BaseRunnerResult {
-  attempt?: number;
-  attempts?: RunnerAttemptResult[];
+  session?: number;
+  sessions?: RunnerSessionResult[];
   repeatTarget?: number;
   completedRepetitions?: number;
   successfulRepetitions?: number;
@@ -68,7 +67,7 @@ export interface SuiteRunResult {
   startedAt: string;
   endedAt: string;
   durationMs: number;
-  outputDir: string;
+  suiteRunArtifactDir: string;
   declaredTags: string[];
   selectedTags: string[];
   cases: CaseResult[];
@@ -81,8 +80,6 @@ export interface SerializedError {
   stack?: string;
 }
 
-export type RunnerFailureType = "assertion" | "runner-crash" | "timeout";
-
 export type RunnerFailureOrigin =
   | "assertion"
   | "assert-hook"
@@ -90,7 +87,7 @@ export type RunnerFailureOrigin =
   | "model-rejected"
   | "runner"
   | "workspace-bootstrap"
-  | "workspace-setup"
+  | "workspace"
   | "collection"
   | "normalization"
   | "snapshot";

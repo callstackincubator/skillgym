@@ -253,7 +253,7 @@ test("CodexAdapter collect reads isolated session from artifacts codex-home", as
   ]);
 });
 
-test("CodexAdapter collect keeps runs isolated by artifactsDir", async () => {
+test("CodexAdapter collect keeps executions isolated by artifactsDir", async () => {
   const adapter = new CodexAdapter();
   const firstArtifactsDir = await createTempDir();
   const secondArtifactsDir = await createTempDir();

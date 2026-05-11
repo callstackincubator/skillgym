@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import { formatCliError } from "../src/cli/error.js";
-import { RunFailuresError } from "../src/cli/run.js";
+import { ExecutionFailuresError } from "../src/cli/run.js";
 
 test("formatCliError formats known errors through declarative rules", () => {
   const rendered = formatCliError(new Error("No runners matched the requested filter: open-main"));
@@ -18,9 +18,9 @@ test("formatCliError falls back to a generic message for unknown errors", () => 
   expect(rendered).toContain("If this looks like a bug in skillgym");
 });
 
-test("formatCliError does not special-case completed suites with failed runs", () => {
-  const rendered = formatCliError(new RunFailuresError());
+test("formatCliError does not special-case completed suites with failed executions", () => {
+  const rendered = formatCliError(new ExecutionFailuresError());
 
   expect(rendered).toContain("Error: skillgym could not complete the run");
-  expect(rendered).toContain("One or more runs failed.");
+  expect(rendered).toContain("One or more executions failed.");
 });

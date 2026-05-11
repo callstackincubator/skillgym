@@ -157,7 +157,7 @@ function createAggregateAssertionError(
 ): AssertionError {
   const count = failures.length;
   const message = [
-    `${count} assertion failure${count === 1 ? "" : "s"} collected during test case execution:`,
+    `${count} assertion failure${count === 1 ? "" : "s"} collected during case execution:`,
     ...failures.map((failure, index) => `${index + 1}. ${failure.error.message}`),
   ].join("\n");
 

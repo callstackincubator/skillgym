@@ -21,7 +21,7 @@ assert.classify("missing-flag", () => {
 
 ## Failure classification
 
-Use `assert.classify(...)` when you want an assertion failure to carry a stable structured class that reporters can group across runs.
+Use `assert.classify(...)` when you want an assertion failure to carry a stable structured class that reporters can group across executions.
 
 ```ts
 assert.classify({ id: "wrong-cli-alias", label: "Wrong CLI alias" }, () => {
@@ -51,7 +51,7 @@ Rules:
 `assert.soft` mirrors the sync assertion methods on the root `assert` export and the grouped SkillGym helpers.
 
 - soft failures are collected in execution order
-- the runner throws a single `AssertionError` after `testCase.assert(report, ctx)` completes
+- the runner throws a single `AssertionError` after `case_.assert(report, ctx)` completes
 - if a hard `AssertionError` is thrown after soft failures were collected, the final failure includes both
 - `assert.soft.rejects(...)` and `assert.soft.doesNotReject(...)` remain hard assertions in the first implementation
 
@@ -116,7 +116,7 @@ Grouped assertions can attach a follow-up question that `skillgym` persists when
 
 - `explain.question` can be a fixed string
 - or a callback that renders a question from the failing assertion context
-- questions are persisted only for failed runs
+- questions are persisted only for failed executions
 - unsupported assertions are skipped unless you provide a custom `explain.question`
 
 Example:
@@ -130,7 +130,7 @@ assert.fileReads.includes(report, /SKILL\.md$/, {
 });
 ```
 
-When at least one explainable assertion fails, `skillgym` writes `explain.json` into the failed leaf artifact directory. You can later resume the original runner session with `skillgym explain <artifactDir>`.
+When at least one explainable assertion fails, `skillgym` writes `explain.json` into the failed artifact directory. You can later resume the original runner session with `skillgym explain <artifactDir>`.
 
 ## Skills
 
@@ -350,5 +350,5 @@ assert.output.notEmpty(report);
 
 ## Related docs
 
-- `test-cases.md`
+- `cases.md`
 - `session-report.md`

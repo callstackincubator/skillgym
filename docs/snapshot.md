@@ -10,7 +10,7 @@ This is useful for catching regressions caused by:
 - tool changes that return too much data
 - model behavior changes that increase token usage unexpectedly
 
-Phase 1 is a per-run guard, not a statistical benchmark. A single run is compared against a stored baseline with configurable tolerance.
+Phase 1 is a per-execution guard, not a statistical benchmark. A single execution is compared against a stored baseline with configurable tolerance.
 
 ## Default behavior
 
@@ -19,7 +19,7 @@ Phase 1 is a per-run guard, not a statistical benchmark. A single run is compare
 - Missing snapshot: auto-create from the current run
 - Failure: the run fails when usage exceeds the configured threshold
 
-If both tolerances are configured, exceeding either one fails the run.
+If both tolerances are configured, exceeding either one fails the execution.
 
 ## Configuration
 
@@ -58,7 +58,7 @@ Supported metrics:
 - `reasoningTokens`
 - `cacheTokens`
 
-Snapshot checks require the selected token metric to be present in the normalized report. Character counts are diagnostics only and are not used as a token fallback for snapshot enforcement.
+Snapshot checks require the selected token metric to be present in the session report. Character counts are diagnostics only and are not used as a token fallback for snapshot enforcement.
 
 ## CLI
 
@@ -72,7 +72,7 @@ skillgym run ./examples/basic-suite.ts --snapshots ./baselines.json
 
 Flags:
 
-- `--update-snapshots`: overwrite baselines for the executed runs
+- `--update-snapshots`: overwrite baselines for the selected executions
 - `--snapshots <path>`: override the configured snapshot file path
 
 ## File format
@@ -106,7 +106,7 @@ Run with --update-snapshots to accept the new baseline.
 
 ## Notes
 
-- Missing snapshots are created automatically during normal runs.
+- Missing snapshots are created automatically during normal executions.
 - `--update-snapshots` only refreshes the executed `caseId + runner.id` pairs.
 - Snapshot files should be reviewed like other test fixtures.
 - Phase 1 does not model variance statistically. Aggregate and percentile-based checks can be added later.

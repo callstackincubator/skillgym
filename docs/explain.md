@@ -1,14 +1,14 @@
 # Deferred Explain
 
-`skillgym explain <artifactDir>` resumes a failed run's original runner session and asks persisted follow-up questions.
+`skillgym explain <artifactDir>` resumes a failed execution's original runner session and asks persisted follow-up questions.
 
 ## Required input
 
-Point the command at the exact failed leaf artifact directory, for example:
+Point the command at the exact failed artifact directory, for example:
 
 ```bash
 skillgym explain ./.skillgym-results/run-1/case-a/open-main/repeat-1
-skillgym explain ./.skillgym-results/run-1/case-a/open-main/repeat-2/attempt-2
+skillgym explain ./.skillgym-results/run-1/case-a/open-main/repeat-2/session-2
 ```
 
 The directory must contain:
@@ -22,7 +22,7 @@ If `explanations.json` already exists, the command refuses to run again.
 
 ### `explain.json`
 
-Created automatically for failed runs when at least one explainable assertion question exists.
+Created automatically for failed executions when at least one explainable assertion question exists.
 
 Shape:
 
@@ -98,4 +98,4 @@ Each runner must have a resumable session id captured during the original run.
 
 Deferred explain currently assumes the recorded `cwd` is still resumable by the runner.
 
-For isolated workspaces, that means historical explain attempts may fail if the original workspace was already cleaned up and the runner needs that exact workspace state to resume correctly.
+For isolated workspaces, that means historical explain sessions may fail if the original workspace was already cleaned up and the runner needs that exact workspace state to resume correctly.

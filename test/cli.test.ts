@@ -63,7 +63,7 @@ test("cli skills list prints bundled skill names", async () => {
   expect(result.stdout).toContain("core");
   expect(result.stdout).toContain("reporters");
   expect(result.stdout).toContain("snapshots");
-  expect(result.stdout).toContain("test-cases");
+  expect(result.stdout).toContain("cases");
   expect(result.stdout).toContain("workspaces");
 });
 
@@ -73,7 +73,7 @@ test("cli skills get core prints the bundled core skill", async () => {
   expect(result.exitCode).toBe(0);
   expect(result.stderr).toBe("");
   expect(result.stdout).toContain("# skillgym core");
-  expect(result.stdout).toContain("skillgym skills get test-cases");
+  expect(result.stdout).toContain("skillgym skills get cases");
   expect(result.stdout).toContain("skillgym run <suite.ts>");
 });
 
@@ -489,10 +489,10 @@ test("cli run exits non-zero for assertion failures without printing a generic s
     })),
   }));
 
-  const { RunFailuresError, runCommand } = await import("../src/cli/run.js");
+  const { ExecutionFailuresError, runCommand } = await import("../src/cli/run.js");
 
   await expect(runCommand({ suitePath: "./suite.ts", cwd: tempDir })).rejects.toBeInstanceOf(
-    RunFailuresError,
+    ExecutionFailuresError,
   );
 
   vi.doUnmock("../src/config.js");
@@ -503,7 +503,7 @@ test("cli run exits non-zero for assertion failures without printing a generic s
   vi.doUnmock("../src/runner/execute-suite.js");
 });
 
-test("cli run treats expected assertion failures as successful suite health", async () => {
+test("cli run treats expected assertion failures without failing the suite", async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), "skillgym-cli-"));
   tempDirs.push(tempDir);
   const { runCommand } = await importRunCommandWithSuiteResult(tempDir, {
@@ -533,7 +533,7 @@ test("cli run treats expected assertion failures as successful suite health", as
 test("cli run exits non-zero for unexpected passes", async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), "skillgym-cli-"));
   tempDirs.push(tempDir);
-  const { RunFailuresError, runCommand } = await importRunCommandWithSuiteResult(tempDir, {
+  const { ExecutionFailuresError, runCommand } = await importRunCommandWithSuiteResult(tempDir, {
     suitePath: path.join(tempDir, "suite.ts"),
     startedAt: "2026-04-02T12:00:00.000Z",
     endedAt: "2026-04-02T12:00:01.000Z",
@@ -553,7 +553,7 @@ test("cli run exits non-zero for unexpected passes", async () => {
   });
 
   await expect(runCommand({ suitePath: "./suite.ts", cwd: tempDir })).rejects.toBeInstanceOf(
-    RunFailuresError,
+    ExecutionFailuresError,
   );
 
   unmockRunCommandDependencies();

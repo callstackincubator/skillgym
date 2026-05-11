@@ -2,7 +2,7 @@ import { printHelp } from "./cli/help.js";
 import { printBanner } from "./cli/branding.js";
 import { formatCliError } from "./cli/error.js";
 import { explainCommand } from "./cli/explain.js";
-import { RunFailuresError, runCommand } from "./cli/run.js";
+import { ExecutionFailuresError, runCommand } from "./cli/run.js";
 import { listBundledSkills, readBundledSkill } from "./cli/skills.js";
 import { parseArgs } from "./utils/cli.js";
 
@@ -91,7 +91,7 @@ async function main(): Promise<void> {
 }
 
 main().catch((error: unknown) => {
-  if (error instanceof RunFailuresError) {
+  if (error instanceof ExecutionFailuresError) {
     process.exitCode = 1;
     return;
   }

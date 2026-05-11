@@ -18,7 +18,7 @@ const NPM = 'https://www.npmjs.com/package/skillgym';
 
 const marqueeItems = [
   'Catch skill regressions','TypeScript assertions','Token usage snapshots',
-  'Count tokens per run','Same skill, every agent','Proof from every run',
+  'Count tokens per execution','Same skill, every agent','Proof from every execution',
   'Inspect commands and file reads','OpenCode','Codex','Claude Code','Cursor Agent',
   'Real agent sessions','Isolated workspaces','Open source',
 ];
@@ -74,9 +74,9 @@ export default config;`;
 
 const suiteCode = `\
 // skillgym/my-suite.ts
-import { assert, type TestCase } from "skillgym";
+import { assert, type Case } from "skillgym";
 
-const suite: TestCase[] = [
+const suite: Case[] = [
   {
     id: "agent-device-settings-check",
     prompt: [
@@ -199,9 +199,9 @@ export default suite;`;
                 <div class="tl"><span class="t-k">Workspace</span>  <span class="t-v">~/Projects/acme-app</span></div>
                 <div class="tl"><span class="t-k">Cases</span>      <span class="t-v">3</span></div>
                 <div class="tl"><span class="t-k">Runners</span>    <span class="t-v">2</span></div>
-                <div class="tl"><span class="t-k">Runs</span>       <span class="t-v">6</span></div>
+                <div class="tl"><span class="t-k">Executions</span>       <span class="t-v">6</span></div>
                 <div class="tl tl-blank"></div>
-                <div class="tl tl-head-summary"><span></span><span>case</span><span>runs</span><span>status</span></div>
+                <div class="tl tl-head-summary"><span></span><span>case</span><span>executions</span><span>status</span></div>
                 <div class="tl tl-row-summary"><span class="t-pass">✓</span><span class="t-case">always-passes</span><span class="t-meta">2/2</span><span class="t-pass">passed</span></div>
                 <div class="tl tl-row-summary"><span class="t-fail">✗</span><span class="t-case">assertion-fails</span><span class="t-meta">1/2</span><span class="t-fail">failed</span></div>
                 <div class="tl tl-row-summary"><span class="t-fail">✗</span><span class="t-case">assert-crashes</span><span class="t-meta">0/2</span><span class="t-fail">failed</span></div>
@@ -280,9 +280,9 @@ export default suite;`;
                   <div class="tl"><span class="t-k">Workspace</span>  <span class="t-v">~/Projects/acme-app</span></div>
                   <div class="tl"><span class="t-k">Cases</span>      <span class="t-v">3</span></div>
                   <div class="tl"><span class="t-k">Runners</span>    <span class="t-v">2</span></div>
-                  <div class="tl"><span class="t-k">Runs</span>       <span class="t-v">6</span></div>
+                  <div class="tl"><span class="t-k">Executions</span>       <span class="t-v">6</span></div>
                   <div class="tl tl-blank"></div>
-                  <div class="tl tl-head-summary"><span></span><span>case</span><span>runs</span><span>status</span></div>
+                  <div class="tl tl-head-summary"><span></span><span>case</span><span>executions</span><span>status</span></div>
                   <div class="tl tl-row-summary"><span class="t-pass">✓</span><span class="t-case">always-passes</span><span class="t-meta">2/2</span><span class="t-pass">passed</span></div>
                   <div class="tl tl-row-summary"><span class="t-fail">✗</span><span class="t-case">assertion-fails</span><span class="t-meta">1/2</span><span class="t-fail">failed</span></div>
                   <div class="tl tl-row-summary"><span class="t-fail">✗</span><span class="t-case">assert-crashes</span><span class="t-meta">0/2</span><span class="t-fail">failed</span></div>
@@ -391,7 +391,7 @@ export default suite;`;
           </div>
           <div class="bento-tile bento-tile--dark">
             <p class="bento-label bento-label--dim">WORKSPACES</p>
-            <h3 class="bento-title bento-title--light">Fresh workspace.<br />Honest skill runs.</h3>
+            <h3 class="bento-title bento-title--light">Fresh workspace.<br />Honest skill executions.</h3>
             <p class="bento-body bento-body--dim">Use isolated workspaces when repo state matters, or share one when you want speed. Make skill failures easier to reproduce and debug.</p>
             <div class="bento-code-wrap">
               <Code code={workspaceCode} lang="typescript" theme={darkTheme} />

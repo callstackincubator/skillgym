@@ -28,7 +28,7 @@ afterEach(async () => {
 });
 
 test("executeRunner forwards showRunnerOutput to adapter runs", async () => {
-  const outputDir = await createTempDir();
+  const suiteRunArtifactDir = await createTempDir();
   const runner = createRunnerInfo("open-main", { type: "opencode", model: "openai/gpt-5" });
   const seenInputs: RunInput[] = [];
   const adapter: RunnerAdapter = {
@@ -70,22 +70,22 @@ test("executeRunner forwards showRunnerOutput to adapter runs", async () => {
     adapter,
     {
       suitePath,
-      cwd: outputDir,
-      artifactDir: path.join(outputDir, "alpha", runner.pathKey),
+      cwd: suiteRunArtifactDir,
+      artifactDir: path.join(suiteRunArtifactDir, "alpha", runner.pathKey),
       timeoutMs: 5_000,
       showRunnerOutput: true,
     },
   );
 
   expect(result.passed).toBe(true);
-  expect(result.leafArtifactDir).toBe(result.artifactDir);
+  expect(result.artifactDir).toBe(result.executionArtifactDir);
   expect(seenInputs).toHaveLength(1);
   expect(seenInputs[0]?.showRunnerOutput).toBe(true);
   expect(seenInputs[0]?.runner).toEqual(runner);
 });
 
 test("executeRunner marks run as failed when adapter export collection fails", async () => {
-  const outputDir = await createTempDir();
+  const suiteRunArtifactDir = await createTempDir();
   const runner = createRunnerInfo("open-main", { type: "opencode", model: "openai/gpt-5" });
   const adapter: RunnerAdapter = {
     async run(input: RunInput): Promise<RunHandle> {
@@ -114,28 +114,28 @@ test("executeRunner marks run as failed when adapter export collection fails", a
     adapter,
     {
       suitePath,
-      cwd: outputDir,
-      artifactDir: path.join(outputDir, "alpha", runner.pathKey),
+      cwd: suiteRunArtifactDir,
+      artifactDir: path.join(suiteRunArtifactDir, "alpha", runner.pathKey),
       timeoutMs: 5_000,
     },
   );
 
   expect(result.passed).toBe(false);
-  expect(result.failureType).toBe("runner-crash");
+  expect(result.failureClass).toEqual({ id: "collection", label: "Artifact collection" });
   expect(result.failureOrigin).toBe("collection");
   expect(result.failureLogPath).toBeUndefined();
-  expect(result.leafArtifactDir).toBe(result.artifactDir);
+  expect(result.artifactDir).toBe(result.executionArtifactDir);
   expect(result.error).toMatchObject({
     name: "Error",
     message: "OpenCode export returned invalid JSON: Unterminated string",
   });
 
-  const errorJson = await readFile(path.join(result.artifactDir, "error.json"), "utf8");
+  const errorJson = await readFile(path.join(result.executionArtifactDir, "error.json"), "utf8");
   expect(errorJson).toContain("OpenCode export returned invalid JSON: Unterminated string");
 });
 
 test("executeRunner marks AssertionError failures separately from runner crashes", async () => {
-  const outputDir = await createTempDir();
+  const suiteRunArtifactDir = await createTempDir();
   const runner = createRunnerInfo("open-main", { type: "opencode", model: "openai/gpt-5" });
   const adapter = createSuccessfulAdapter(runner, { totalTokens: 120 });
 
@@ -153,23 +153,22 @@ test("executeRunner marks AssertionError failures separately from runner crashes
     adapter,
     {
       suitePath,
-      cwd: outputDir,
-      artifactDir: path.join(outputDir, "alpha", runner.pathKey),
+      cwd: suiteRunArtifactDir,
+      artifactDir: path.join(suiteRunArtifactDir, "alpha", runner.pathKey),
       timeoutMs: 5_000,
     },
   );
 
   expect(result.passed).toBe(false);
-  expect(result.failureType).toBe("assertion");
   expect(result.failureOrigin).toBe("assertion");
-  expect(result.leafArtifactDir).toBe(result.artifactDir);
+  expect(result.artifactDir).toBe(result.executionArtifactDir);
   expect(result.failureClass).toEqual({ id: "assertion", label: "Assertion failure" });
   expect(result.error?.message).toBe("expected a skill read");
   expect(result.report.usage.totalTokens).toBe(120);
 });
 
 test("executeRunner preserves assertion failure classes attached with assert.classify", async () => {
-  const outputDir = await createTempDir();
+  const suiteRunArtifactDir = await createTempDir();
   const runner = createRunnerInfo("open-main", { type: "opencode", model: "openai/gpt-5" });
   const adapter = createSuccessfulAdapter(runner, { totalTokens: 120 });
 
@@ -189,22 +188,21 @@ test("executeRunner preserves assertion failure classes attached with assert.cla
     adapter,
     {
       suitePath,
-      cwd: outputDir,
-      artifactDir: path.join(outputDir, "alpha", runner.pathKey),
+      cwd: suiteRunArtifactDir,
+      artifactDir: path.join(suiteRunArtifactDir, "alpha", runner.pathKey),
       timeoutMs: 5_000,
     },
   );
 
   expect(result.passed).toBe(false);
-  expect(result.failureType).toBe("assertion");
   expect(result.failureOrigin).toBe("assertion");
-  expect(result.leafArtifactDir).toBe(result.artifactDir);
+  expect(result.artifactDir).toBe(result.executionArtifactDir);
   expect(result.failureClass).toEqual({ id: "missing-flag", label: "Missing required flag" });
   expect(result.error?.message).toContain("expected the agent to pass --json");
 });
 
 test("executeRunner treats non-AssertionError exceptions from assert as run failures", async () => {
-  const outputDir = await createTempDir();
+  const suiteRunArtifactDir = await createTempDir();
   const runner = createRunnerInfo("open-main", { type: "opencode", model: "openai/gpt-5" });
   const adapter = createSuccessfulAdapter(runner, { totalTokens: 120 });
 
@@ -220,22 +218,22 @@ test("executeRunner treats non-AssertionError exceptions from assert as run fail
     adapter,
     {
       suitePath,
-      cwd: outputDir,
-      artifactDir: path.join(outputDir, "alpha", runner.pathKey),
+      cwd: suiteRunArtifactDir,
+      artifactDir: path.join(suiteRunArtifactDir, "alpha", runner.pathKey),
       timeoutMs: 5_000,
     },
   );
 
   expect(result.passed).toBe(false);
-  expect(result.failureType).toBe("runner-crash");
+  expect(result.failureClass).toEqual({ id: "assert-hook", label: "Assert hook crash" });
   expect(result.failureOrigin).toBe("assert-hook");
-  expect(result.leafArtifactDir).toBe(result.artifactDir);
+  expect(result.artifactDir).toBe(result.executionArtifactDir);
   expect(result.error?.message).toBe("assert hook crashed intentionally");
   expect(result.report.usage.totalTokens).toBe(120);
 });
 
 test("executeRunner flushes collected soft assertion failures after assert hook completes", async () => {
-  const outputDir = await createTempDir();
+  const suiteRunArtifactDir = await createTempDir();
   const runner = createRunnerInfo("open-main", { type: "opencode", model: "openai/gpt-5" });
   const adapter = createSuccessfulAdapter(runner, { totalTokens: 120 });
 
@@ -252,25 +250,23 @@ test("executeRunner flushes collected soft assertion failures after assert hook 
     adapter,
     {
       suitePath,
-      cwd: outputDir,
-      artifactDir: path.join(outputDir, "alpha", runner.pathKey),
+      cwd: suiteRunArtifactDir,
+      artifactDir: path.join(suiteRunArtifactDir, "alpha", runner.pathKey),
       timeoutMs: 5_000,
     },
   );
 
   expect(result.passed).toBe(false);
-  expect(result.failureType).toBe("assertion");
+  expect(result.failureClass).toEqual({ id: "assertion", label: "Assertion failure" });
   expect(result.failureOrigin).toBe("assertion");
-  expect(result.leafArtifactDir).toBe(result.artifactDir);
-  expect(result.error?.message).toContain(
-    "2 assertion failures collected during test case execution",
-  );
+  expect(result.artifactDir).toBe(result.executionArtifactDir);
+  expect(result.error?.message).toContain("2 assertion failures collected during case execution");
   expect(result.error?.message).toContain("expected output");
   expect(result.error?.message).toContain("expected command");
 });
 
 test("executeRunner merges soft failures with a later hard AssertionError", async () => {
-  const outputDir = await createTempDir();
+  const suiteRunArtifactDir = await createTempDir();
   const runner = createRunnerInfo("open-main", { type: "opencode", model: "openai/gpt-5" });
   const adapter = createSuccessfulAdapter(runner, { totalTokens: 120 });
 
@@ -287,24 +283,22 @@ test("executeRunner merges soft failures with a later hard AssertionError", asyn
     adapter,
     {
       suitePath,
-      cwd: outputDir,
-      artifactDir: path.join(outputDir, "alpha", runner.pathKey),
+      cwd: suiteRunArtifactDir,
+      artifactDir: path.join(suiteRunArtifactDir, "alpha", runner.pathKey),
       timeoutMs: 5_000,
     },
   );
 
   expect(result.passed).toBe(false);
-  expect(result.failureType).toBe("assertion");
-  expect(result.leafArtifactDir).toBe(result.artifactDir);
-  expect(result.error?.message).toContain(
-    "2 assertion failures collected during test case execution",
-  );
+  expect(result.failureClass).toEqual({ id: "assertion", label: "Assertion failure" });
+  expect(result.artifactDir).toBe(result.executionArtifactDir);
+  expect(result.error?.message).toContain("2 assertion failures collected during case execution");
   expect(result.error?.message).toContain("soft failure");
   expect(result.error?.message).toContain("hard failure");
 });
 
-test("executeRunner clears soft assertion state between runs", async () => {
-  const outputDir = await createTempDir();
+test("executeRunner clears soft assertion state between executions", async () => {
+  const suiteRunArtifactDir = await createTempDir();
   const runner = createRunnerInfo("open-main", { type: "opencode", model: "openai/gpt-5" });
   const adapter = createSuccessfulAdapter(runner, { totalTokens: 120 });
 
@@ -320,8 +314,8 @@ test("executeRunner clears soft assertion state between runs", async () => {
     adapter,
     {
       suitePath,
-      cwd: outputDir,
-      artifactDir: path.join(outputDir, "alpha", runner.pathKey),
+      cwd: suiteRunArtifactDir,
+      artifactDir: path.join(suiteRunArtifactDir, "alpha", runner.pathKey),
       timeoutMs: 5_000,
     },
   );
@@ -336,20 +330,20 @@ test("executeRunner clears soft assertion state between runs", async () => {
     adapter,
     {
       suitePath,
-      cwd: outputDir,
-      artifactDir: path.join(outputDir, "beta", runner.pathKey),
+      cwd: suiteRunArtifactDir,
+      artifactDir: path.join(suiteRunArtifactDir, "beta", runner.pathKey),
       timeoutMs: 5_000,
     },
   );
 
   expect(failed.passed).toBe(false);
   expect(passed.passed).toBe(true);
-  expect(failed.leafArtifactDir).toBe(failed.artifactDir);
-  expect(passed.leafArtifactDir).toBe(passed.artifactDir);
+  expect(failed.artifactDir).toBe(failed.executionArtifactDir);
+  expect(passed.artifactDir).toBe(passed.executionArtifactDir);
 });
 
 test("executeRunner marks timeout failures separately from runner crashes", async () => {
-  const outputDir = await createTempDir();
+  const suiteRunArtifactDir = await createTempDir();
   const runner = createRunnerInfo("open-main", { type: "opencode", model: "openai/gpt-5" });
   const adapter: RunnerAdapter = {
     async run(): Promise<RunHandle> {
@@ -372,22 +366,22 @@ test("executeRunner marks timeout failures separately from runner crashes", asyn
     adapter,
     {
       suitePath,
-      cwd: outputDir,
-      artifactDir: path.join(outputDir, "alpha", runner.pathKey),
+      cwd: suiteRunArtifactDir,
+      artifactDir: path.join(suiteRunArtifactDir, "alpha", runner.pathKey),
       timeoutMs: 5_000,
     },
   );
 
   expect(result.passed).toBe(false);
-  expect(result.failureType).toBe("timeout");
+  expect(result.failureClass).toEqual({ id: "timeout", label: "Timeout" });
   expect(result.failureOrigin).toBe("runner");
-  expect(result.leafArtifactDir).toBe(result.artifactDir);
-  expect(result.failureLogPath).toBe(path.join(result.artifactDir, "stderr.log"));
+  expect(result.artifactDir).toBe(result.executionArtifactDir);
+  expect(result.failureLogPath).toBe(path.join(result.executionArtifactDir, "stderr.log"));
   expect(result.error?.message).toBe("Command timed out after 5000ms: opencode run prompt");
 });
 
 test("executeRunner marks max-steps failures separately from other runner crashes", async () => {
-  const outputDir = await createTempDir();
+  const suiteRunArtifactDir = await createTempDir();
   const runner = createRunnerInfo("open-main", { type: "opencode", model: "openai/gpt-5" });
   const adapter: RunnerAdapter = {
     async run(): Promise<RunHandle> {
@@ -415,25 +409,25 @@ test("executeRunner marks max-steps failures separately from other runner crashe
     adapter,
     {
       suitePath,
-      cwd: outputDir,
-      artifactDir: path.join(outputDir, "alpha", runner.pathKey),
+      cwd: suiteRunArtifactDir,
+      artifactDir: path.join(suiteRunArtifactDir, "alpha", runner.pathKey),
       timeoutMs: 5_000,
       maxSteps: 1,
     },
   );
 
   expect(result.passed).toBe(false);
-  expect(result.failureType).toBe("runner-crash");
+  expect(result.failureClass).toEqual({ id: "max-steps", label: "Max steps exceeded" });
   expect(result.failureOrigin).toBe("max-steps");
-  expect(result.leafArtifactDir).toBe(result.artifactDir);
-  expect(result.failureLogPath).toBe(path.join(result.artifactDir, "stderr.log"));
+  expect(result.artifactDir).toBe(result.executionArtifactDir);
+  expect(result.failureLogPath).toBe(path.join(result.executionArtifactDir, "stderr.log"));
   expect(result.error?.message).toContain("Exceeded maxSteps: observed 2 steps with limit 1");
 });
 
 test("executeRunner creates a missing snapshot baseline and passes", async () => {
-  const outputDir = await createTempDir();
+  const suiteRunArtifactDir = await createTempDir();
   const runner = createRunnerInfo("open-main", { type: "opencode", model: "openai/gpt-5" });
-  const snapshotsPath = path.join(outputDir, "snapshots.json");
+  const snapshotsPath = path.join(suiteRunArtifactDir, "snapshots.json");
   const runtime = createSnapshotRuntime(snapshotsPath);
   const store = (await SnapshotStore.load(runtime))!;
   const adapter = createSuccessfulAdapter(runner, { totalTokens: 120 });
@@ -444,8 +438,8 @@ test("executeRunner creates a missing snapshot baseline and passes", async () =>
     adapter,
     {
       suitePath,
-      cwd: outputDir,
-      artifactDir: path.join(outputDir, "alpha", runner.pathKey),
+      cwd: suiteRunArtifactDir,
+      artifactDir: path.join(suiteRunArtifactDir, "alpha", runner.pathKey),
       timeoutMs: 5_000,
       snapshots: { runtime, store },
     },
@@ -454,16 +448,16 @@ test("executeRunner creates a missing snapshot baseline and passes", async () =>
   await store.save();
 
   expect(result.passed).toBe(true);
-  expect(result.leafArtifactDir).toBe(result.artifactDir);
+  expect(result.artifactDir).toBe(result.executionArtifactDir);
   const saved = await readFile(snapshotsPath, "utf8");
   expect(saved).toContain('"alpha::open-main"');
   expect(saved).toContain('"value": 120');
 });
 
 test("executeRunner fails when snapshot absolute tolerance is exceeded", async () => {
-  const outputDir = await createTempDir();
+  const suiteRunArtifactDir = await createTempDir();
   const runner = createRunnerInfo("open-main", { type: "opencode", model: "openai/gpt-5" });
-  const snapshotsPath = path.join(outputDir, "snapshots.json");
+  const snapshotsPath = path.join(suiteRunArtifactDir, "snapshots.json");
   const runtime = createSnapshotRuntime(snapshotsPath, { absolute: 10 });
   const store = (await SnapshotStore.load(runtime))!;
   store.check({ caseId: "alpha", runner, actual: 100 }, { ...runtime, updateSnapshots: true });
@@ -477,25 +471,25 @@ test("executeRunner fails when snapshot absolute tolerance is exceeded", async (
     adapter,
     {
       suitePath,
-      cwd: outputDir,
-      artifactDir: path.join(outputDir, "alpha", runner.pathKey),
+      cwd: suiteRunArtifactDir,
+      artifactDir: path.join(suiteRunArtifactDir, "alpha", runner.pathKey),
       timeoutMs: 5_000,
       snapshots: { runtime, store: reloadedStore },
     },
   );
 
   expect(result.passed).toBe(false);
-  expect(result.failureType).toBe("runner-crash");
+  expect(result.failureClass).toEqual({ id: "snapshot", label: "Snapshot verification" });
   expect(result.failureOrigin).toBe("snapshot");
-  expect(result.leafArtifactDir).toBe(result.artifactDir);
+  expect(result.artifactDir).toBe(result.executionArtifactDir);
   expect(result.error?.message).toContain("Snapshot mismatch for totalTokens");
   expect(result.error?.message).toContain("alpha / open-main");
 });
 
 test("executeRunner fails when snapshot metric is unavailable", async () => {
-  const outputDir = await createTempDir();
+  const suiteRunArtifactDir = await createTempDir();
   const runner = createRunnerInfo("open-main", { type: "opencode", model: "openai/gpt-5" });
-  const snapshotsPath = path.join(outputDir, "snapshots.json");
+  const snapshotsPath = path.join(suiteRunArtifactDir, "snapshots.json");
   const runtime = createSnapshotRuntime(snapshotsPath);
   const store = (await SnapshotStore.load(runtime))!;
   const adapter = createSuccessfulAdapter(runner, { totalTokens: undefined });
@@ -506,24 +500,24 @@ test("executeRunner fails when snapshot metric is unavailable", async () => {
     adapter,
     {
       suitePath,
-      cwd: outputDir,
-      artifactDir: path.join(outputDir, "alpha", runner.pathKey),
+      cwd: suiteRunArtifactDir,
+      artifactDir: path.join(suiteRunArtifactDir, "alpha", runner.pathKey),
       timeoutMs: 5_000,
       snapshots: { runtime, store },
     },
   );
 
   expect(result.passed).toBe(false);
-  expect(result.failureType).toBe("runner-crash");
+  expect(result.failureClass).toEqual({ id: "snapshot", label: "Snapshot verification" });
   expect(result.failureOrigin).toBe("snapshot");
-  expect(result.leafArtifactDir).toBe(result.artifactDir);
+  expect(result.artifactDir).toBe(result.executionArtifactDir);
   expect(result.error?.message).toContain(
     "Snapshot check requires provider token metric totalTokens",
   );
 });
 
 test("executeRunner writes explain.json for hard explainable assertion failures", async () => {
-  const outputDir = await createTempDir();
+  const suiteRunArtifactDir = await createTempDir();
   const runner = createRunnerInfo("open-main", { type: "opencode", model: "openai/gpt-5" });
   const adapter = createSuccessfulAdapter(runner, { totalTokens: 120, sessionId: "ses_123" });
   let expectedLine = "0";
@@ -545,16 +539,16 @@ test("executeRunner writes explain.json for hard explainable assertion failures"
     adapter,
     {
       suitePath,
-      cwd: outputDir,
-      artifactDir: path.join(outputDir, "alpha", runner.pathKey),
+      cwd: suiteRunArtifactDir,
+      artifactDir: path.join(suiteRunArtifactDir, "alpha", runner.pathKey),
       timeoutMs: 5_000,
     },
   );
 
   expect(result.passed).toBe(false);
-  expect(result.leafArtifactDir).toBe(result.artifactDir);
+  expect(result.artifactDir).toBe(result.executionArtifactDir);
   const explainJson = JSON.parse(
-    await readFile(path.join(result.artifactDir, "explain.json"), "utf8"),
+    await readFile(path.join(result.executionArtifactDir, "explain.json"), "utf8"),
   ) as {
     suitePath: string;
     caseId: string;
@@ -569,7 +563,7 @@ test("executeRunner writes explain.json for hard explainable assertion failures"
     suitePath,
     caseId: "alpha",
     runnerId: "open-main",
-    cwd: outputDir,
+    cwd: suiteRunArtifactDir,
     sessionId: "ses_123",
   });
   expect(explainJson.questions).toHaveLength(1);
@@ -581,7 +575,7 @@ test("executeRunner writes explain.json for hard explainable assertion failures"
 });
 
 test("executeRunner writes explain.json with collected soft and hard assertion questions", async () => {
-  const outputDir = await createTempDir();
+  const suiteRunArtifactDir = await createTempDir();
   const runner = createRunnerInfo("open-main", { type: "opencode", model: "openai/gpt-5" });
   const adapter = createSuccessfulAdapter(runner, { totalTokens: 120, sessionId: "ses_123" });
 
@@ -611,16 +605,16 @@ test("executeRunner writes explain.json with collected soft and hard assertion q
     adapter,
     {
       suitePath,
-      cwd: outputDir,
-      artifactDir: path.join(outputDir, "alpha", runner.pathKey),
+      cwd: suiteRunArtifactDir,
+      artifactDir: path.join(suiteRunArtifactDir, "alpha", runner.pathKey),
       timeoutMs: 5_000,
     },
   );
 
   expect(result.passed).toBe(false);
-  expect(result.leafArtifactDir).toBe(result.artifactDir);
+  expect(result.artifactDir).toBe(result.executionArtifactDir);
   const explainJson = JSON.parse(
-    await readFile(path.join(result.artifactDir, "explain.json"), "utf8"),
+    await readFile(path.join(result.executionArtifactDir, "explain.json"), "utf8"),
   ) as { questions: Array<{ question: string }> };
   expect(explainJson.questions.map((question) => question.question)).toEqual([
     "Why did you produce no final output?",
@@ -630,7 +624,7 @@ test("executeRunner writes explain.json with collected soft and hard assertion q
 });
 
 test("executeRunner skips explain.json when assertion failure has no explainable question", async () => {
-  const outputDir = await createTempDir();
+  const suiteRunArtifactDir = await createTempDir();
   const runner = createRunnerInfo("open-main", { type: "opencode", model: "openai/gpt-5" });
   const adapter = createSuccessfulAdapter(runner, { totalTokens: 120, sessionId: "ses_123" });
 
@@ -646,15 +640,17 @@ test("executeRunner skips explain.json when assertion failure has no explainable
     adapter,
     {
       suitePath,
-      cwd: outputDir,
-      artifactDir: path.join(outputDir, "alpha", runner.pathKey),
+      cwd: suiteRunArtifactDir,
+      artifactDir: path.join(suiteRunArtifactDir, "alpha", runner.pathKey),
       timeoutMs: 5_000,
     },
   );
 
   expect(result.passed).toBe(false);
-  expect(result.leafArtifactDir).toBe(result.artifactDir);
-  await expect(readFile(path.join(result.artifactDir, "explain.json"), "utf8")).rejects.toThrow();
+  expect(result.artifactDir).toBe(result.executionArtifactDir);
+  await expect(
+    readFile(path.join(result.executionArtifactDir, "explain.json"), "utf8"),
+  ).rejects.toThrow();
 });
 
 function createSuccessfulAdapter(

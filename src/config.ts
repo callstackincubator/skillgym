@@ -1,7 +1,7 @@
 import { readdir } from "node:fs/promises";
 import path from "node:path";
 import type { RunnerConfig } from "./domain/runner.js";
-import type { SuiteWorkspaceConfig, WorkspaceBootstrapConfig } from "./domain/test-case.js";
+import type { SuiteWorkspaceConfig, WorkspaceBootstrapConfig } from "./domain/case.js";
 import { SCHEDULE_MODES, type ScheduleMode } from "./domain/schedule.js";
 import { isBuiltInReporter } from "./reporters/builtins.js";
 import { importFromPath } from "./utils/import.js";
@@ -203,13 +203,13 @@ export function resolveReporterOptions(
 }
 
 export function getCaseExecutionOptions(
-  testCase: { timeoutMs?: number },
+  case_: { timeoutMs?: number },
   config: SkillGymConfig,
 ): {
   timeoutMs: number;
 } {
   return {
-    timeoutMs: testCase.timeoutMs ?? config.defaults?.timeoutMs ?? 120_000,
+    timeoutMs: case_.timeoutMs ?? config.defaults?.timeoutMs ?? 120_000,
   };
 }
 

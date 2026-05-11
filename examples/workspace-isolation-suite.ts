@@ -1,4 +1,4 @@
-import { assert, type SuiteWorkspaceConfig, type TestCase } from "../src/index.js";
+import { assert, type SuiteWorkspaceConfig, type Case } from "../src/index.js";
 
 export const workspace: SuiteWorkspaceConfig = {
   mode: "isolated",
@@ -9,7 +9,7 @@ export const workspace: SuiteWorkspaceConfig = {
   },
 };
 
-const suite: TestCase[] = [
+const suite: Case[] = [
   {
     id: "isolated-workspace-check",
     prompt: [

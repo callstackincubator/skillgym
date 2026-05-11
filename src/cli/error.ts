@@ -124,7 +124,7 @@ const cliErrorRules: CliErrorRule[] = [
       ],
     };
   }),
-  exactRule("case-filter-miss", "No test cases matched the requested filters.", () => ({
+  exactRule("case-filter-miss", "No cases matched the requested filters.", () => ({
     title: "case filter did not match anything",
     detail: "The selected suite does not contain a case matching the provided filters.",
     fixes: ["Check the case id passed to `--case`.", "Remove `--case` to run the full suite."],

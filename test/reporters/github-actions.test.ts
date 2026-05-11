@@ -15,7 +15,7 @@ afterEach(async () => {
   );
 });
 
-test("github-actions reporter formats escaped annotations for failed runs", async () => {
+test("github-actions reporter formats escaped annotations for failed executions", async () => {
   const writes: string[] = [];
   const runner = createRunnerInfo("code:main", { type: "codex", model: "gpt-5.4" });
   const reporter = createGitHubActionsReporter({
@@ -34,7 +34,7 @@ test("github-actions reporter formats escaped annotations for failed runs", asyn
       runner,
       caseId: "case,a",
       errorMessage: "boom,\n100%",
-      attempts: 2,
+      sessions: 2,
     }),
   });
 
@@ -42,12 +42,14 @@ test("github-actions reporter formats escaped annotations for failed runs", asyn
     "::error title=case%2Ca > code%3Amain,file=/workspace/examples/basic-suite.ts,line=14,col=15::",
   );
   expect(writes.join("")).toContain(
-    "failure type: assertion%0Aretries: 1%0Afailure origin: assertion%0Aerror: AssertionError: boom,%0A100%25",
+    "failure class: assertion%0Aretries: 1%0Afailure origin: assertion%0Afailure class: assertion%0Aerror: AssertionError: boom,%0A100%25",
   );
   expect(writes.join("")).toContain(
-    "artifacts: .skillgym-results/run-1/case,a/code-main/attempt-2",
+    "artifact directory: .skillgym-results/run-1/case,a/code-main/session-2",
   );
-  expect(writes.join("")).toContain("artifact root: .skillgym-results/run-1/case,a/code-main");
+  expect(writes.join("")).toContain(
+    "execution artifact directory: .skillgym-results/run-1/case,a/code-main",
+  );
 });
 
 test("github-actions reporter includes file metadata from user stack frames", async () => {
@@ -65,7 +67,7 @@ test("github-actions reporter includes file metadata from user stack frames", as
 
   await reporter.onSuiteFinish?.({
     context: createContext(),
-    result: createSuiteResult({ runner, caseId: "case-a", attempts: 2 }),
+    result: createSuiteResult({ runner, caseId: "case-a", sessions: 2 }),
   });
 
   expect(writes.join("")).toContain("file=/workspace/examples/basic-suite.ts,line=14,col=15");
@@ -87,19 +89,19 @@ test("github-actions reporter writes a job summary when GITHUB_STEP_SUMMARY is s
 
   await reporter.onSuiteFinish?.({
     context: createContext(),
-    result: createSuiteResult({ runner, caseId: "case-a", attempts: 2 }),
+    result: createSuiteResult({ runner, caseId: "case-a", sessions: 2 }),
   });
 
   const summary = await readFile(summaryPath, "utf8");
   expect(summary).toContain("## SkillGym Summary");
   expect(summary).toContain("- Suite: `examples/basic-suite.ts`");
   expect(summary).toContain("- Cases: 0 passed, 1 failed");
-  expect(summary).toContain("- Runs: 0 passed, 1 failed");
+  expect(summary).toContain("- Executions: 0 passed, 1 failed");
   expect(summary).toContain("### Runner: `open-main` (opencode, openai/gpt-5)");
   expect(summary).toContain("| Case | Duration | Input | Output | Reasoning | Cache | Billable |");
   expect(summary).toContain("| ❌ `case-a` (1 retry) | 24s | 9,830 | 1,104 | 0 | 0 | 12,000 |");
   expect(summary).toContain(
-    "- `case-a > open-main`; assertion; AssertionError: expected skill to be loaded before command execution; retries: 1; artifacts: `.skillgym-results/run-1/case-a/open-main/attempt-2`; artifact root: `.skillgym-results/run-1/case-a/open-main`; log: `.skillgym-results/run-1/case-a/open-main/stderr.log`",
+    "- `case-a > open-main`; assertion; AssertionError: expected skill to be loaded before command execution; class: `assertion`; retries: 1; artifact directory: `.skillgym-results/run-1/case-a/open-main/session-2`; execution artifact directory: `.skillgym-results/run-1/case-a/open-main`; log: `.skillgym-results/run-1/case-a/open-main/stderr.log`",
   );
 });
 
@@ -131,7 +133,7 @@ function createContext() {
     cwd: "/workspace",
     workspaceMode: "shared" as const,
     suitePath: "examples/basic-suite.ts",
-    outputDir: ".skillgym-results/run-1",
+    suiteRunArtifactDir: ".skillgym-results/run-1",
     selectedCaseCount: 1,
     selectedRunnerCount: 1,
     selectedExecutionCount: 1,
@@ -145,13 +147,13 @@ function createSuiteResult(options: {
   runner: RunnerInfo;
   caseId: string;
   errorMessage?: string;
-  attempts?: number;
+  sessions?: number;
 }): SuiteRunResult {
   const runnerResult = createFailedRunnerResult(
     options.runner,
     options.caseId,
     options.errorMessage,
-    options.attempts,
+    options.sessions,
   );
 
   return {
@@ -159,7 +161,7 @@ function createSuiteResult(options: {
     startedAt: "2026-04-02T12:00:00.000Z",
     endedAt: "2026-04-02T12:01:00.000Z",
     durationMs: 60_000,
-    outputDir: ".skillgym-results/run-1",
+    suiteRunArtifactDir: ".skillgym-results/run-1",
     declaredTags: [],
     selectedTags: [],
     cases: [{ caseId: options.caseId, tags: [], passed: false, runnerResults: [runnerResult] }],
@@ -171,29 +173,35 @@ function createFailedRunnerResult(
   runner: RunnerInfo,
   caseId: string,
   errorMessage = "expected skill to be loaded before command execution",
-  attempts = 1,
+  sessions = 1,
 ): RunnerResult {
-  const artifactDir = `.skillgym-results/run-1/${caseId}/${runner.id.replace(/[:]/g, "-")}`;
+  const executionArtifactDir = `.skillgym-results/run-1/${caseId}/${runner.id.replace(/[:]/g, "-")}`;
 
   return {
     runner,
     passed: false,
     status: "failed",
-    attempt: attempts,
+    session: sessions,
     durationMs: 24_800,
-    artifactDir,
-    leafArtifactDir:
-      attempts === 1 ? artifactDir : path.join(artifactDir, `attempt-${String(attempts)}`),
-    attempts: Array.from({ length: attempts }, (_, index) => ({
+    executionArtifactDir,
+    artifactDir:
+      sessions === 1
+        ? executionArtifactDir
+        : path.join(executionArtifactDir, `session-${String(sessions)}`),
+    sessions: Array.from({ length: sessions }, (_, index) => ({
       runner,
       passed: false,
       status: "failed",
-      attempt: index + 1,
+      session: index + 1,
       durationMs: 24_800,
+      executionArtifactDir:
+        index === 0
+          ? executionArtifactDir
+          : path.join(executionArtifactDir, `session-${String(index + 1)}`),
       artifactDir:
-        index === 0 ? artifactDir : path.join(artifactDir, `attempt-${String(index + 1)}`),
-      leafArtifactDir:
-        index === 0 ? artifactDir : path.join(artifactDir, `attempt-${String(index + 1)}`),
+        index === 0
+          ? executionArtifactDir
+          : path.join(executionArtifactDir, `session-${String(index + 1)}`),
       error: {
         name: "AssertionError",
         message: errorMessage,
@@ -204,12 +212,12 @@ function createFailedRunnerResult(
           "    at executeRunner (/workspace/src/runner/execute-runner.ts:91:7)",
         ].join("\n"),
       },
-      failureType: "assertion",
       failureOrigin: "assertion",
+      failureClass: { id: "assertion", label: "Assertion failure" },
       failureLogPath:
         index === 0
-          ? `${artifactDir}/stderr.log`
-          : `${path.join(artifactDir, `attempt-${String(index + 1)}`)}/stderr.log`,
+          ? `${executionArtifactDir}/stderr.log`
+          : `${path.join(executionArtifactDir, `session-${String(index + 1)}`)}/stderr.log`,
       report: createSessionReport({
         runner,
         usage: {
@@ -243,9 +251,9 @@ function createFailedRunnerResult(
         "    at executeRunner (/workspace/src/runner/execute-runner.ts:91:7)",
       ].join("\n"),
     },
-    failureType: "assertion",
     failureOrigin: "assertion",
-    failureLogPath: `${artifactDir}/stderr.log`,
+    failureClass: { id: "assertion", label: "Assertion failure" },
+    failureLogPath: `${executionArtifactDir}/stderr.log`,
     report: createSessionReport({
       runner,
       usage: {

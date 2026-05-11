@@ -6,9 +6,9 @@ This directory contains end-user documentation for `skillgym`.
 
 `skillgym` is a benchmarking tool for testing whether coding-agent skills are selected and used correctly during real agent execution.
 
-The tool runs real sessions against supported CLIs, captures session artifacts, normalizes them into a shared report format, and executes user-provided JavaScript assertions against that report.
+The tool runs real sessions against supported CLIs, captures session artifacts, normalizes them into a shared session report format, and executes user-provided JavaScript assertions against that session report.
 
-Workspace behavior is documented in `workspaces.md`, including shared runs, isolated runs, suite-level workspace exports, template directories, and bootstrap commands.
+Workspace behavior is documented in `workspaces.md`, including shared executions, isolated executions, suite-level workspace exports, template directories, and bootstrap commands.
 
 ## Current V1 scope
 
@@ -43,11 +43,11 @@ Assertion authoring and the built-in grouped `assert` API are documented in `ass
 
 ## Document map
 
-- `test-cases.md`: test suite and test case authoring
+- `cases.md`: test suite and case authoring
 - `assertions.md`: assertion reference and matcher semantics
 - `explain.md`: deferred explain workflow and artifact shapes
 - `workspaces.md`: shared and isolated workspace behavior
 - `reporters.md`: reporter lifecycle, loading, and standard reporter behavior
-- `session-report.md`: normalized report schema
+- `session-report.md`: session report schema
 - `snapshot.md`: token regression snapshots and baseline updates
 - `skill-detection.md`: how skill selection is observed

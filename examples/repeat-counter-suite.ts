@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { type TestCase } from "../src/index.js";
+import { type Case } from "../src/index.js";
 
 const counterDir = path.join(os.tmpdir(), "skillgym-repeat-counter-suite");
 const stableCounterPath = path.join(counterDir, "stable.json");
@@ -12,7 +12,7 @@ mkdirSync(counterDir, { recursive: true });
 writeFileSync(stableCounterPath, JSON.stringify({ value: 0 }, null, 2), "utf8");
 writeFileSync(flakyCounterPath, JSON.stringify({ value: 0 }, null, 2), "utf8");
 
-const suite: TestCase[] = [
+const suite: Case[] = [
   {
     id: "repeat-counter-stable",
     prompt: "Say only: stable repeat counter demo",

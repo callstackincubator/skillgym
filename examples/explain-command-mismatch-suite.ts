@@ -1,6 +1,6 @@
-import { assert, type TestCase } from "../src/index.js";
+import { assert, type Case } from "../src/index.js";
 
-const suite: TestCase[] = [
+const suite: Case[] = [
   {
     id: "command-mismatch-for-explain",
     prompt:

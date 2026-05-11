@@ -4,8 +4,8 @@ import type { RunnerResult } from "../domain/result.js";
 
 export async function isModelRejectedResult(result: RunnerResult): Promise<boolean> {
   const [stdout, stderr] = await Promise.all([
-    readArtifactText(path.join(result.artifactDir, "stdout.log")),
-    readArtifactText(path.join(result.artifactDir, "stderr.log")),
+    readArtifactText(path.join(result.executionArtifactDir, "stdout.log")),
+    readArtifactText(path.join(result.executionArtifactDir, "stderr.log")),
   ]);
   const combinedError = result.error?.message ?? "";
 

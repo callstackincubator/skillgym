@@ -1,9 +1,9 @@
 ---
-name: test-cases
-description: Defining Skillgym suites and test cases. Covers suite exports, test case fields, tags, expected failures, timeouts, and assertion context usage.
+name: cases
+description: Defining Skillgym suites and cases. Covers suite exports, case fields, tags, expected failures, timeouts, and assertion context usage.
 ---
 
-# skillgym test-cases
+# skillgym cases
 
 Use this skill when creating or restructuring suite files.
 
@@ -13,13 +13,13 @@ A suite module must export a default suite value.
 
 Supported shapes:
 
-- array of `TestCase`
-- object map of named `TestCase`
+- array of `Case`
+- object map of named `Case`
 
 ```ts
-import { assert, type TestCase } from "skillgym";
+import { assert, type Case } from "skillgym";
 
-const suite: TestCase[] = [
+const suite: Case[] = [
   {
     id: "always-passes",
     prompt: "Say only: skillgym ready",
@@ -56,7 +56,7 @@ Tag matching is OR-based.
 
 ## Expected failures
 
-Use `expectedFail: true` for known model or agent gaps that you want to track without failing suite health.
+Use `expectedFail: true` for known model or agent gaps that you want to track without failing the suite.
 
 - assertion failure becomes `expected-failed`
 - assertion success becomes `unexpected-passed`
@@ -64,7 +64,7 @@ Use `expectedFail: true` for known model or agent gaps that you want to track wi
 
 ## Assertion context
 
-`ctx` is a convenience wrapper over the normalized report.
+`ctx` is a convenience wrapper over the session report.
 
 Useful helpers:
 

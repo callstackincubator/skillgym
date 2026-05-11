@@ -107,8 +107,8 @@ async function createResultWithLogs(options: {
       name: "Error",
       message: options.errorMessage ?? "runner failed",
     },
-    failureType: "runner-crash",
     failureOrigin: "runner",
+    failureClass: { id: "runner-crash", label: "Runner crash" },
     report: createSessionReport({ runner }),
   };
 }
