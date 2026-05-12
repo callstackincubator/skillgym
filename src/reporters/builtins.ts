@@ -3,6 +3,7 @@ export const BUILT_IN_REPORTER_NAMES = [
   "json",
   "json-summary",
   "github-actions",
+  "html",
 ] as const;
 
 export type BuiltInReporterName = (typeof BUILT_IN_REPORTER_NAMES)[number];

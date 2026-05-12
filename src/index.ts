@@ -45,6 +45,7 @@ export { assert, CommandMatcherBuilder, commandMatcher } from "./assertions/inde
 export {
   BUILT_IN_REPORTER_NAMES,
   createGitHubActionsReporter,
+  createHtmlReporter,
   createJsonReporter,
   createStandardReporter,
   loadReporter,
