@@ -6,7 +6,7 @@ import type { Case } from "../domain/case.js";
 export interface ReporterContext {
   isInteractive: boolean;
   cwd: string;
-  workspaceMode: "shared" | "isolated";
+  workspaceMode: "none" | "shared" | "isolated";
   suitePath: string;
   suiteRunArtifactDir: string;
   selectedCaseCount: number;

@@ -17,7 +17,7 @@ import {
 import { execFileCapture } from "../utils/process.js";
 
 export interface ResolvedWorkspaceConfig {
-  mode: "shared" | "isolated";
+  mode: "none" | "shared" | "isolated";
   cwd: string;
   templateDir?: string;
   bootstrap?: WorkspaceBootstrapConfig;
@@ -49,11 +49,17 @@ interface BootstrapResult {
 
 export interface PreparedWorkspace {
   cwd: string;
-  mode: "shared" | "isolated";
+  mode: "none" | "shared" | "isolated";
   workspacePath?: string;
   templateDir?: string;
   bootstrap?: BootstrapResult;
   cleanup(): Promise<{ preserved: boolean; cleanupError?: string }>;
+}
+
+export interface SharedWorkspaceSetupOptions {
+  outputDir: string;
+  artifactDir: string;
+  timeoutMs: number;
 }
 
 export function resolveEffectiveWorkspace(options: WorkspaceSetupOptions): ResolvedWorkspaceConfig {
@@ -66,15 +72,22 @@ export function resolveEffectiveWorkspace(options: WorkspaceSetupOptions): Resol
 
   if (effective === undefined) {
     return {
-      mode: "shared",
+      mode: "none",
       cwd: options.baseCwd,
+    };
+  }
+
+  if (effective.mode === "none") {
+    return {
+      mode: "none",
+      cwd: effective.cwd ?? options.baseCwd,
     };
   }
 
   if (effective.mode === "shared") {
     return {
       mode: "shared",
-      cwd: effective.cwd ?? options.baseCwd,
+      cwd: "",
       templateDir: effective.templateDir,
       bootstrap: effective.bootstrap,
     };
@@ -92,7 +105,29 @@ export function validateSuiteWorkspaceConfig(
   config: SuiteWorkspaceConfig,
   configPath = "workspace",
 ): void {
+  if (config.mode === "none") {
+    if (config.templateDir !== undefined) {
+      throw new Error(
+        `Invalid suite config at ${configPath}.templateDir: expected this key to be omitted when workspace mode is "none"`,
+      );
+    }
+
+    if (config.bootstrap !== undefined) {
+      throw new Error(
+        `Invalid suite config at ${configPath}.bootstrap: expected this key to be omitted when workspace mode is "none"`,
+      );
+    }
+
+    return;
+  }
+
   if (config.mode === "shared") {
+    if (config.cwd !== undefined) {
+      throw new Error(
+        `Invalid suite config at ${configPath}.cwd: expected this key to be omitted when workspace mode is "shared"`,
+      );
+    }
+
     return;
   }
 
@@ -107,39 +142,28 @@ export async function prepareWorkspace(
   config: ResolvedWorkspaceConfig,
   options: ExecutionWorkspaceOptions,
 ): Promise<PreparedWorkspace> {
-  if (config.mode === "shared") {
-    let bootstrap: BootstrapResult | undefined;
-
-    if (config.templateDir !== undefined) {
-      await ensureDirectoryExists(config.templateDir);
-      await ensureDir(config.cwd);
-      await copyDir(config.templateDir, config.cwd);
-    }
-
-    bootstrap =
-      config.bootstrap === undefined
-        ? undefined
-        : await runBootstrap(config.bootstrap, config.cwd, options);
-
+  if (config.mode === "none") {
     await writeWorkspaceMetadata(path.join(options.artifactDir, "workspace.json"), {
-      mode: "shared",
+      mode: "none",
       cwd: config.cwd,
-      templateDir: config.templateDir,
+      templateDir: undefined,
       workspacePath: undefined,
-      bootstrap,
+      bootstrap: undefined,
       preserved: false,
       cleanupError: undefined,
     });
 
     return {
       cwd: config.cwd,
-      mode: "shared",
-      templateDir: config.templateDir,
-      bootstrap,
+      mode: "none",
       async cleanup() {
         return { preserved: false };
       },
     };
+  }
+
+  if (config.mode === "shared") {
+    throw new Error("Shared workspaces must be prepared once per suite run.");
   }
 
   const workspacePath = path.join(
@@ -209,7 +233,7 @@ export async function finalizeWorkspace(
     passed: boolean;
   },
 ): Promise<void> {
-  if (prepared.mode === "shared") {
+  if (prepared.mode === "none" || prepared.mode === "shared") {
     return;
   }
 
@@ -226,6 +250,92 @@ export async function finalizeWorkspace(
     preserved: cleanupResult.preserved,
     cleanupError: cleanupResult.cleanupError,
   });
+}
+
+export async function prepareSharedWorkspace(
+  config: ResolvedWorkspaceConfig,
+  options: SharedWorkspaceSetupOptions,
+): Promise<PreparedWorkspace> {
+  if (config.mode !== "shared") {
+    throw new Error(`Expected shared workspace config, received ${config.mode}`);
+  }
+
+  const workspacePath = getSharedWorkspacePath(options.outputDir);
+  let bootstrap: BootstrapResult | undefined;
+
+  try {
+    await removeDir(workspacePath);
+
+    if (config.templateDir !== undefined) {
+      await ensureDirectoryExists(config.templateDir);
+      await copyDir(config.templateDir, workspacePath);
+    } else {
+      await ensureDir(workspacePath);
+    }
+
+    bootstrap =
+      config.bootstrap === undefined
+        ? undefined
+        : await runBootstrap(config.bootstrap, workspacePath, {
+            artifactDir: options.artifactDir,
+            outputDir: options.outputDir,
+            timeoutMs: options.timeoutMs,
+          });
+
+    await writeWorkspaceMetadata(path.join(options.artifactDir, "workspace.json"), {
+      mode: "shared",
+      cwd: workspacePath,
+      templateDir: config.templateDir,
+      workspacePath,
+      bootstrap,
+      preserved: false,
+      cleanupError: undefined,
+    });
+
+    return {
+      cwd: workspacePath,
+      mode: "shared",
+      workspacePath,
+      templateDir: config.templateDir,
+      bootstrap,
+      async cleanup() {
+        return cleanupWorkspace({
+          artifactDir: options.artifactDir,
+          workspacePath,
+        });
+      },
+    };
+  } catch (error) {
+    await writeWorkspaceMetadata(path.join(options.artifactDir, "workspace.json"), {
+      mode: "shared",
+      cwd: workspacePath,
+      templateDir: config.templateDir,
+      workspacePath,
+      bootstrap,
+      preserved: true,
+      cleanupError: serializeError(error).message,
+    });
+    throw error;
+  }
+}
+
+export async function writeExecutionWorkspaceMetadata(
+  filePath: string,
+  value: {
+    mode: "none" | "shared" | "isolated";
+    cwd: string;
+    templateDir?: string;
+    workspacePath?: string;
+    bootstrap?: BootstrapResult;
+    preserved: boolean;
+    cleanupError?: string;
+  },
+): Promise<void> {
+  await writeWorkspaceMetadata(filePath, value);
+}
+
+export function getSharedWorkspacePath(outputDir: string): string {
+  return path.join(outputDir, "workspaces", "shared");
 }
 
 export function createExecutionFailureResult(
@@ -292,10 +402,16 @@ function resolveSuiteWorkspacePaths(
   config: SuiteWorkspaceConfig,
   suiteDir: string,
 ): SuiteWorkspaceConfig {
+  if (config.mode === "none") {
+    return {
+      mode: "none",
+      cwd: config.cwd === undefined ? undefined : path.resolve(suiteDir, config.cwd),
+    };
+  }
+
   if (config.mode === "shared") {
     return {
       mode: "shared",
-      cwd: config.cwd === undefined ? undefined : path.resolve(suiteDir, config.cwd),
       templateDir:
         config.templateDir === undefined ? undefined : path.resolve(suiteDir, config.templateDir),
       bootstrap:
@@ -329,7 +445,10 @@ function resolveSuiteWorkspacePaths(
 async function runBootstrap(
   config: WorkspaceBootstrapConfig,
   workspacePath: string,
-  options: ExecutionWorkspaceOptions,
+  options: Pick<ExecutionWorkspaceOptions, "artifactDir" | "outputDir" | "timeoutMs"> & {
+    case?: Pick<Case, "id">;
+    runner?: Pick<RunnerInfo, "id">;
+  },
 ): Promise<BootstrapResult> {
   const stdoutPath = path.join(options.artifactDir, "bootstrap.stdout.log");
   const stderrPath = path.join(options.artifactDir, "bootstrap.stderr.log");
@@ -342,8 +461,8 @@ async function runBootstrap(
       ...process.env,
       ...config.env,
       SKILLGYM_WORKSPACE: workspacePath,
-      SKILLGYM_CASE_ID: options.case.id,
-      SKILLGYM_RUNNER_ID: options.runner.id,
+      ...(options.case === undefined ? {} : { SKILLGYM_CASE_ID: options.case.id }),
+      ...(options.runner === undefined ? {} : { SKILLGYM_RUNNER_ID: options.runner.id }),
       SKILLGYM_OUTPUT_DIR: options.outputDir,
       SKILLGYM_ARTIFACT_DIR: options.artifactDir,
     },
@@ -390,7 +509,7 @@ async function cleanupWorkspace(options: {
 async function writeWorkspaceMetadata(
   filePath: string,
   value: {
-    mode: "shared" | "isolated";
+    mode: "none" | "shared" | "isolated";
     cwd: string;
     templateDir?: string;
     workspacePath?: string;

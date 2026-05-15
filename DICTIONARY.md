@@ -29,10 +29,11 @@ Before adding or changing a term, check this file and ask the user for approval.
 - `artifact`: Preserved file or directory written by SkillGym.
 - `artifact directory`: Directory holding artifacts for one scope such as a suite run, execution, repetition, retry, or session.
 - `workspace`: Directory where the agent runs.
-- `shared workspace`: Run directly in one real directory.
+- `no workspace`: Run directly in an existing working directory with no provisioning.
+- `shared workspace`: One provisioned workspace created once per suite run and reused across executions.
 - `isolated workspace`: Fresh workspace created per execution.
 - `workspace template`: Directory copied into an execution workspace before execution.
-- `workspace bootstrap`: Command run in an execution workspace before the agent starts.
+- `workspace bootstrap`: Command run in a provisioned workspace before the agent starts.
 - `schedule`: Execution ordering and concurrency policy.
 - `reporter`: Component rendering suite-run progress and results.
 - `skill detection`: Evidence that a skill was used, with confidence and evidence.

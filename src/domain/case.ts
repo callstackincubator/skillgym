@@ -10,8 +10,14 @@ export interface WorkspaceBootstrapConfig {
 
 export type SuiteWorkspaceConfig =
   | {
-      mode: "shared";
+      mode: "none";
       cwd?: string;
+      templateDir?: never;
+      bootstrap?: never;
+    }
+  | {
+      mode: "shared";
+      cwd?: never;
       templateDir?: string;
       bootstrap?: WorkspaceBootstrapConfig;
     }

@@ -227,7 +227,6 @@ describe("config", () => {
         run: {
           workspace: {
             mode: "shared",
-            cwd: "./workspace",
             templateDir: "./fixture",
             bootstrap: {
               command: "./scripts/bootstrap.sh",
@@ -241,7 +240,6 @@ describe("config", () => {
       }).run?.workspace,
     ).toEqual({
       mode: "shared",
-      cwd: "./workspace",
       templateDir: "./fixture",
       bootstrap: {
         command: "./scripts/bootstrap.sh",
@@ -260,7 +258,7 @@ describe("config", () => {
       path.join(tempDir, "bench", "skillgym.config.mjs"),
       [
         "export default {",
-        "  run: { workspace: { mode: 'shared', cwd: './workspace', templateDir: './fixtures/base', bootstrap: { command: './scripts/bootstrap.sh', args: ['./scripts/seed.ts', '--flag'], timeoutMs: 5000 } } },",
+        "  run: { workspace: { mode: 'shared', templateDir: './fixtures/base', bootstrap: { command: './scripts/bootstrap.sh', args: ['./scripts/seed.ts', '--flag'], timeoutMs: 5000 } } },",
         "  runners: {",
         "    openMain: { agent: { type: 'opencode', model: 'openai/gpt-5' } }",
         "  }",
@@ -274,7 +272,6 @@ describe("config", () => {
 
     expect(loaded.config.run?.workspace).toEqual({
       mode: "shared",
-      cwd: path.join(tempDir, "bench", "workspace"),
       templateDir: path.join(tempDir, "bench", "fixtures", "base"),
       bootstrap: {
         command: path.join(tempDir, "bench", "scripts", "bootstrap.sh"),
@@ -282,6 +279,53 @@ describe("config", () => {
         timeoutMs: 5000,
       },
     });
+  });
+
+  test("parses none workspace with cwd", () => {
+    expect(
+      parseConfig({
+        run: {
+          workspace: {
+            mode: "none",
+            cwd: "./workspace",
+          },
+        },
+        runners: { openMain: { agent: { type: "opencode", model: "openai/gpt-5" } } },
+      }).run?.workspace,
+    ).toEqual({
+      mode: "none",
+      cwd: "./workspace",
+    });
+  });
+
+  test("rejects invalid workspace keys by mode", () => {
+    expect(() =>
+      parseConfig({
+        run: {
+          workspace: {
+            mode: "shared",
+            cwd: "./workspace",
+          },
+        },
+        runners: { openMain: { agent: { type: "opencode", model: "openai/gpt-5" } } },
+      }),
+    ).toThrow(
+      'Invalid config at run.workspace.cwd: expected this key to be omitted when workspace mode is "shared"',
+    );
+
+    expect(() =>
+      parseConfig({
+        run: {
+          workspace: {
+            mode: "none",
+            templateDir: "./fixture",
+          },
+        },
+        runners: { openMain: { agent: { type: "opencode", model: "openai/gpt-5" } } },
+      }),
+    ).toThrow(
+      'Invalid config at run.workspace.templateDir: expected this key to be omitted when workspace mode is "none"',
+    );
   });
 
   test("parses run maxSteps", () => {

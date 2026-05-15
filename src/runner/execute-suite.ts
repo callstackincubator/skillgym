@@ -26,8 +26,11 @@ import { scheduleExecutions, type PlannedExecution } from "./scheduler.js";
 import {
   createExecutionFailureResult,
   finalizeWorkspace,
+  getSharedWorkspacePath,
   prepareWorkspace,
+  prepareSharedWorkspace,
   resolveEffectiveWorkspace,
+  writeExecutionWorkspaceMetadata,
 } from "./workspace.js";
 
 interface PlannedSuiteExecution {
@@ -54,6 +57,7 @@ export async function executeSuite(
   options: {
     cwd: string;
     outputDir?: string;
+    suiteRunArtifactDir?: string;
     schedule?: ScheduleMode;
     maxParallel?: number;
     repeat?: number;
@@ -86,7 +90,10 @@ export async function executeSuite(
   const startedAt = nowIso();
   const startedMs = Date.now();
   const resolvedSuitePath = path.resolve(suitePath);
-  const outputDir = path.resolve(options.outputDir ?? ".skillgym-results", timestampDirName());
+  const outputDir =
+    options.suiteRunArtifactDir === undefined
+      ? path.resolve(options.outputDir ?? ".skillgym-results", timestampDirName())
+      : path.resolve(options.suiteRunArtifactDir);
   const scheduleMode = options.schedule ?? "serial";
   const maxParallel = resolveMaxParallel(scheduleMode, options.maxParallel);
   const repeat = options.repeat ?? options.config.run?.repeat ?? 1;
@@ -123,7 +130,7 @@ export async function executeSuite(
     );
     await options.reporter?.onError?.({
       context: createReporterContext({
-        cwd: resolvedWorkspace.mode === "shared" ? resolvedWorkspace.cwd : options.cwd,
+        cwd: resolveReporterWorkspaceCwd(resolvedWorkspace, outputDir),
         suitePath: resolvedSuitePath,
         outputDir,
         selectedCases,
@@ -147,7 +154,7 @@ export async function executeSuite(
     const error = new Error("No cases matched the requested filters.");
     await options.reporter?.onError?.({
       context: createReporterContext({
-        cwd: resolvedWorkspace.mode === "shared" ? resolvedWorkspace.cwd : options.cwd,
+        cwd: resolveReporterWorkspaceCwd(resolvedWorkspace, outputDir),
         suitePath: resolvedSuitePath,
         outputDir,
         selectedCases,
@@ -168,7 +175,7 @@ export async function executeSuite(
   }
 
   const context = createReporterContext({
-    cwd: resolvedWorkspace.mode === "shared" ? resolvedWorkspace.cwd : options.cwd,
+    cwd: resolveReporterWorkspaceCwd(resolvedWorkspace, outputDir),
     suitePath: resolvedSuitePath,
     outputDir,
     selectedCases,
@@ -190,6 +197,16 @@ export async function executeSuite(
   const caseStates = createPlannedCaseStates(selectedCases.length);
   const rejectedRunners = new Map<string, RunnerResult>();
   const restoreMaxListeners = raiseProcessMaxListeners(resolveProcessMaxListeners(maxParallel));
+  const sharedWorkspace =
+    resolvedWorkspace.mode === "shared"
+      ? createSharedWorkspaceState(resolvedWorkspace, {
+          outputDir,
+          timeoutMs: plannedExecutions.reduce(
+            (maxTimeoutMs, execution) => Math.max(maxTimeoutMs, execution.item.timeoutMs),
+            120_000,
+          ),
+        })
+      : undefined;
 
   try {
     await options.reporter?.onSuiteStart?.({
@@ -198,6 +215,10 @@ export async function executeSuite(
       runners: selectedRunners.map((runner) => runner.info),
       startedAt,
     });
+
+    if (sharedWorkspace !== undefined) {
+      await sharedWorkspace.prepare();
+    }
 
     const initialExecutions = plannedExecutions.filter(
       (execution) => execution.item.caseIndex === 0,
@@ -221,6 +242,7 @@ export async function executeSuite(
         maxSteps: options.config.run?.maxSteps,
         repeat,
         repeatFailure,
+        sharedWorkspace,
         reporter: options.reporter,
         rejectedRunners,
       });
@@ -241,6 +263,7 @@ export async function executeSuite(
         maxSteps: options.config.run?.maxSteps,
         repeat,
         repeatFailure,
+        sharedWorkspace,
         reporter: options.reporter,
         rejectedRunners,
       });
@@ -267,6 +290,9 @@ export async function executeSuite(
 
     await writeJson(path.join(outputDir, "results.json"), result);
     await snapshotStore?.save();
+    if (sharedWorkspace !== undefined) {
+      await sharedWorkspace.finalize(result.cases.every((caseResult) => caseResult.passed));
+    }
     await options.reporter?.onSuiteFinish?.({ context, result });
     return result;
   } catch (error) {
@@ -362,6 +388,7 @@ async function executePlannedExecution(
     maxSteps?: number;
     repeat: number;
     repeatFailure: number;
+    sharedWorkspace?: SharedWorkspaceState;
     reporter?: BenchmarkReporter;
     rejectedRunners: Map<string, RunnerResult>;
   },
@@ -423,6 +450,7 @@ async function executePlannedExecution(
               executeRunnerFn: options.executeRunnerFn,
               outputDir: options.outputDir,
               maxSteps: options.maxSteps,
+              sharedWorkspace: options.sharedWorkspace,
             })
           : await createRejectedModelResult(item, sessionArtifactDir);
 
@@ -542,6 +570,7 @@ async function runExecution(
     executeRunnerFn: typeof executeRunner;
     outputDir: string;
     maxSteps?: number;
+    sharedWorkspace?: SharedWorkspaceState;
   },
 ): Promise<RunnerResult> {
   const executionStartedMs = Date.now();
@@ -549,13 +578,16 @@ async function runExecution(
   let preparedWorkspace;
 
   try {
-    preparedWorkspace = await prepareWorkspace(options.resolvedWorkspace, {
-      artifactDir: options.artifactDir,
-      outputDir: options.outputDir,
-      case: item.case,
-      runner: item.runner.info,
-      timeoutMs: item.timeoutMs,
-    });
+    preparedWorkspace =
+      options.sharedWorkspace === undefined
+        ? await prepareWorkspace(options.resolvedWorkspace, {
+            artifactDir: options.artifactDir,
+            outputDir: options.outputDir,
+            case: item.case,
+            runner: item.runner.info,
+            timeoutMs: item.timeoutMs,
+          })
+        : await options.sharedWorkspace.createExecutionWorkspace(options.artifactDir);
 
     result = await options.executeRunnerFn(
       item.case,
@@ -585,10 +617,22 @@ async function runExecution(
     await writeJson(path.join(options.artifactDir, "report.json"), result.report);
   } finally {
     if (preparedWorkspace !== undefined) {
-      await finalizeWorkspace(preparedWorkspace, {
-        artifactDir: options.artifactDir,
-        passed: result!.passed,
-      });
+      if (preparedWorkspace.mode === "shared") {
+        await writeExecutionWorkspaceMetadata(path.join(options.artifactDir, "workspace.json"), {
+          mode: "shared",
+          cwd: preparedWorkspace.cwd,
+          templateDir: preparedWorkspace.templateDir,
+          workspacePath: preparedWorkspace.workspacePath,
+          bootstrap: preparedWorkspace.bootstrap,
+          preserved: false,
+          cleanupError: undefined,
+        });
+      } else {
+        await finalizeWorkspace(preparedWorkspace, {
+          artifactDir: options.artifactDir,
+          passed: result!.passed,
+        });
+      }
     }
   }
 
@@ -973,7 +1017,7 @@ function createPlannedCaseStates(caseCount: number): PlannedCaseState[] {
 
 function createReporterContext(options: {
   cwd: string;
-  workspaceMode: "shared" | "isolated";
+  workspaceMode: "none" | "shared" | "isolated";
   suitePath: string;
   outputDir: string;
   selectedCases: Case[];
@@ -1004,6 +1048,66 @@ function createReporterContext(options: {
     tagFilter: options.tagFilter.length === 0 ? undefined : options.tagFilter,
     declaredTags: options.declaredTags,
   };
+}
+
+interface SharedWorkspaceState {
+  prepare(): Promise<void>;
+  createExecutionWorkspace(
+    artifactDir: string,
+  ): Promise<Awaited<ReturnType<typeof prepareSharedWorkspace>>>;
+  finalize(passed: boolean): Promise<void>;
+}
+
+function createSharedWorkspaceState(
+  config: ReturnType<typeof resolveEffectiveWorkspace>,
+  options: {
+    outputDir: string;
+    timeoutMs: number;
+  },
+): SharedWorkspaceState {
+  const setupArtifactDir = path.join(options.outputDir, "workspaces", "shared-setup");
+  let preparedPromise: Promise<Awaited<ReturnType<typeof prepareSharedWorkspace>>> | undefined;
+
+  const loadPreparedWorkspace = () => {
+    preparedPromise ??= (async () => {
+      await ensureDir(setupArtifactDir);
+      return prepareSharedWorkspace(config, {
+        outputDir: options.outputDir,
+        artifactDir: setupArtifactDir,
+        timeoutMs: options.timeoutMs,
+      });
+    })();
+
+    return preparedPromise;
+  };
+
+  return {
+    async prepare() {
+      await loadPreparedWorkspace();
+    },
+    async createExecutionWorkspace() {
+      return loadPreparedWorkspace();
+    },
+    async finalize(passed) {
+      if (!passed) {
+        return;
+      }
+
+      const preparedWorkspace = await loadPreparedWorkspace();
+      await preparedWorkspace.cleanup();
+    },
+  };
+}
+
+function resolveReporterWorkspaceCwd(
+  resolvedWorkspace: ReturnType<typeof resolveEffectiveWorkspace>,
+  outputDir: string,
+): string {
+  if (resolvedWorkspace.mode === "shared") {
+    return getSharedWorkspacePath(outputDir);
+  }
+
+  return resolvedWorkspace.mode === "none" ? resolvedWorkspace.cwd : outputDir;
 }
 
 function resolveMaxParallel(
