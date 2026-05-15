@@ -58,7 +58,8 @@ Behavior:
 - executions run directly in the shared directory
 - `cwd` is optional
 - if omitted, shared mode falls back to config `run.cwd`, then `process.cwd()`
-- `templateDir` and `bootstrap` are not allowed
+- `templateDir` copies into the shared directory before the agent starts
+- `bootstrap` runs inside the shared directory before the agent starts
 
 ## Isolated mode
 
@@ -79,11 +80,11 @@ Behavior:
 
 ## Bootstrap commands
 
-Bootstrap commands run inside the isolated workspace before the agent starts.
+Bootstrap commands run inside the execution workspace before the agent starts.
 
 ```ts
 export const workspace = {
-  mode: "isolated",
+  mode: "shared",
   bootstrap: {
     command: "sh",
     args: ["./scripts/bootstrap-workspace.sh", "--seed", "demo"],
@@ -94,6 +95,7 @@ export const workspace = {
 Bootstrap command behavior:
 
 - `cwd` is the isolated workspace
+- `cwd` is the shared workspace or isolated workspace for that execution
 - non-zero exit fails that execution before the agent runs
 - stdout and stderr are written to the execution artifact directory
 

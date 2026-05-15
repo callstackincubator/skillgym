@@ -75,6 +75,8 @@ export function resolveEffectiveWorkspace(options: WorkspaceSetupOptions): Resol
     return {
       mode: "shared",
       cwd: effective.cwd ?? options.baseCwd,
+      templateDir: effective.templateDir,
+      bootstrap: effective.bootstrap,
     };
   }
 
@@ -91,18 +93,6 @@ export function validateSuiteWorkspaceConfig(
   configPath = "workspace",
 ): void {
   if (config.mode === "shared") {
-    if (config.templateDir !== undefined) {
-      throw new Error(
-        `Invalid suite config at ${configPath}.templateDir: expected this key to be omitted when workspace mode is "shared"`,
-      );
-    }
-
-    if (config.bootstrap !== undefined) {
-      throw new Error(
-        `Invalid suite config at ${configPath}.bootstrap: expected this key to be omitted when workspace mode is "shared"`,
-      );
-    }
-
     return;
   }
 
@@ -118,12 +108,25 @@ export async function prepareWorkspace(
   options: ExecutionWorkspaceOptions,
 ): Promise<PreparedWorkspace> {
   if (config.mode === "shared") {
+    let bootstrap: BootstrapResult | undefined;
+
+    if (config.templateDir !== undefined) {
+      await ensureDirectoryExists(config.templateDir);
+      await ensureDir(config.cwd);
+      await copyDir(config.templateDir, config.cwd);
+    }
+
+    bootstrap =
+      config.bootstrap === undefined
+        ? undefined
+        : await runBootstrap(config.bootstrap, config.cwd, options);
+
     await writeWorkspaceMetadata(path.join(options.artifactDir, "workspace.json"), {
       mode: "shared",
       cwd: config.cwd,
-      templateDir: undefined,
+      templateDir: config.templateDir,
       workspacePath: undefined,
-      bootstrap: undefined,
+      bootstrap,
       preserved: false,
       cleanupError: undefined,
     });
@@ -131,6 +134,8 @@ export async function prepareWorkspace(
     return {
       cwd: config.cwd,
       mode: "shared",
+      templateDir: config.templateDir,
+      bootstrap,
       async cleanup() {
         return { preserved: false };
       },
@@ -291,6 +296,17 @@ function resolveSuiteWorkspacePaths(
     return {
       mode: "shared",
       cwd: config.cwd === undefined ? undefined : path.resolve(suiteDir, config.cwd),
+      templateDir:
+        config.templateDir === undefined ? undefined : path.resolve(suiteDir, config.templateDir),
+      bootstrap:
+        config.bootstrap === undefined
+          ? undefined
+          : {
+              command: resolvePathLikeValue(config.bootstrap.command, suiteDir),
+              args: config.bootstrap.args?.map((arg) => resolvePathLikeValue(arg, suiteDir)),
+              timeoutMs: config.bootstrap.timeoutMs,
+              env: config.bootstrap.env === undefined ? undefined : { ...config.bootstrap.env },
+            },
     };
   }
 

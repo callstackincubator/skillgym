@@ -20,6 +20,11 @@ Use isolated workspaces when executions should not mutate the original checkout 
 export const workspace = {
   mode: "shared",
   cwd: "./fixtures/repo-a",
+  templateDir: "./fixtures/base-project",
+  bootstrap: {
+    command: "sh",
+    args: ["./scripts/bootstrap-workspace.sh"],
+  },
 };
 ```
 
@@ -28,6 +33,8 @@ Behavior:
 - executions run directly in that directory
 - `cwd` is optional
 - if omitted, Skillgym falls back to config `run.cwd`, then `process.cwd()`
+- `templateDir` copies into that directory before the agent starts
+- `bootstrap` runs in that directory before the agent starts
 
 ## Isolated mode
 

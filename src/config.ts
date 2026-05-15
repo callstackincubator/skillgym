@@ -422,23 +422,11 @@ function parseWorkspaceConfig(value: unknown, configPath: string): SuiteWorkspac
   const bootstrap = parseOptionalBootstrapConfig(record.bootstrap, `${configPath}.bootstrap`);
 
   if (mode === "shared") {
-    if (templateDir !== undefined) {
-      throw invalidConfig(
-        `${configPath}.templateDir`,
-        'expected this key to be omitted when workspace mode is "shared"',
-      );
-    }
-
-    if (bootstrap !== undefined) {
-      throw invalidConfig(
-        `${configPath}.bootstrap`,
-        'expected this key to be omitted when workspace mode is "shared"',
-      );
-    }
-
     return {
       mode,
       cwd,
+      templateDir,
+      bootstrap,
     };
   }
 
@@ -627,6 +615,12 @@ function resolveWorkspaceConfigPaths(
     return {
       mode: "shared",
       cwd: config.cwd === undefined ? undefined : path.resolve(configDir, config.cwd),
+      templateDir:
+        config.templateDir === undefined ? undefined : path.resolve(configDir, config.templateDir),
+      bootstrap:
+        config.bootstrap === undefined
+          ? undefined
+          : resolveBootstrapConfigPaths(config.bootstrap, configDir),
     };
   }
 

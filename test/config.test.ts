@@ -178,14 +178,6 @@ describe("config", () => {
     ).toThrow("Invalid config at runners.openMain.agent.model: expected non-empty string");
     expect(() =>
       parseConfig({
-        run: { workspace: { mode: "shared", templateDir: "./fixture" } },
-        runners: { openMain: { agent: { type: "opencode", model: "openai/gpt-5" } } },
-      }),
-    ).toThrow(
-      'Invalid config at run.workspace.templateDir: expected this key to be omitted when workspace mode is "shared"',
-    );
-    expect(() =>
-      parseConfig({
         snapshots: { tolerance: {} },
         runners: { openMain: { agent: { type: "opencode", model: "openai/gpt-5" } } },
       }),
@@ -227,6 +219,69 @@ describe("config", () => {
         runners: { open: { agent: { type: "opencode", model: "openai/gpt-5" } } },
       }).run?.schedule,
     ).toBe("isolated-by-runner");
+  });
+
+  test("parses shared workspace template and bootstrap config", () => {
+    expect(
+      parseConfig({
+        run: {
+          workspace: {
+            mode: "shared",
+            cwd: "./workspace",
+            templateDir: "./fixture",
+            bootstrap: {
+              command: "./scripts/bootstrap.sh",
+              args: ["./scripts/seed.ts", "--flag"],
+              timeoutMs: 5000,
+              env: { NODE_ENV: "test" },
+            },
+          },
+        },
+        runners: { openMain: { agent: { type: "opencode", model: "openai/gpt-5" } } },
+      }).run?.workspace,
+    ).toEqual({
+      mode: "shared",
+      cwd: "./workspace",
+      templateDir: "./fixture",
+      bootstrap: {
+        command: "./scripts/bootstrap.sh",
+        args: ["./scripts/seed.ts", "--flag"],
+        timeoutMs: 5000,
+        env: { NODE_ENV: "test" },
+      },
+    });
+  });
+
+  test("resolves shared workspace template and bootstrap paths from config directory", async () => {
+    const suiteDir = path.join(tempDir, "bench", "nested");
+    await mkdir(suiteDir, { recursive: true });
+    await writeFile(path.join(suiteDir, "suite.ts"), "export default []\n", "utf8");
+    await writeFile(
+      path.join(tempDir, "bench", "skillgym.config.mjs"),
+      [
+        "export default {",
+        "  run: { workspace: { mode: 'shared', cwd: './workspace', templateDir: './fixtures/base', bootstrap: { command: './scripts/bootstrap.sh', args: ['./scripts/seed.ts', '--flag'], timeoutMs: 5000 } } },",
+        "  runners: {",
+        "    openMain: { agent: { type: 'opencode', model: 'openai/gpt-5' } }",
+        "  }",
+        "};",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const loaded = await loadConfig({ suitePath: path.join(suiteDir, "suite.ts") });
+
+    expect(loaded.config.run?.workspace).toEqual({
+      mode: "shared",
+      cwd: path.join(tempDir, "bench", "workspace"),
+      templateDir: path.join(tempDir, "bench", "fixtures", "base"),
+      bootstrap: {
+        command: path.join(tempDir, "bench", "scripts", "bootstrap.sh"),
+        args: [path.join(tempDir, "bench", "scripts", "seed.ts"), "--flag"],
+        timeoutMs: 5000,
+      },
+    });
   });
 
   test("parses run maxSteps", () => {

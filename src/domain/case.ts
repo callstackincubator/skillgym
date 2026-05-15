@@ -12,8 +12,8 @@ export type SuiteWorkspaceConfig =
   | {
       mode: "shared";
       cwd?: string;
-      templateDir?: never;
-      bootstrap?: never;
+      templateDir?: string;
+      bootstrap?: WorkspaceBootstrapConfig;
     }
   | {
       mode: "isolated";

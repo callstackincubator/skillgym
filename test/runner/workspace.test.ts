@@ -93,6 +93,85 @@ test("executeSuite provisions isolated workspaces from suite template and remove
   expect(workspaceMetadata).toContain('"preserved": false');
 });
 
+test("executeSuite provisions shared workspace from template and bootstrap before runner starts", async () => {
+  const tempDir = await createTempDir();
+  const suiteRunArtifactDir = path.join(tempDir, "results");
+  const sharedWorkspaceDir = path.join(tempDir, "shared-workspace");
+  const templateDir = path.join(tempDir, "template");
+  const suiteDir = path.join(tempDir, "suite-dir");
+  const scriptPath = path.join(suiteDir, "bootstrap.sh");
+
+  await mkdir(templateDir, { recursive: true });
+  await mkdir(suiteDir, { recursive: true });
+  await writeFile(path.join(templateDir, "README.md"), "template\n", "utf8");
+  await writeFile(
+    scriptPath,
+    "#!/bin/sh\nprintf 'Bootstrap marker: shared\\n' > bootstrap-output.txt\n",
+    "utf8",
+  );
+
+  const runner = createRunnerInfo("open", { type: "opencode", model: "openai/gpt-5" });
+  const result = await executeSuite(
+    path.join(suiteDir, "suite.ts"),
+    [{ id: "alpha", prompt: "hello", assert() {} }],
+    {
+      cwd: tempDir,
+      suiteRunArtifactDir,
+      suiteWorkspace: {
+        mode: "shared",
+        cwd: sharedWorkspaceDir,
+        templateDir,
+        bootstrap: {
+          command: "sh",
+          args: ["./bootstrap.sh"],
+        },
+      },
+      config: {
+        runners: {
+          open: { agent: { type: "opencode", model: "openai/gpt-5" } },
+        },
+      },
+      executeRunnerFn: async (_case, _runner, _adapter, options) => {
+        expect(options.cwd).toBe(sharedWorkspaceDir);
+        expect(await readFile(path.join(options.cwd, "README.md"), "utf8")).toBe("template\n");
+        expect(await readFile(path.join(options.cwd, "bootstrap-output.txt"), "utf8")).toContain(
+          "shared",
+        );
+
+        return {
+          runner,
+          passed: true,
+          status: "passed",
+          durationMs: 10,
+          executionArtifactDir: options.artifactDir,
+          artifactDir: options.artifactDir,
+          report: createSessionReport({ runner, prompt: "hello" }),
+        };
+      },
+    },
+  );
+
+  expect(result.cases[0]?.passed).toBe(true);
+  expect((await stat(sharedWorkspaceDir)).isDirectory()).toBe(true);
+
+  const executionArtifactDir = path.join(
+    result.suiteRunArtifactDir,
+    "alpha",
+    runner.pathKey,
+    "repeat-1",
+  );
+  const workspaceMetadata = await readFile(
+    path.join(executionArtifactDir, "workspace.json"),
+    "utf8",
+  );
+  const stdout = await readFile(path.join(executionArtifactDir, "bootstrap.stdout.log"), "utf8");
+
+  expect(workspaceMetadata).toContain('"mode": "shared"');
+  expect(workspaceMetadata).toContain(JSON.stringify(sharedWorkspaceDir));
+  expect(workspaceMetadata).toContain(JSON.stringify(templateDir));
+  expect(stdout).toBe("");
+});
+
 test("executeSuite preserves failed isolated workspaces and writes bootstrap logs", async () => {
   const tempDir = await createTempDir();
   const suiteRunArtifactDir = path.join(tempDir, "results");

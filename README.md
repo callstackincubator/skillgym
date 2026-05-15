@@ -200,7 +200,7 @@ A workspace is the directory where an execution runs.
 - `shared`: run directly in one real directory
 - `isolated`: create a fresh temporary workspace per case x runner execution
 
-Use `shared` when you want the agent to work against your real project checkout. Use `isolated` when you want clean filesystem state per execution or need to prepare each execution from a template.
+Use `shared` when you want the agent to work against your real project checkout. Shared mode can still seed that directory with `templateDir` and `bootstrap` before the agent starts. Use `isolated` when you want clean filesystem state per execution or need a fresh prepared workspace every time.
 
 You can configure workspaces in `skillgym.config.*` with `run.workspace`, or per suite with a named `workspace` export. Suite-level workspace config overrides config-level `run.workspace`.
 
