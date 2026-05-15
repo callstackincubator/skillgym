@@ -1,6 +1,7 @@
 import path from "node:path";
 import type { BenchmarkReporter } from "./contract.js";
 import { createGitHubActionsReporter } from "./github-actions.js";
+import { createHtmlReporter } from "./html.js";
 import { createJsonReporter } from "./json.js";
 import { createJsonSummaryReporter } from "./json-summary.js";
 import { createStandardReporter } from "./standard.js";
@@ -40,6 +41,8 @@ export async function loadReporter(
         return createJsonSummaryReporter();
       case "github-actions":
         return createGitHubActionsReporter();
+      case "html":
+        return createHtmlReporter();
     }
   }
 

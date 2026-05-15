@@ -11,12 +11,13 @@ skillgym run <suite.ts> --reporter standard
 skillgym run <suite.ts> --reporter json
 skillgym run <suite.ts> --reporter json-summary
 skillgym run <suite.ts> --reporter github-actions
+skillgym run <suite.ts> --reporter html
 skillgym run <suite.ts> --reporter ./examples/custom-reporter.ts
 skillgym run <suite.ts> --schedule isolated-by-runner --max-parallel 4
 ```
 
 - Omitting `--reporter` uses the built-in `standard` reporter.
-- Built-in reporters are `standard`, `json`, `json-summary`, and `github-actions`.
+- Built-in reporters are `standard`, `json`, `json-summary`, `github-actions`, and `html`.
 - Relative paths resolve from `process.cwd()`.
 
 ## Config
@@ -136,6 +137,17 @@ The built-in `json-summary` reporter writes a trimmed JSON summary to stdout —
 - The output includes per-case and per-runner results with token usage, pass/fail status, artifact paths, and error details, but omits the full session events and raw artifact data.
 - Per-runner results include `failureClass` when present so downstream tooling can keep grouped-failure semantics.
 - It is useful for post-run analysis steps or feeding results to an LLM.
+
+## HTML reporter
+
+The built-in `html` reporter writes a self-contained `report.html` file to the suite run artifact directory.
+
+- It renders a collapsible tree: suite summary → case → runner execution → individual session events.
+- Each runner block shows pass/fail status, duration, and token usage (input/output).
+- Assistant messages, tool calls, file reads, and commands are rendered as expandable `<details>` elements.
+- The final output of each execution is shown in a collapsible block.
+- Errors are shown inline when present.
+- The output path is printed to stdout after the file is written.
 
 ## GitHub Actions reporter
 

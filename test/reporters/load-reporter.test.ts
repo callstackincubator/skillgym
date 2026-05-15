@@ -42,6 +42,13 @@ describe("loadReporter", () => {
     expect(reporter.onRunnerFinish).toBeUndefined();
   });
 
+  test("resolves built-in reporter when html is provided", async () => {
+    const reporter = await loadReporter("html", tempDir);
+
+    expect(typeof reporter.onCaseFinish).toBe("function");
+    expect(typeof reporter.onSuiteFinish).toBe("function");
+  });
+
   test("loads custom reporter from relative default export path", async () => {
     const filePath = path.join(tempDir, "default-reporter.ts");
     await writeFile(filePath, "export default { onSuiteStart() {} };\n", "utf8");
