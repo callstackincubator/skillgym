@@ -581,7 +581,7 @@ test("cli run exits non-zero for assertion failures without printing a generic s
     })),
   }));
   vi.doMock("../src/runner/workspace.js", () => ({
-    resolveEffectiveWorkspace: vi.fn(() => ({ mode: "shared", cwd: tempDir })),
+    resolveEffectiveWorkspace: vi.fn(() => ({ mode: "none", cwd: tempDir })),
   }));
   vi.doMock("../src/runner/execute-suite.js", () => ({
     executeSuite: vi.fn(async () => ({
@@ -707,7 +707,7 @@ async function importRunCommandWithSuiteResult(tempDir: string, suiteResult: unk
     })),
   }));
   vi.doMock("../src/runner/workspace.js", () => ({
-    resolveEffectiveWorkspace: vi.fn(() => ({ mode: "shared", cwd: tempDir })),
+    resolveEffectiveWorkspace: vi.fn(() => ({ mode: "none", cwd: tempDir })),
   }));
   vi.doMock("../src/runner/execute-suite.js", () => ({
     executeSuite: vi.fn(async () => suiteResult),
@@ -779,7 +779,7 @@ test("cli run passes repeated and comma-separated tag filters to execution", asy
     })),
   }));
   vi.doMock("../src/runner/workspace.js", () => ({
-    resolveEffectiveWorkspace: vi.fn(() => ({ mode: "shared", cwd: tempDir })),
+    resolveEffectiveWorkspace: vi.fn(() => ({ mode: "none", cwd: tempDir })),
   }));
   vi.doMock("../src/runner/execute-suite.js", () => ({ executeSuite }));
 
@@ -857,7 +857,7 @@ test("cli run passes retryFailed through to execution", async () => {
     })),
   }));
   vi.doMock("../src/runner/workspace.js", () => ({
-    resolveEffectiveWorkspace: vi.fn(() => ({ mode: "shared", cwd: tempDir })),
+    resolveEffectiveWorkspace: vi.fn(() => ({ mode: "none", cwd: tempDir })),
   }));
   vi.doMock("../src/runner/execute-suite.js", () => ({
     executeSuite,

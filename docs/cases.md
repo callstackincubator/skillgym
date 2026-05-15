@@ -249,6 +249,13 @@ export type SuiteWorkspaceConfig =
   | {
       mode: "shared";
       cwd?: string;
+      templateDir?: string;
+      bootstrap?: {
+        command: string;
+        args?: string[];
+        timeoutMs?: number;
+        env?: Record<string, string>;
+      };
     }
   | {
       mode: "isolated";
@@ -264,8 +271,8 @@ export type SuiteWorkspaceConfig =
 
 Rules:
 
-- `shared` mode supports `cwd` only
-- `isolated` mode supports `templateDir` and `bootstrap` only
+- `shared` mode supports `cwd`, `templateDir`, and `bootstrap`
+- `isolated` mode supports `templateDir` and `bootstrap` but not `cwd`
 - relative suite workspace paths resolve from the suite file directory
 - isolated workspaces start empty when `templateDir` is omitted
 - `templateDir` copies the full directory contents, including dotfiles and `.git`

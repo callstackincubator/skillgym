@@ -63,9 +63,9 @@ export async function runCommand(options: {
     suiteDir: suite.dirPath,
   });
 
-  if (options.cwd !== undefined && effectiveWorkspace.mode === "isolated") {
+  if (options.cwd !== undefined && effectiveWorkspace.mode !== "none") {
     throw new Error(
-      "CLI option --cwd is only supported when the effective workspace mode is shared.",
+      "CLI option --cwd is only supported when the effective workspace mode is none.",
     );
   }
 

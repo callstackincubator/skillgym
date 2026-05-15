@@ -421,24 +421,39 @@ function parseWorkspaceConfig(value: unknown, configPath: string): SuiteWorkspac
   const templateDir = parseOptionalNonEmptyString(record.templateDir, `${configPath}.templateDir`);
   const bootstrap = parseOptionalBootstrapConfig(record.bootstrap, `${configPath}.bootstrap`);
 
-  if (mode === "shared") {
+  if (mode === "none") {
     if (templateDir !== undefined) {
       throw invalidConfig(
         `${configPath}.templateDir`,
-        'expected this key to be omitted when workspace mode is "shared"',
+        'expected this key to be omitted when workspace mode is "none"',
       );
     }
 
     if (bootstrap !== undefined) {
       throw invalidConfig(
         `${configPath}.bootstrap`,
-        'expected this key to be omitted when workspace mode is "shared"',
+        'expected this key to be omitted when workspace mode is "none"',
       );
     }
 
     return {
       mode,
       cwd,
+    };
+  }
+
+  if (mode === "shared") {
+    if (cwd !== undefined) {
+      throw invalidConfig(
+        `${configPath}.cwd`,
+        'expected this key to be omitted when workspace mode is "shared"',
+      );
+    }
+
+    return {
+      mode,
+      templateDir,
+      bootstrap,
     };
   }
 
@@ -457,8 +472,8 @@ function parseWorkspaceConfig(value: unknown, configPath: string): SuiteWorkspac
 }
 
 function parseWorkspaceMode(value: unknown, configPath: string): SuiteWorkspaceConfig["mode"] {
-  if (value !== "shared" && value !== "isolated") {
-    throw invalidConfig(configPath, 'expected "shared" or "isolated"');
+  if (value !== "none" && value !== "shared" && value !== "isolated") {
+    throw invalidConfig(configPath, 'expected "none", "shared", or "isolated"');
   }
 
   return value;
@@ -623,10 +638,22 @@ function resolveWorkspaceConfigPaths(
   config: SuiteWorkspaceConfig,
   configDir: string,
 ): SuiteWorkspaceConfig {
+  if (config.mode === "none") {
+    return {
+      mode: "none",
+      cwd: config.cwd === undefined ? undefined : path.resolve(configDir, config.cwd),
+    };
+  }
+
   if (config.mode === "shared") {
     return {
       mode: "shared",
-      cwd: config.cwd === undefined ? undefined : path.resolve(configDir, config.cwd),
+      templateDir:
+        config.templateDir === undefined ? undefined : path.resolve(configDir, config.templateDir),
+      bootstrap:
+        config.bootstrap === undefined
+          ? undefined
+          : resolveBootstrapConfigPaths(config.bootstrap, configDir),
     };
   }
 
