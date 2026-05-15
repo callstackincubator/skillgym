@@ -290,7 +290,7 @@ export function createStandardReporter(options: StandardReporterOptions = {}): B
 }
 
 function hasExplainArtifact(failure: FailureEntry): boolean {
-  return existsSync(path.join(failure.executionArtifactDir, "explain.json"));
+  return existsSync(path.join(failure.artifactDir, "explain.json"));
 }
 
 function formatCaseRow(result: CaseResult, symbols: ReturnType<typeof getSymbols>): string {

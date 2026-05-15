@@ -279,6 +279,107 @@ test("standard reporter shows explain hint when a failed execution has explain.j
   expect(output).toContain("Explain failed executions with `skillgym explain <artifactDir>`.");
 });
 
+test("standard reporter finds explain.json in the failed artifactDir for retried executions", async () => {
+  const writes: string[] = [];
+  const reporter = createStandardReporter({
+    stdout: {
+      isTTY: false,
+      columns: 120,
+      write(chunk: string) {
+        writes.push(chunk);
+        return true;
+      },
+    },
+    isInteractive: false,
+    isUnicode: true,
+  });
+
+  const executionArtifactDir = await fs.mkdtemp(
+    path.join(os.tmpdir(), "skillgym-standard-reporter-"),
+  );
+  const artifactDir = path.join(executionArtifactDir, "session-2");
+  await fs.mkdir(artifactDir, { recursive: true });
+  await fs.writeFile(
+    path.join(artifactDir, "explain.json"),
+    JSON.stringify({ questions: ["why"] }),
+  );
+
+  const runner = createRunnerInfo("code-main", { type: "codex", model: "gpt-5.4" });
+  const context = {
+    isInteractive: false,
+    cwd: "/workspace",
+    workspaceMode: "shared" as const,
+    suitePath: "examples/basic-suite.ts",
+    suiteRunArtifactDir: ".skillgym-results/run-1",
+    selectedCaseCount: 1,
+    selectedRunnerCount: 1,
+    selectedExecutionCount: 1,
+    scheduleMode: "serial" as const,
+    maxParallel: 1,
+    declaredTags: [],
+  };
+  const suiteResult: SuiteRunResult = {
+    suitePath: context.suitePath,
+    startedAt: "2026-04-02T12:00:00.000Z",
+    endedAt: "2026-04-02T12:01:42.000Z",
+    durationMs: 102_000,
+    suiteRunArtifactDir: context.suiteRunArtifactDir,
+    declaredTags: [],
+    selectedTags: [],
+    cases: [
+      createCaseResult({
+        caseId: "case-a",
+        runnerResults: [
+          createRunnerResult({
+            runner,
+            passed: false,
+            executionArtifactDir,
+            artifactDir,
+            totalTokens: 12_000,
+            sessions: 2,
+          }),
+        ],
+      }),
+    ],
+    runners: [
+      createRunnerSummary({
+        runner,
+        passedCases: 0,
+        totalCases: 1,
+        averageDurationMs: 19_300,
+        averageTotalTokens: 13_500,
+      }),
+    ],
+  };
+
+  await reporter.onSuiteStart?.({
+    context,
+    cases: [],
+    runners: [runner],
+    startedAt: suiteResult.startedAt,
+  });
+  await reporter.onRunnerFinish?.({
+    context,
+    case: { id: "case-a", prompt: "", assert() {} },
+    runner,
+    result: suiteResult.cases[0]!.runnerResults[0]!,
+    caseIndex: 1,
+    totalCases: 1,
+  });
+  await reporter.onCaseFinish?.({
+    context,
+    case: { id: "case-a", prompt: "", assert() {} },
+    result: suiteResult.cases[0]!,
+    caseIndex: 1,
+    totalCases: 1,
+  });
+  await reporter.onSuiteFinish?.({ context, result: suiteResult });
+
+  const output = writes.join("");
+
+  expect(output).toContain("Explain failed executions with `skillgym explain <artifactDir>`.");
+});
+
 test("standard reporter interactive mode renders queued, running, and finished executions", async () => {
   vi.useFakeTimers();
   const writes: string[] = [];
