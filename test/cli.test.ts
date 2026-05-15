@@ -4,7 +4,7 @@ import path from "node:path";
 import process from "node:process";
 import { afterEach, expect, test, vi } from "vitest";
 import { execFileCapture } from "../src/utils/process.js";
-import { parseArgs } from "../src/utils/cli.js";
+import { accumulateTagOptionValues, parseTagOption } from "../src/cli/tag-options.js";
 
 const repoRoot = process.cwd();
 const tsxLoaderPath = path.join(repoRoot, "node_modules", "tsx", "dist", "loader.mjs");
@@ -82,7 +82,7 @@ test("cli skills get reports missing skill name without printing MOTD banner", a
 
   expect(result.exitCode).toBe(1);
   expect(result.stdout).toBe("");
-  expect(result.stderr).toContain("Missing skill name. Usage: skillgym skills get <name>");
+  expect(result.stderr).toContain("error: missing required argument 'name'");
   expect(result.stderr).not.toContain("Prove your agent skills work before you ship them.");
 });
 
@@ -91,10 +91,8 @@ test("cli run reports missing suite path without printing MOTD banner", async ()
 
   expect(result.exitCode).toBe(1);
   expect(result.stdout).toBe("");
-  expect(result.stderr).toContain("Error: missing suite path");
-  expect(result.stderr).toContain("`skillgym run` needs a suite file to execute.");
-  expect(result.stderr).toContain("skillgym run ./examples/basic-suite.ts");
-  expect(result.stderr).not.toContain("at main");
+  expect(result.stderr).toContain("error: missing required argument 'suite'");
+  expect(result.stderr).not.toContain("Prove your agent skills work before you ship them.");
 });
 
 test("cli explain reports missing artifact directory without printing MOTD banner", async () => {
@@ -102,9 +100,7 @@ test("cli explain reports missing artifact directory without printing MOTD banne
 
   expect(result.exitCode).toBe(1);
   expect(result.stdout).toBe("");
-  expect(result.stderr).toContain(
-    "Missing artifact directory. Usage: skillgym explain <artifactDir>",
-  );
+  expect(result.stderr).toContain("error: missing required argument 'artifactDir'");
   expect(result.stderr).not.toContain("Prove your agent skills work before you ship them.");
 });
 
@@ -519,14 +515,20 @@ test("explainCommand reruns and overwrites an existing explanations.json artifac
   expect(explanations.questions[0]?.answer).toBe("Fresh answer from rerun.");
 });
 
-test("cli parser preserves repeated tag flags", () => {
-  expect(parseArgs(["run", "./suite.ts", "--tag", "smoke,gestures", "--tag=regression"])).toEqual({
-    command: "run",
-    positionals: ["./suite.ts"],
-    options: {
-      tag: ["smoke,gestures", "regression"],
-    },
-  });
+test("cli tag option accumulation preserves repeated tag flags", () => {
+  let tags = accumulateTagOptionValues("smoke,gestures", []);
+  tags = accumulateTagOptionValues("regression", tags);
+  expect(parseTagOption(tags)).toEqual(["smoke", "gestures", "regression"]);
+});
+
+test("cli run --help prints usage without executing", async () => {
+  const result = await execCli(["run", "--help"]);
+
+  expect(result.exitCode).toBe(0);
+  expect(result.stderr).toBe("");
+  expect(result.stdout).toContain("Usage: skillgym run");
+  expect(result.stdout).toContain("--config");
+  expect(result.stdout).toContain("--cwd");
 });
 
 test("cli run reports missing config with suggested fixes", async () => {
