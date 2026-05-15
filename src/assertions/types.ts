@@ -1,4 +1,4 @@
-import type nodeAssert from "node:assert/strict";
+type NodeAssert = typeof import("node:assert/strict");
 import type { ExplainOptions } from "./explain.js";
 import type { FailureClass } from "../domain/result.js";
 import type { SessionReport, ToolCallEvent } from "../domain/session-report.js";
@@ -162,7 +162,7 @@ export interface AssertionClassifier {
   <T>(failureClass: string | FailureClass, callback: () => T): T;
 }
 
-export type SkillGymSoftAssert = typeof nodeAssert & {
+export type SkillGymSoftAssert = NodeAssert & {
   skills: SkillAssertions;
   commands: CommandAssertions;
   fileReads: FileReadAssertions;
@@ -170,7 +170,7 @@ export type SkillGymSoftAssert = typeof nodeAssert & {
   output: OutputAssertions;
 };
 
-export type SkillGymAssert = typeof nodeAssert & {
+export type SkillGymAssert = NodeAssert & {
   soft: SkillGymSoftAssert;
   skills: SkillAssertions;
   commands: CommandAssertions;
