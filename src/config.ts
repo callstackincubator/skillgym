@@ -58,7 +58,7 @@ export interface SnapshotConfig {
   tolerance: SnapshotToleranceConfig;
 }
 
-export interface SkillGymConfig {
+export interface SkillgymConfig {
   run?: {
     cwd?: string;
     outputDir?: string;
@@ -79,15 +79,15 @@ export interface SkillGymConfig {
   snapshots?: SnapshotConfig;
 }
 
-export interface LoadedSkillGymConfig {
+export interface LoadedSkillgymConfig {
   filePath?: string;
-  config: SkillGymConfig;
+  config: SkillgymConfig;
 }
 
 export async function loadConfig(options: {
   suitePath: string;
   configPath?: string;
-}): Promise<LoadedSkillGymConfig> {
+}): Promise<LoadedSkillgymConfig> {
   const filePath =
     options.configPath !== undefined
       ? path.resolve(options.configPath)
@@ -109,7 +109,7 @@ export async function loadConfig(options: {
   };
 }
 
-export function parseConfig(raw: unknown): SkillGymConfig {
+export function parseConfig(raw: unknown): SkillgymConfig {
   const record = parseObject(raw, undefined);
   ensureKnownKeys(record, TOP_LEVEL_KEYS, undefined);
 
@@ -132,7 +132,7 @@ export function resolveRunOptions(
     retryFailed?: string;
     tags?: string[];
   },
-  config: SkillGymConfig,
+  config: SkillgymConfig,
 ): {
   cwd: string;
   outputDir?: string;
@@ -184,7 +184,7 @@ export function resolveReporterOptions(
     reporter?: string;
     cwd?: string;
   },
-  loadedConfig: LoadedSkillGymConfig,
+  loadedConfig: LoadedSkillgymConfig,
 ): {
   reporter?: string;
   cwd: string;
@@ -204,7 +204,7 @@ export function resolveReporterOptions(
 
 export function getCaseExecutionOptions(
   case_: { timeoutMs?: number },
-  config: SkillGymConfig,
+  config: SkillgymConfig,
 ): {
   timeoutMs: number;
 } {
@@ -257,7 +257,7 @@ function readConfigModule(imported: unknown): unknown {
   return imported;
 }
 
-function resolveConfigPaths(config: SkillGymConfig, configDir: string): SkillGymConfig {
+function resolveConfigPaths(config: SkillgymConfig, configDir: string): SkillgymConfig {
   return {
     run:
       config.run === undefined
@@ -368,7 +368,7 @@ function looksPathLike(value: string): boolean {
   );
 }
 
-function parseRunConfig(value: unknown, configPath: string): SkillGymConfig["run"] | undefined {
+function parseRunConfig(value: unknown, configPath: string): SkillgymConfig["run"] | undefined {
   if (value === undefined) {
     return undefined;
   }
@@ -519,7 +519,7 @@ function parseScheduleMode(value: unknown, configPath: string): ScheduleMode {
 function parseDefaultsConfig(
   value: unknown,
   configPath: string,
-): SkillGymConfig["defaults"] | undefined {
+): SkillgymConfig["defaults"] | undefined {
   if (value === undefined) {
     return undefined;
   }
@@ -537,7 +537,7 @@ function parseDefaultsConfig(
 function parseSnapshotConfig(
   value: unknown,
   configPath: string,
-): SkillGymConfig["snapshots"] | undefined {
+): SkillgymConfig["snapshots"] | undefined {
   if (value === undefined) {
     return undefined;
   }
@@ -554,7 +554,7 @@ function parseSnapshotConfig(
   };
 }
 
-function parseRunnersConfig(value: unknown, configPath: string): SkillGymConfig["runners"] {
+function parseRunnersConfig(value: unknown, configPath: string): SkillgymConfig["runners"] {
   const record = parseObject(value, configPath);
 
   if (Object.keys(record).length === 0) {

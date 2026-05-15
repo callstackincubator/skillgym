@@ -31,7 +31,7 @@ bun add --dev skillgym
 Create `skillgym.config.ts` in your project root, or in a parent directory that the suite can discover upward:
 
 ```ts
-import type { SkillGymConfig } from "skillgym";
+import type { SkillgymConfig } from "skillgym";
 
 const config = {
   run: {
@@ -67,7 +67,7 @@ const config = {
       },
     },
   },
-} satisfies SkillGymConfig;
+} satisfies SkillgymConfig;
 
 export default config;
 ```
@@ -179,13 +179,13 @@ The execution unit is one case x runner pair. `skillgym` expands the suite into 
 
 `serial` is the default. `parallel` maximizes overlap across the full matrix up to the configured cap. `isolated-by-runner` is a middle ground when you want each runner to stay ordered internally but still allow different runners to overlap.
 
-For concurrent schedules, `run.maxParallel` defaults to `os.availableParallelism()`. This limits how many SkillGym executions are active at once; it does not pin or limit CPU cores used by an individual agent process.
+For concurrent schedules, `run.maxParallel` defaults to `os.availableParallelism()`. This limits how many Skillgym executions are active at once; it does not pin or limit CPU cores used by an individual agent process.
 
 Concurrent schedules do not copy or isolate the workspace by themselves. Overlapping executions may still interact through the same filesystem state and live runner output unless you use isolated workspaces. OpenCode, Codex, and Claude Code runtime state are isolated per execution under each artifact directory.
 
 `run.repeat` is useful when you want stability sampling instead of a single lucky pass. Each case x runner execution keeps running until it records the requested number of successful classified results, or stops early when one repetition still fails after exhausting `run.repeatFailure` retries.
 
-`run.repeatFailure` retries only the current repetition when it still counts as failed after result classification. SkillGym keeps all repetition and retry artifacts, averages visible duration and token metrics across the final results of completed successful repetitions, and preserves the full nested detail in `results.json`.
+`run.repeatFailure` retries only the current repetition when it still counts as failed after result classification. Skillgym keeps all repetition and retry artifacts, averages visible duration and token metrics across the final results of completed successful repetitions, and preserves the full nested detail in `results.json`.
 
 Artifacts for repeated executions are grouped under the stable case x runner directory using `repeat-N` directories, with retry sessions nested as `session-N` inside the repetition that needed recovery.
 

@@ -28,7 +28,7 @@ export type {
   RunnerSummary,
   SuiteRunResult,
 } from "./domain/result.js";
-export type { SkillGymConfig } from "./config.js";
+export type { SkillgymConfig } from "./config.js";
 export { loadConfig, parseConfig } from "./config.js";
 export type {
   BenchmarkReporter,
@@ -61,8 +61,8 @@ export type {
   OutputAssertions,
   SkillAssertionOptions,
   SkillAssertions,
-  SkillGymAssert,
-  SkillGymSoftAssert,
+  SkillgymAssert,
+  SkillgymSoftAssert,
   SkillConfidence,
   StructuredCommandMatcher,
   ToolCallAssertions,

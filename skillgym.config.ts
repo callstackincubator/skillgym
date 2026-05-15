@@ -1,3 +1,5 @@
+import { SkillgymConfig } from "./src/index";
+
 const config = {
   run: {
     cwd: ".",
@@ -34,6 +36,6 @@ const config = {
       },
     },
   },
-};
+} satisfies SkillgymConfig;
 
 export default config;
