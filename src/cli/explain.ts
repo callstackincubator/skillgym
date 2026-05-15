@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import cliSpinners from "cli-spinners";
@@ -32,7 +32,7 @@ export async function explainCommandWithWriter(
   const colors = pc.createColors(Boolean(stdout.isTTY));
   const accent = (value: string): string =>
     colors.isColorSupported ? `${ACCENT_OPEN}${value}${ACCENT_CLOSE}` : value;
-  const artifactDir = path.resolve(options.artifactDir);
+  const artifactDir = await resolveExplainArtifactDirectory(path.resolve(options.artifactDir));
   const explainPath = path.join(artifactDir, "explain.json");
   const explanationsPath = path.join(artifactDir, "explanations.json");
   const reportPath = path.join(artifactDir, "report.json");
@@ -193,6 +193,72 @@ async function readJsonIfPresent<T>(filePath: string): Promise<T | undefined> {
 
     throw error;
   }
+}
+
+async function resolveExplainArtifactDirectory(artifactDir: string): Promise<string> {
+  if (await hasExplainArtifacts(artifactDir)) {
+    return artifactDir;
+  }
+
+  const nestedArtifactDirs = await collectExplainArtifactDirectories(artifactDir, 2);
+
+  if (nestedArtifactDirs.length === 1) {
+    return nestedArtifactDirs[0]!;
+  }
+
+  if (nestedArtifactDirs.length > 1) {
+    throw new Error(
+      "Multiple explain artifacts were found below the provided artifact directory. Pass the exact failed artifact directory instead.",
+    );
+  }
+
+  return artifactDir;
+}
+
+async function collectExplainArtifactDirectories(
+  artifactDir: string,
+  depth: number,
+): Promise<string[]> {
+  if (depth <= 0) {
+    return [];
+  }
+
+  let entries;
+  try {
+    entries = await readdir(artifactDir, { withFileTypes: true });
+  } catch (error) {
+    if (isMissingFileError(error)) {
+      return [];
+    }
+
+    throw error;
+  }
+
+  const nestedDirs = entries
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => path.join(artifactDir, entry.name))
+    .sort();
+  const matches: string[] = [];
+
+  for (const nestedDir of nestedDirs) {
+    if (await hasExplainArtifacts(nestedDir)) {
+      matches.push(nestedDir);
+      continue;
+    }
+
+    matches.push(...(await collectExplainArtifactDirectories(nestedDir, depth - 1)));
+  }
+
+  return matches;
+}
+
+async function hasExplainArtifacts(artifactDir: string): Promise<boolean> {
+  const [explainArtifact, explanationsArtifact] = await Promise.all([
+    readJsonIfPresent<ExplainArtifact>(path.join(artifactDir, "explain.json")),
+    readJsonIfPresent<ExplanationsArtifact>(path.join(artifactDir, "explanations.json")),
+  ]);
+
+  return explainArtifact !== undefined || explanationsArtifact !== undefined;
 }
 
 function isMissingFileError(error: unknown): error is NodeJS.ErrnoException {
