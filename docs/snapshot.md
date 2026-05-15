@@ -26,13 +26,13 @@ If both tolerances are configured, exceeding either one fails the execution.
 ```ts
 export default {
   runners: {
-    open-main: {
+    "open-main": {
       agent: {
         type: "opencode",
         model: "openai/gpt-5",
       },
     },
-    code-main: {
+    "code-main": {
       agent: {
         type: "codex",
         model: "gpt-5",

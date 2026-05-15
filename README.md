@@ -33,7 +33,7 @@ Create `skillgym.config.ts` in your project root, or in a parent directory that 
 ```ts
 import type { SkillGymConfig } from "skillgym";
 
-const config: SkillGymConfig = {
+const config = {
   run: {
     cwd: ".",
     outputDir: "./.skillgym-results",
@@ -48,26 +48,26 @@ const config: SkillGymConfig = {
     timeoutMs: 120_000,
   },
   runners: {
-    open-main: {
+    "open-main": {
       agent: {
         type: "opencode",
         model: "openai/gpt-5",
       },
     },
-    code-main: {
+    "code-main": {
       agent: {
         type: "codex",
         model: "gpt-5",
       },
     },
-    cursor-main: {
+    "cursor-main": {
       agent: {
         type: "cursor-agent",
         model: "composer-2-fast",
       },
     },
   },
-};
+} satisfies SkillGymConfig;
 
 export default config;
 ```
