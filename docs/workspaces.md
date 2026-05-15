@@ -94,7 +94,6 @@ export const workspace = {
 
 Bootstrap command behavior:
 
-- `cwd` is the isolated workspace
 - `cwd` is the shared workspace or isolated workspace for that execution
 - non-zero exit fails that execution before the agent runs
 - stdout and stderr are written to the execution artifact directory
@@ -122,7 +121,7 @@ Path rules:
 
 - config `run.workspace` paths resolve from the config file directory
 - suite `workspace` paths resolve from the suite file directory
-- `bootstrap.command` and path-like `bootstrap.args` are resolved from the config or suite directory before the bootstrap runs inside the isolated workspace
+- `bootstrap.command` and path-like `bootstrap.args` are resolved from the config or suite directory before the bootstrap runs inside the execution workspace
 
 ## Limitations
 
