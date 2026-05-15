@@ -8,7 +8,7 @@
 - `shared`: create one workspace per suite run and reuse it across executions
 - `isolated`: create a fresh workspace per case x runner execution
 
-Use `none` when the agent should run in an existing directory. Use `shared` or `isolated` when the suite needs SkillGym to provision a workspace first.
+Use `none` when the agent should run in an existing directory. Use `shared` or `isolated` when the suite needs Skillgym to provision a workspace first.
 
 ## Suite-level workspace config
 
@@ -61,7 +61,7 @@ Behavior:
 - if omitted, none mode falls back to config `run.cwd`, then `process.cwd()`
 - `templateDir` and `bootstrap` are not allowed
 
-If a suite file does not export `workspace`, SkillGym falls back to config `run.workspace`, then to implicit `none` mode.
+If a suite file does not export `workspace`, Skillgym falls back to config `run.workspace`, then to implicit `none` mode.
 
 ## Shared mode
 
