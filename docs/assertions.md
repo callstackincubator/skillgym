@@ -48,7 +48,7 @@ Rules:
 
 ## Soft assertions
 
-`assert.soft` mirrors the sync assertion methods on the root `assert` export and the grouped SkillGym helpers.
+`assert.soft` mirrors the sync assertion methods on the root `assert` export and the grouped Skillgym helpers.
 
 - soft failures are collected in execution order
 - the runner throws a single `AssertionError` after `case_.assert(report, ctx)` completes

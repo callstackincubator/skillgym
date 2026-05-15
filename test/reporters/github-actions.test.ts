@@ -93,7 +93,7 @@ test("github-actions reporter writes a job summary when GITHUB_STEP_SUMMARY is s
   });
 
   const summary = await readFile(summaryPath, "utf8");
-  expect(summary).toContain("## SkillGym Summary");
+  expect(summary).toContain("## Skillgym Summary");
   expect(summary).toContain("- Suite: `examples/basic-suite.ts`");
   expect(summary).toContain("- Cases: 0 passed, 1 failed");
   expect(summary).toContain("- Executions: 0 passed, 1 failed");

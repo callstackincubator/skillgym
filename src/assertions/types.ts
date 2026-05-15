@@ -162,7 +162,7 @@ export interface AssertionClassifier {
   <T>(failureClass: string | FailureClass, callback: () => T): T;
 }
 
-export type SkillGymSoftAssert = typeof nodeAssert & {
+export type SkillgymSoftAssert = typeof nodeAssert & {
   skills: SkillAssertions;
   commands: CommandAssertions;
   fileReads: FileReadAssertions;
@@ -170,8 +170,8 @@ export type SkillGymSoftAssert = typeof nodeAssert & {
   output: OutputAssertions;
 };
 
-export type SkillGymAssert = typeof nodeAssert & {
-  soft: SkillGymSoftAssert;
+export type SkillgymAssert = typeof nodeAssert & {
+  soft: SkillgymSoftAssert;
   skills: SkillAssertions;
   commands: CommandAssertions;
   fileReads: FileReadAssertions;

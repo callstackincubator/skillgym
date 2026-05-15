@@ -113,7 +113,7 @@ function formatJobSummary(result: SuiteRunResult): string {
   const totalExecutions = countTotalExecutions(result.cases);
   const failures = listFailures(result);
   const lines = [
-    "## SkillGym Summary",
+    "## Skillgym Summary",
     "",
     `- Suite: \`${result.suitePath}\``,
     `- Cases: ${passedCases} passed, ${result.cases.length - passedCases} failed`,

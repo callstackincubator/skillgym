@@ -12,7 +12,7 @@ import type {
   FileReadAssertions,
   OutputAssertions,
   SkillAssertions,
-  SkillGymSoftAssert,
+  SkillgymSoftAssert,
   ToolCallAssertions,
 } from "./types.js";
 
@@ -45,7 +45,7 @@ const softAssertionGroups = {
   output: OutputAssertions;
 };
 
-export const softAssert: SkillGymSoftAssert = Object.assign(
+export const softAssert: SkillgymSoftAssert = Object.assign(
   createSoftNodeAssert(),
   softAssertionGroups,
 );

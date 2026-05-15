@@ -6,9 +6,9 @@ import { outputAssertions } from "./output.js";
 import { skillAssertions } from "./skills.js";
 import { softAssert } from "./soft.js";
 import { toolCallAssertions } from "./tool-calls.js";
-import type { SkillGymAssert } from "./types.js";
+import type { SkillgymAssert } from "./types.js";
 
-export const assert: SkillGymAssert = Object.assign(nodeAssert, {
+export const assert: SkillgymAssert = Object.assign(nodeAssert, {
   classify<T>(failureClass: FailureClassInput, callback: () => T): T {
     try {
       return callback();
