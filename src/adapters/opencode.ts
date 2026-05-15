@@ -1,5 +1,5 @@
 import path from "node:path";
-import { copyFile, readFile } from "node:fs/promises";
+import { copyFile, readdir, readFile } from "node:fs/promises";
 import type {
   ExplainInput,
   ExplainResult,
@@ -160,7 +160,10 @@ export class OpenCodeAdapter extends BaseAdapter implements RunnerAdapter {
       throw new Error(`OpenCode run failed: ${runError}`);
     }
 
-    const sessionId = this.extractSessionId(stdout) ?? this.extractSessionId(stderr);
+    const sessionId =
+      this.extractSessionId(stdout) ??
+      this.extractSessionId(stderr) ??
+      (await this.extractSessionIdFromRuntimeLog(input));
 
     if (sessionId === undefined) {
       throw new Error(
@@ -393,6 +396,33 @@ export class OpenCodeAdapter extends BaseAdapter implements RunnerAdapter {
     const match = text.match(/\b(ses_[A-Za-z0-9]+)\b/);
     return match?.[1];
   }
+
+  private async extractSessionIdFromRuntimeLog(input: RunInput): Promise<string | undefined> {
+    const logDir = path.join(getOpenCodePaths(input).dataHome, "opencode", "log");
+    let entries: string[];
+
+    try {
+      entries = await readdir(logDir);
+    } catch (error) {
+      if (isMissingFileError(error)) {
+        return undefined;
+      }
+      throw error;
+    }
+
+    for (const entry of entries.toSorted().toReversed()) {
+      if (!entry.endsWith(".log")) {
+        continue;
+      }
+
+      const sessionId = this.extractSessionId(await readFile(path.join(logDir, entry), "utf8"));
+      if (sessionId !== undefined) {
+        return sessionId;
+      }
+    }
+
+    return undefined;
+  }
 }
 
 function getOpenCodeRuntimeRoot(input: RunInput): string {
@@ -533,8 +563,12 @@ function parseOpenCodeExport(value: string): OpenCodeExport & { messages: OpenCo
   try {
     parsed = JSON.parse(value);
   } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    throw new Error(`OpenCode export returned invalid JSON: ${reason}`);
+    try {
+      parsed = JSON.parse(extractJsonObject(value));
+    } catch {
+      const reason = error instanceof Error ? error.message : String(error);
+      throw new Error(`OpenCode export returned invalid JSON: ${reason}`);
+    }
   }
 
   if (!isOpenCodeExport(parsed)) {
@@ -542,6 +576,17 @@ function parseOpenCodeExport(value: string): OpenCodeExport & { messages: OpenCo
   }
 
   return parsed;
+}
+
+function extractJsonObject(value: string): string {
+  const start = value.indexOf("{");
+  const end = value.lastIndexOf("}");
+
+  if (start === -1 || end === -1 || end < start) {
+    throw new Error("OpenCode export output did not contain a JSON object.");
+  }
+
+  return value.slice(start, end + 1);
 }
 
 function isOpenCodeExport(

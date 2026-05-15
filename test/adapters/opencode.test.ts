@@ -16,7 +16,7 @@ afterEach(async () => {
 test("OpenCodeAdapter collect parses export payload wrapped in extra text", async () => {
   const tempDir = await createTempDir();
   const adapter = new ExportingOpenCodeAdapter({
-    exportStdout: JSON.stringify({
+    exportStdout: `Exporting session: ses_123\n${JSON.stringify({
       info: { id: "ses_123" },
       messages: [
         {
@@ -36,7 +36,7 @@ test("OpenCodeAdapter collect parses export payload wrapped in extra text", asyn
           ],
         },
       ],
-    }),
+    })}`,
   });
 
   const input = {
@@ -86,6 +86,46 @@ test("OpenCodeAdapter collect parses export payload wrapped in extra text", asyn
     output: "provider",
     reasoning: "provider",
   });
+});
+
+test("OpenCodeAdapter collect falls back to runtime log session id", async () => {
+  const tempDir = await createTempDir();
+  const adapter = new ExportingOpenCodeAdapter({
+    exportStdout: JSON.stringify({
+      info: { id: "ses_fromlog" },
+      messages: [],
+    }),
+    expectedSessionId: "ses_fromlog",
+  });
+
+  const input = {
+    ...createRunInput(),
+    cwd: tempDir,
+    artifactsDir: path.join(tempDir, "artifacts"),
+  } satisfies RunInput;
+  const logDir = path.join(input.artifactsDir, "opencode-xdg", "data", "opencode", "log");
+  await mkdir(logDir, { recursive: true });
+  await writeFile(
+    path.join(logDir, "2026-05-15T115637.log"),
+    "INFO service=session id=ses_fromlog created\n",
+    "utf8",
+  );
+
+  const stdoutPath = path.join(tempDir, "stdout.log");
+  const stderrPath = path.join(tempDir, "stderr.log");
+  await writeFile(stdoutPath, "", "utf8");
+  await writeFile(stderrPath, "Database migration complete.\n", "utf8");
+
+  const artifacts = await adapter.collect(
+    {
+      ...createArtifacts(),
+      stdoutPath,
+      stderrPath,
+    },
+    input,
+  );
+
+  expect(artifacts.sessionId).toBe("ses_fromlog");
 });
 
 test("OpenCodeAdapter collect fails when export output is invalid JSON", async () => {
@@ -335,7 +375,7 @@ async function createTempDir(): Promise<string> {
 class ExportingOpenCodeAdapter extends OpenCodeAdapter {
   exportEnv?: Record<string, string>;
 
-  constructor(private readonly testOptions: { exportStdout: string }) {
+  constructor(private readonly testOptions: { exportStdout: string; expectedSessionId?: string }) {
     super();
   }
 
@@ -346,7 +386,7 @@ class ExportingOpenCodeAdapter extends OpenCodeAdapter {
     options?: { env?: Record<string, string> },
   ) {
     expect(command).toBe("opencode");
-    expect(args).toEqual(["export", "ses_123"]);
+    expect(args).toEqual(["export", this.testOptions.expectedSessionId ?? "ses_123"]);
     this.exportEnv = options?.env;
 
     const stdoutPath = path.join(input.artifactsDir, "stdout.log");
