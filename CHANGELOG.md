@@ -1,5 +1,29 @@
 # skillgym
 
+## 0.9.0
+
+### Minor Changes
+
+- [#34](https://github.com/callstackincubator/skillgym/pull/34) [`2693d64`](https://github.com/callstackincubator/skillgym/commit/2693d6483fef890ca35f92689ddbafd44137c908) Thanks [@V3RON](https://github.com/V3RON)! - Use Commander for argv parsing.
+
+- [#36](https://github.com/callstackincubator/skillgym/pull/36) [`aa653cf`](https://github.com/callstackincubator/skillgym/commit/aa653cfcaf1fc36ffc9bbf92ae3d262c06782300) Thanks [@CAMOBAP](https://github.com/CAMOBAP)! - Add built-in HTML reporter.
+
+- [#40](https://github.com/callstackincubator/skillgym/pull/40) [`a668d40`](https://github.com/callstackincubator/skillgym/commit/a668d40627847b224e6a32a5663a5bdf74b1bacf) Thanks [@V3RON](https://github.com/V3RON)! - Allow shared workspace bootstrap setup.
+
+### Patch Changes
+
+- [#42](https://github.com/callstackincubator/skillgym/pull/42) [`ac9dda4`](https://github.com/callstackincubator/skillgym/commit/ac9dda4afee0491f8b86f27497cd92dc90eb256f) Thanks [@V3RON](https://github.com/V3RON)! - Fix OpenCode artifact collection.
+
+- [#41](https://github.com/callstackincubator/skillgym/pull/41) [`5907944`](https://github.com/callstackincubator/skillgym/commit/590794438323c71bb5480366e73b7d635d8d306a) Thanks [@V3RON](https://github.com/V3RON)! - Normalize Skillgym casing across docs and APIs.
+
+- [#39](https://github.com/callstackincubator/skillgym/pull/39) [`9facf01`](https://github.com/callstackincubator/skillgym/commit/9facf0165362930434e364a9c74c10f44265bf9d) Thanks [@V3RON](https://github.com/V3RON)! - Fix public assert typings.
+
+- [#38](https://github.com/callstackincubator/skillgym/pull/38) [`99608d0`](https://github.com/callstackincubator/skillgym/commit/99608d0477fab04ebcff8a9a863c9fa59395b23a) Thanks [@V3RON](https://github.com/V3RON)! - Fix explain artifact path resolution.
+
+- [#37](https://github.com/callstackincubator/skillgym/pull/37) [`e59f808`](https://github.com/callstackincubator/skillgym/commit/e59f808b43b6f187ad401aaa5810e775de910989) Thanks [@V3RON](https://github.com/V3RON)! - Fix README config example syntax.
+
+- [#35](https://github.com/callstackincubator/skillgym/pull/35) [`7db9dd3`](https://github.com/callstackincubator/skillgym/commit/7db9dd3179af56cf43c4716cbeea171adce8ed25) Thanks [@V3RON](https://github.com/V3RON)! - chore: pin GitHub Actions workflows.
+
 ## 0.8.1
 
 ### Patch Changes
