@@ -31,7 +31,7 @@ ${theme.bold("Run Options:")}
   --case ${theme.accent("<id>")}            Filter the configured suite to one case id
   --tag ${theme.accent("<tag>")}            Filter cases by tag; repeat or comma-separate for OR matching
   --runner ${theme.accent("<runner-id>")}   Filter the configured runner set by runner id
-  --reporter ${theme.accent("<value>")}     Use ${theme.light("standard")}, ${theme.light("json")}, ${theme.light("github-actions")}, or override run.reporter
+  --reporter ${theme.accent("<value>")}     Use ${theme.light("standard")}, ${theme.light("json")}, ${theme.light("json-summary")}, ${theme.light("token-usage")}, ${theme.light("github-actions")}, ${theme.light("html")}, or override run.reporter
   --snapshots ${theme.accent("<path>")}     Override the configured snapshot file path
   --update-snapshots       Refresh snapshot baselines for the selected executions
 

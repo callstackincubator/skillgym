@@ -16,3 +16,4 @@ export { createJsonReporter } from "./json.js";
 export { createJsonSummaryReporter } from "./json-summary.js";
 export { loadReporter } from "./load-reporter.js";
 export { createStandardReporter } from "./standard.js";
+export { createTokenUsageReporter } from "./token-usage.js";

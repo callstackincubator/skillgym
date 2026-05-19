@@ -47,6 +47,7 @@ export {
   createGitHubActionsReporter,
   createHtmlReporter,
   createJsonReporter,
+  createTokenUsageReporter,
   createStandardReporter,
   loadReporter,
 } from "./reporters/index.js";
