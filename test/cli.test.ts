@@ -63,6 +63,7 @@ test("cli skills list prints bundled skill names", async () => {
   expect(result.stdout).toContain("core");
   expect(result.stdout).toContain("reporters");
   expect(result.stdout).toContain("snapshots");
+  expect(result.stdout).toContain("token-optimization");
   expect(result.stdout).toContain("cases");
   expect(result.stdout).toContain("workspaces");
 });
@@ -75,6 +76,16 @@ test("cli skills get core prints the bundled core skill", async () => {
   expect(result.stdout).toContain("# skillgym core");
   expect(result.stdout).toContain("skillgym skills get cases");
   expect(result.stdout).toContain("skillgym run <suite.ts>");
+});
+
+test("cli skills get token-optimization prints the bundled optimization skill", async () => {
+  const result = await execCli(["skills", "get", "token-optimization"]);
+
+  expect(result.exitCode).toBe(0);
+  expect(result.stderr).toBe("");
+  expect(result.stdout).toContain("# skillgym token-optimization");
+  expect(result.stdout).toContain("skillgym run <suite.ts> --reporter token-usage");
+  expect(result.stdout).toContain("require a passing baseline before editing");
 });
 
 test("cli skills get reports missing skill name without printing MOTD banner", async () => {
