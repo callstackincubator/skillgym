@@ -7,7 +7,6 @@ import { execFileCapture } from "../src/utils/process.js";
 import { accumulateTagOptionValues, parseTagOption } from "../src/cli/tag-options.js";
 
 const repoRoot = process.cwd();
-const tsxLoaderPath = path.join(repoRoot, "node_modules", "tsx", "dist", "loader.mjs");
 const tempDirs: string[] = [];
 
 afterEach(async () => {
@@ -880,12 +879,8 @@ test("cli run passes retryFailed through to execution", async () => {
 });
 
 async function execCli(args: string[], cwd = repoRoot) {
-  return execFileCapture(
-    process.execPath,
-    ["--import", tsxLoaderPath, path.join(repoRoot, "index.ts"), ...args],
-    {
-      cwd,
-      timeoutMs: 30_000,
-    },
-  );
+  return execFileCapture(process.execPath, [path.join(repoRoot, "bin.js"), ...args], {
+    cwd,
+    timeoutMs: 30_000,
+  });
 }
