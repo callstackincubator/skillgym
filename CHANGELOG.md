@@ -1,5 +1,11 @@
 # skillgym
 
+## 0.9.1
+
+### Patch Changes
+
+- Fix Skillgym CLI startup when running the package build on modern Node versions.
+
 ## 0.9.0
 
 ### Minor Changes
