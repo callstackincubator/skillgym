@@ -1,6 +1,6 @@
 {
   "name": "skillgym",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "private": false,
   "description": "Prove your agent skills work before you ship them.",
   "keywords": [
@@ -43,7 +43,7 @@
   "scripts": {
     "build": "npm run build:runtime && npm run build:declarations",
     "build:declarations": "tsc -p ./tsconfig.build.json",
-    "build:runtime": "esbuild ./src/index.ts ./src/cli.ts --bundle --platform=node --format=esm --target=node22 --outdir=./dist",
+    "build:runtime": "esbuild ./src/index.ts ./src/cli.ts --bundle --packages=external --platform=node --format=esm --target=node22 --outdir=./dist",
     "fmt": "oxfmt .",
     "fmt:check": "oxfmt --check .",
     "prepare": "husky",
@@ -52,7 +52,7 @@
     "skillgym:help": "tsx ./index.ts help",
     "skillgym:example:basic": "tsx ./index.ts run ./examples/basic-suite.ts",
     "skillgym:example:skill-selection": "tsx ./index.ts run ./examples/skill-selection-suite.ts",
-    "test": "vitest run",
+    "test": "npm run build:runtime && vitest run",
     "typecheck": "tsc -p ./tsconfig.json --noEmit"
   },
   "dependencies": {

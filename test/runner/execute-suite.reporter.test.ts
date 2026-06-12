@@ -1483,7 +1483,7 @@ test("executeSuite raises process max listeners for parallel runs and restores i
           passed: true,
           durationMs: 10,
           executionArtifactDir: options.artifactDir,
-          outputTokens: 20,
+          outputTokens: 0,
           observedReads: 0,
         });
       },
