@@ -35,6 +35,12 @@ const config = {
         model: "auto",
       },
     },
+    "copilot-main": {
+      agent: {
+        type: "copilot",
+        model: "gpt-5.4-mini",
+      },
+    },
   },
 } satisfies SkillgymConfig;
 

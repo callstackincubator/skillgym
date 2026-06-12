@@ -596,16 +596,17 @@ function parseAgentConfig(value: unknown, configPath: string): RunnerConfig["age
 function parseRequiredAgentType(
   value: unknown,
   configPath: string,
-): "codex" | "opencode" | "claude-code" | "cursor-agent" {
+): "codex" | "opencode" | "claude-code" | "cursor-agent" | "copilot" {
   if (
     value !== "codex" &&
     value !== "opencode" &&
     value !== "claude-code" &&
-    value !== "cursor-agent"
+    value !== "cursor-agent" &&
+    value !== "copilot"
   ) {
     throw invalidConfig(
       configPath,
-      'expected "codex", "opencode", "claude-code", or "cursor-agent"',
+      'expected "codex", "opencode", "claude-code", "cursor-agent", or "copilot"',
     );
   }
 

@@ -18,6 +18,7 @@ Supported in V1:
 - Codex CLI
 - Claude Code CLI
 - Cursor Agent CLI
+- GitHub Copilot CLI
 
 ## Core principles
 

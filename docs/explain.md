@@ -91,6 +91,7 @@ Deferred explain is implemented for:
 - Codex
 - Claude Code
 - Cursor Agent
+- GitHub Copilot CLI
 
 Each runner must have a resumable session id captured during the original run.
 

@@ -50,11 +50,12 @@ export interface SessionReport {
     stderrPath?: string;
     sessionPath?: string;
     exportPath?: string;
+    telemetryPath?: string;
   };
 }
 ```
 
-`runner.id` is the configured runner id, and `runner.agent.type` identifies the backing integration such as `opencode`, `codex`, or `claude-code`.
+`runner.id` is the configured runner id, and `runner.agent.type` identifies the backing integration such as `opencode`, `codex`, `claude-code`, `cursor-agent`, or `copilot`.
 
 ## Skill detection
 
@@ -110,7 +111,7 @@ Preferred source order:
 
 1. `inputTokens + outputTokens + reasoningTokens - cacheTokens`
 
-This keeps OpenCode, Codex, and Claude Code comparable even though the raw provider fields use different cache semantics.
+This keeps OpenCode, Codex, Claude Code, Cursor Agent, and Copilot comparable even though the raw provider fields use different cache semantics.
 
 Snapshot enforcement uses the selected token metric directly and does not fall back to character counts when token usage is unavailable.
 

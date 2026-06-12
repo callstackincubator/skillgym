@@ -2,6 +2,7 @@ import type {
   AgentConfig,
   ClaudeCodeAgentConfig,
   CodexAgentConfig,
+  CopilotAgentConfig,
   CursorAgentConfig,
   OpenCodeAgentConfig,
   RunnerInfo,
@@ -21,7 +22,13 @@ export interface RunInput {
 
 export type RunnerAdapterConfig = AgentConfig;
 
-export type { ClaudeCodeAgentConfig, CodexAgentConfig, CursorAgentConfig, OpenCodeAgentConfig };
+export type {
+  ClaudeCodeAgentConfig,
+  CodexAgentConfig,
+  CopilotAgentConfig,
+  CursorAgentConfig,
+  OpenCodeAgentConfig,
+};
 
 export interface RunHandle {
   startedAt: string;
@@ -42,6 +49,7 @@ export interface RawRunArtifacts {
   sessionId?: string;
   sessionPath?: string;
   exportPath?: string;
+  telemetryPath?: string;
   rawSession?: unknown;
 }
 

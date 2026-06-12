@@ -19,7 +19,7 @@ const NPM = 'https://www.npmjs.com/package/skillgym';
 const marqueeItems = [
   'Catch skill regressions','TypeScript assertions','Token usage snapshots',
   'Count tokens per execution','Same skill, every agent','Proof from every execution',
-  'Inspect commands and file reads','OpenCode','Codex','Claude Code','Cursor Agent',
+  'Inspect commands and file reads','OpenCode','Codex','Claude Code','Cursor Agent','Copilot',
   'Real agent sessions','Isolated workspaces','Open source',
 ];
 const doubled = [...marqueeItems, ...marqueeItems];
@@ -65,6 +65,12 @@ const config: SkillgymConfig = {
       agent: {
         type: "opencode",
         model: "openai/gpt-4o",
+      },
+    },
+    "copilot-main": {
+      agent: {
+        type: "copilot",
+        model: "gpt-5.4-mini",
       },
     },
   },
@@ -308,7 +314,7 @@ export default suite;`;
           <div class="split-copy">
             <p class="eyebrow eyebrow-light">RUNNERS</p>
             <h2 class="h2-light">Same skill.<br />Different agents.</h2>
-            <p class="split-body">The same skill edit can behave differently on each runner. Compare OpenCode, Codex, Claude Code, and Cursor Agent on the same cases before you trust the change.</p>
+            <p class="split-body">The same skill edit can behave differently on each runner. Compare OpenCode, Codex, Claude Code, Cursor Agent, and GitHub Copilot CLI on the same cases before you trust the change.</p>
           </div>
           <div class="split-visual">
             <div class="agent-stack">
@@ -339,6 +345,13 @@ export default suite;`;
                   <p class="agent-desc">Cursor CLI agent mode</p>
                 </div>
                 <span class="agent-badge">cursor-agent</span>
+              </div>
+              <div class="agent-card">
+                <div class="agent-info">
+                  <p class="agent-name">GitHub Copilot CLI</p>
+                  <p class="agent-desc">GitHub's terminal coding agent</p>
+                </div>
+                <span class="agent-badge">copilot</span>
               </div>
             </div>
           </div>

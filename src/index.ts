@@ -3,6 +3,7 @@ export type {
   AgentConfig,
   AgentType,
   ClaudeCodeAgentConfig,
+  CopilotAgentConfig,
   RunnerConfig,
   RunnerId,
   RunnerInfo,
