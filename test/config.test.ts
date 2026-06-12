@@ -387,6 +387,28 @@ describe("config", () => {
     });
   });
 
+  test("accepts copilot runner configs", () => {
+    const parsed = parseConfig({
+      runners: {
+        copilot: {
+          agent: {
+            type: "copilot",
+            command: "copilot",
+            model: "gpt-5.4-mini",
+          },
+        },
+      },
+    });
+
+    expect(parsed.runners.copilot?.agent).toEqual({
+      type: "copilot",
+      command: "copilot",
+      commandArgs: undefined,
+      env: undefined,
+      model: "gpt-5.4-mini",
+    });
+  });
+
   test("throws when multiple config files exist in the same directory", async () => {
     const suiteDir = path.join(tempDir, "bench");
     await mkdir(suiteDir, { recursive: true });

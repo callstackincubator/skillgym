@@ -50,6 +50,7 @@ export interface RawArtifactPaths {
   stderrPath?: string;
   sessionPath?: string;
   exportPath?: string;
+  telemetryPath?: string;
 }
 
 export type SessionEvent =

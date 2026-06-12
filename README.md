@@ -16,6 +16,7 @@ When you evaluate agent skills manually, it is hard to tell whether the agent ac
 - Codex CLI
 - Claude Code
 - Cursor Agent (Cursor CLI `agent`)
+- GitHub Copilot CLI (`copilot`)
 
 ## Quick start
 
@@ -64,6 +65,12 @@ const config = {
       agent: {
         type: "cursor-agent",
         model: "composer-2-fast",
+      },
+    },
+    "copilot-main": {
+      agent: {
+        type: "copilot",
+        model: "gpt-5.4-mini",
       },
     },
   },
@@ -165,7 +172,7 @@ Most important config properties:
 - `run.maxSteps`: best-effort limit on streamed agent steps before skillgym terminates the execution
 - `run.workspace`: default workspace mode for the suite
 - `defaults.timeoutMs`: default per-case timeout
-- `runners.<id>.agent.type`: which agent integration to use, currently `opencode`, `codex`, `claude-code`, or `cursor-agent`
+- `runners.<id>.agent.type`: which agent integration to use, currently `opencode`, `codex`, `claude-code`, `cursor-agent`, or `copilot`
 - `runners.<id>.agent.model`: model passed to that runner
 - `snapshots`: token regression baseline configuration
 
@@ -181,7 +188,7 @@ The execution unit is one case x runner pair. `skillgym` expands the suite into 
 
 For concurrent schedules, `run.maxParallel` defaults to `os.availableParallelism()`. This limits how many Skillgym executions are active at once; it does not pin or limit CPU cores used by an individual agent process.
 
-Concurrent schedules do not copy or isolate the workspace by themselves. Overlapping executions may still interact through the same filesystem state and live runner output unless you use isolated workspaces. OpenCode, Codex, and Claude Code runtime state are isolated per execution under each artifact directory.
+Concurrent schedules do not copy or isolate the workspace by themselves. Overlapping executions may still interact through the same filesystem state and live runner output unless you use isolated workspaces. OpenCode, Codex, Claude Code, and Copilot runtime state are isolated per execution under each artifact directory.
 
 `run.repeat` is useful when you want stability sampling instead of a single lucky pass. Each case x runner execution keeps running until it records the requested number of successful classified results, or stops early when one repetition still fails after exhausting `run.repeatFailure` retries.
 

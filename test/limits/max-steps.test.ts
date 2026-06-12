@@ -69,4 +69,24 @@ describe("max steps monitor", () => {
       monitor.observeLine('{"type":"assistant","message":{"role":"assistant"}}'),
     ).toMatchObject({ observedSteps: 2 });
   });
+
+  test("deduplicates copilot assistant messages by id", () => {
+    const monitor = createMaxStepsMonitor({
+      agentType: "copilot",
+      runnerId: "copilot-main",
+      maxSteps: 1,
+    });
+
+    expect(
+      monitor.observeLine('{"type":"assistant.message","data":{"messageId":"msg_1"}}'),
+    ).toBeUndefined();
+    expect(
+      monitor.observeLine('{"type":"assistant.message","data":{"messageId":"msg_1"}}'),
+    ).toBeUndefined();
+    expect(
+      monitor.observeLine('{"type":"assistant.message","data":{"messageId":"msg_2"}}'),
+    ).toMatchObject({
+      observedSteps: 2,
+    });
+  });
 });

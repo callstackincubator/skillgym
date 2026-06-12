@@ -15,6 +15,7 @@ Before adding or changing a term, check this file and ask the user for approval.
 - `prompt`: Exact instruction sent to the agent.
 - `runner`: Configured execution target: agent type plus model.
 - `agent`: External coding agent doing the work.
+- `copilot`: GitHub Copilot CLI agent type.
 - `suite run`: One top-level `skillgym run ...` over one suite.
 - `execution`: One case x runner unit of work, including all its repetitions and retries.
 - `repetition`: One planned sample within an execution.

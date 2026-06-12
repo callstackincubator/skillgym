@@ -84,6 +84,8 @@ function createStepDetector(agentType: AgentType): StepDetector {
       return new ClaudeCodeStepDetector();
     case "cursor-agent":
       return new CursorAgentStepDetector();
+    case "copilot":
+      return new CopilotStepDetector();
   }
 }
 
@@ -170,6 +172,30 @@ class CursorAgentStepDetector implements StepDetector {
       this.steps += 1;
     }
 
+    return this.steps;
+  }
+}
+
+class CopilotStepDetector implements StepDetector {
+  private steps = 0;
+  private readonly seenMessageIds = new Set<string>();
+
+  observe(record: unknown): number {
+    if (readString(record, "type") !== "assistant.message") {
+      return this.steps;
+    }
+
+    const data = readRecord(record, "data");
+    const messageId = readString(data, "messageId");
+    if (messageId !== undefined) {
+      if (this.seenMessageIds.has(messageId)) {
+        return this.steps;
+      }
+
+      this.seenMessageIds.add(messageId);
+    }
+
+    this.steps += 1;
     return this.steps;
   }
 }

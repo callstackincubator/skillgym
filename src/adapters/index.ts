@@ -1,6 +1,7 @@
 import type { RunnerAdapter, RunnerAdapterConfig } from "../domain/adapter.js";
 import { ClaudeCodeAdapter } from "./claude-code.js";
 import { CodexAdapter } from "./codex.js";
+import { CopilotAdapter } from "./copilot.js";
 import { CursorAgentAdapter } from "./cursor-agent.js";
 import { OpenCodeAdapter } from "./opencode.js";
 
@@ -14,5 +15,7 @@ export function getAdapter(config: RunnerAdapterConfig): RunnerAdapter {
       return new ClaudeCodeAdapter(config);
     case "cursor-agent":
       return new CursorAgentAdapter(config);
+    case "copilot":
+      return new CopilotAdapter(config);
   }
 }
