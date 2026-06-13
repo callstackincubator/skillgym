@@ -57,7 +57,10 @@ function createProgram(): Command {
       [],
     )
     .option("--runner <runner-id>", "Filter the configured runner set by runner id")
-    .option("--reporter <value>", "Use standard, json, github-actions, or override run.reporter")
+    .option(
+      "--reporter <value>",
+      "Use standard, json, json-summary, token-usage, github-actions, html, or override run.reporter",
+    )
     .option("--snapshots <path>", "Override the configured snapshot file path")
     .option("--update-snapshots", "Refresh snapshot baselines for the selected executions");
 
