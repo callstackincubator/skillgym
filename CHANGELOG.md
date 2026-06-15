@@ -1,5 +1,11 @@
 # skillgym
 
+## 0.10.0
+
+### Minor Changes
+
+- [#48](https://github.com/callstackincubator/skillgym/pull/48) [`6cddd07`](https://github.com/callstackincubator/skillgym/commit/6cddd078d04afc3be5df8b58bb475a8fede1b836) Thanks [@V3RON](https://github.com/V3RON)! - Add GitHub Copilot CLI as a supported runner with JSONL session normalization, isolated Copilot runtime state, token usage capture, explicit skill detection, docs, and website coverage.
+
 ## 0.9.1
 
 ### Patch Changes
