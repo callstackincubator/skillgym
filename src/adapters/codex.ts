@@ -1,5 +1,5 @@
 import path from "node:path";
-import { cp, readdir, readFile, stat } from "node:fs/promises";
+import { cp, mkdtemp, readdir, readFile, rm, stat } from "node:fs/promises";
 import os from "node:os";
 import type {
   CodexAgentConfig,
@@ -10,6 +10,8 @@ import type {
   RunInput,
   RunnerAdapter,
 } from "../domain/adapter.js";
+import type { JudgeInput, JudgeVerdict } from "../domain/judge.js";
+import { parseJudgeVerdict } from "../domain/judge.js";
 import type { SessionEvent, SessionReport } from "../domain/session-report.js";
 import { resolveReportedPath } from "../normalize/reported-path.js";
 import { inferSkillsFromPaths } from "../normalize/skill-detection.js";
@@ -45,6 +47,60 @@ export class CodexAdapter extends BaseAdapter implements RunnerAdapter {
       },
     });
     return handle;
+  }
+
+  async judge(input: JudgeInput): Promise<JudgeVerdict> {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), "skillgym-codex-judge-"));
+    const judgeInput = createJudgeRunInput(input, tempRoot);
+    const codexHome = getCodexHome(judgeInput);
+    const codexSqliteHome = getCodexSqliteHome(judgeInput);
+    const command = this.options.command ?? "npx";
+    const args = [
+      ...(this.options.commandArgs ?? []),
+      "codex",
+      "exec",
+      ...(this.options.model === undefined ? [] : ["--model", this.options.model]),
+      "--json",
+      "--sandbox",
+      "read-only",
+      "--ephemeral",
+      "--skip-git-repo-check",
+      "-C",
+      tempRoot,
+      input.prompt,
+    ];
+
+    try {
+      await Promise.all([
+        ensureDir(codexHome),
+        ensureDir(codexSqliteHome),
+        seedCodexRuntime(judgeInput),
+      ]);
+
+      const handle = await this.runCommand(command, args, judgeInput, {
+        env: {
+          ...this.options.env,
+          CODEX_HOME: codexHome,
+          CODEX_SQLITE_HOME: codexSqliteHome,
+        },
+      });
+      const stdout = await readFile(handle.stdoutPath, "utf8");
+      const stderr = await readFile(handle.stderrPath, "utf8");
+      const report = await this.normalize(judgeInput, {
+        stdout,
+        stderr,
+        stdoutPath: handle.stdoutPath,
+        stderrPath: handle.stderrPath,
+        startedAt: handle.startedAt,
+        endedAt: handle.endedAt,
+        durationMs: handle.durationMs,
+        rawSession: parseJsonLines(stdout),
+      });
+
+      return parseJudgeVerdict(report.finalOutput);
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
   }
 
   async explain(input: ExplainInput): Promise<ExplainResult> {
@@ -420,6 +476,24 @@ function createExplainQuestionInput(
       "explain",
       `question-${String(index + 1).padStart(2, "0")}`,
     ),
+  };
+}
+
+function createJudgeRunInput(input: JudgeInput, tempRoot: string): RunInput {
+  return {
+    runner: {
+      id: "codex-judge",
+      pathKey: "codex-judge",
+      agent: {
+        type: "codex",
+        model: input.model,
+      },
+    },
+    prompt: input.prompt,
+    cwd: tempRoot,
+    timeoutMs: input.timeoutMs,
+    artifactsDir: path.join(tempRoot, "artifacts"),
+    showRunnerOutput: false,
   };
 }
 

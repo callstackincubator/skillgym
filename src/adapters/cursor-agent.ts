@@ -9,6 +9,7 @@ import type {
   RunInput,
   RunnerAdapter,
 } from "../domain/adapter.js";
+import type { JudgeInput, JudgeVerdict } from "../domain/judge.js";
 import type { SessionEvent, SessionReport } from "../domain/session-report.js";
 import { resolveReportedPath } from "../normalize/reported-path.js";
 import { inferSkillsFromPaths } from "../normalize/skill-detection.js";
@@ -80,6 +81,10 @@ export class CursorAgentAdapter extends BaseAdapter implements RunnerAdapter {
     }
 
     return { answers };
+  }
+
+  async judge(_input: JudgeInput): Promise<JudgeVerdict> {
+    throw new Error("CursorAgentAdapter judge is not supported yet.");
   }
 
   private async runPrompt(input: RunInput, args: string[]): Promise<RunHandle> {

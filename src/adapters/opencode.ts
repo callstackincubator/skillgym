@@ -9,6 +9,7 @@ import type {
   RunInput,
   RunnerAdapter,
 } from "../domain/adapter.js";
+import type { JudgeInput, JudgeVerdict } from "../domain/judge.js";
 import type { SessionEvent, SessionReport } from "../domain/session-report.js";
 import { resolveReportedPath } from "../normalize/reported-path.js";
 import { inferSkillsFromPaths } from "../normalize/skill-detection.js";
@@ -141,6 +142,10 @@ export class OpenCodeAdapter extends BaseAdapter implements RunnerAdapter {
     }
 
     return { answers };
+  }
+
+  async judge(_input: JudgeInput): Promise<JudgeVerdict> {
+    throw new Error("OpenCodeAdapter judge is not supported yet.");
   }
 
   async collect(handle: RunHandle, input: RunInput): Promise<RawRunArtifacts> {

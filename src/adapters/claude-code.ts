@@ -10,6 +10,7 @@ import type {
   RunnerAdapter,
 } from "../domain/adapter.js";
 import type { SessionEvent, SessionReport } from "../domain/session-report.js";
+import type { JudgeInput, JudgeVerdict } from "../domain/judge.js";
 import { resolveReportedPath } from "../normalize/reported-path.js";
 import { inferSkillsFromPaths } from "../normalize/skill-detection.js";
 import { writeText } from "../utils/fs.js";
@@ -89,6 +90,10 @@ export class ClaudeCodeAdapter extends BaseAdapter implements RunnerAdapter {
     }
 
     return { answers };
+  }
+
+  async judge(_input: JudgeInput): Promise<JudgeVerdict> {
+    throw new Error("ClaudeCodeAdapter judge is not supported yet.");
   }
 
   private async runPrompt(input: RunInput, args: string[]): Promise<RunHandle> {
