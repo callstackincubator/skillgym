@@ -1,9 +1,10 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, expect, test } from "vitest";
 import { CursorAgentAdapter } from "../../src/adapters/cursor-agent.js";
 import type { RawRunArtifacts, RunInput } from "../../src/domain/adapter.js";
+import type { JudgeInput } from "../../src/domain/judge.js";
 
 const tempDirs: string[] = [];
 
@@ -35,6 +36,68 @@ test("CursorAgentAdapter run uses stream-json headless mode", async () => {
     "composer-2-fast",
     "solve it",
   ]);
+});
+
+test("CursorAgentAdapter judge uses temp workspace and safe cursor flags", async () => {
+  const adapter = new RecordingJudgeCursorAgentAdapter(
+    '{"verdict":"pass","score":1,"reason":"meets rubric"}',
+  );
+
+  const verdict = await adapter.judge(createJudgeInput({ model: "cursor-judge-model" }));
+
+  expect(verdict).toEqual({
+    verdict: "pass",
+    score: 1,
+    reason: "meets rubric",
+  });
+  expect(adapter.calls).toHaveLength(1);
+  expect(adapter.calls[0]).toMatchObject({
+    command: "agent",
+    input: {
+      prompt: "Return verdict JSON.",
+      timeoutMs: 5_000,
+      showRunnerOutput: false,
+    },
+  });
+  expect(adapter.calls[0]?.input.cwd).not.toBe(process.cwd());
+  expect(adapter.calls[0]?.input.cwd).toContain(os.tmpdir());
+  expect(adapter.calls[0]?.input.artifactsDir).toContain(os.tmpdir());
+  expect(adapter.calls[0]?.args).toEqual([
+    "-p",
+    "--output-format",
+    "stream-json",
+    "--trust",
+    "--mode",
+    "ask",
+    "--sandbox",
+    "enabled",
+    "--workspace",
+    adapter.calls[0]!.input.cwd,
+    "--model",
+    "cursor-judge-model",
+    "Return verdict JSON.",
+  ]);
+  expect(adapter.calls[0]?.args).not.toContain("--force");
+  expect(adapter.calls[0]?.args).not.toContain("--yolo");
+  await expect(stat(adapter.calls[0]!.input.cwd)).rejects.toMatchObject({ code: "ENOENT" });
+  await expect(stat(adapter.calls[0]!.input.artifactsDir)).rejects.toMatchObject({
+    code: "ENOENT",
+  });
+});
+
+test("CursorAgentAdapter judge parses stream-json final output", async () => {
+  const adapter = new RecordingJudgeCursorAgentAdapter(
+    '{"verdict":"fail","score":0.25,"reason":"missing required step"}',
+  );
+
+  await expect(
+    adapter.judge(createJudgeInput({ model: "cursor-judge-lite" })),
+  ).resolves.toEqual({
+    verdict: "fail",
+    score: 0.25,
+    reason: "missing required step",
+  });
+  expect(adapter.calls[0]?.args).toContain("cursor-judge-lite");
 });
 
 test("CursorAgentAdapter collect saves stdout as session stream jsonl", async () => {
@@ -340,6 +403,14 @@ function createArtifacts(): RawRunArtifacts {
   };
 }
 
+function createJudgeInput(overrides: Partial<JudgeInput> = {}): JudgeInput {
+  return {
+    model: overrides.model ?? "composer-2-fast",
+    prompt: overrides.prompt ?? "Return verdict JSON.",
+    timeoutMs: overrides.timeoutMs ?? 5_000,
+  };
+}
+
 async function createTempDir(): Promise<string> {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), "skillgym-cursor-agent-"));
   tempDirs.push(tempDir);
@@ -372,6 +443,56 @@ class RecordingRunCursorAgentAdapter extends CursorAgentAdapter {
       stdoutPath,
       stderrPath,
       stdout: "",
+      stderr: "",
+    };
+  }
+}
+
+class RecordingJudgeCursorAgentAdapter extends CursorAgentAdapter {
+  calls: Array<{
+    command: string;
+    args: string[];
+    input: RunInput;
+  }> = [];
+
+  constructor(private readonly stdout: string) {
+    super({ type: "cursor-agent", model: "composer-2-fast" });
+  }
+
+  protected override async runCommand(
+    command: string,
+    args: string[],
+    input: RunInput,
+    _options?: { env?: Record<string, string> },
+  ) {
+    this.calls.push({ command, args, input });
+
+    await mkdir(input.artifactsDir, { recursive: true });
+
+    const stdoutPath = path.join(input.artifactsDir, "stdout.log");
+    const stderrPath = path.join(input.artifactsDir, "stderr.log");
+    await writeFile(
+      stdoutPath,
+      [
+        JSON.stringify({ type: "system", session_id: "judge-session-1" }),
+        JSON.stringify({
+          type: "result",
+          result: this.stdout,
+          session_id: "judge-session-1",
+        }),
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    await writeFile(stderrPath, "", "utf8");
+
+    return {
+      startedAt: "2026-05-07T10:00:00.000Z",
+      endedAt: "2026-05-07T10:00:01.000Z",
+      durationMs: 1_000,
+      stdoutPath,
+      stderrPath,
+      stdout: this.stdout,
       stderr: "",
     };
   }
