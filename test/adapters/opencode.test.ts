@@ -1,8 +1,9 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, expect, test } from "vitest";
 import type { RawRunArtifacts, RunInput } from "../../src/domain/adapter.js";
+import type { JudgeInput } from "../../src/domain/judge.js";
 import { OpenCodeAdapter } from "../../src/adapters/opencode.js";
 
 const tempDirs: string[] = [];
@@ -336,6 +337,66 @@ test("OpenCodeAdapter run seeds isolated runtime and auth file", async () => {
   }
 });
 
+test("OpenCodeAdapter judge uses temp workspace, denies writes, and parses verdict JSON", async () => {
+  const adapter = new RecordingJudgeOpenCodeAdapter(
+    '{"type":"result","result":"{\\"verdict\\":\\"pass\\",\\"score\\":1,\\"reason\\":\\"meets rubric\\"}","is_error":false}',
+  );
+
+  const verdict = await adapter.judge(
+    createJudgeInput({
+      model: "opencode-judge-model",
+      prompt: "Return verdict JSON.",
+    }),
+  );
+
+  expect(verdict).toEqual({
+    verdict: "pass",
+    score: 1,
+    reason: "meets rubric",
+  });
+  expect(adapter.calls).toHaveLength(1);
+  expect(adapter.calls[0]).toMatchObject({
+    command: "opencode",
+    input: {
+      prompt: "Return verdict JSON.",
+      timeoutMs: 5_000,
+      showRunnerOutput: false,
+    },
+  });
+  expect(adapter.calls[0]?.input.cwd).not.toBe(process.cwd());
+  expect(adapter.calls[0]?.input.cwd).toContain(os.tmpdir());
+  expect(adapter.calls[0]?.input.artifactsDir).toContain(os.tmpdir());
+  expect(adapter.calls[0]?.args).toEqual([
+    "run",
+    "--model",
+    "opencode-judge-model",
+    "--format",
+    "json",
+    "--thinking",
+    "Return verdict JSON.",
+  ]);
+  expect(adapter.calls[0]?.args).not.toContain("--dangerously-skip-permissions");
+  expect(adapter.calls[0]?.env).toMatchObject({
+    XDG_DATA_HOME: path.join(adapter.calls[0]!.input.artifactsDir, "opencode-xdg", "data"),
+    XDG_CONFIG_HOME: path.join(adapter.calls[0]!.input.artifactsDir, "opencode-xdg", "config"),
+    XDG_STATE_HOME: path.join(adapter.calls[0]!.input.artifactsDir, "opencode-xdg", "state"),
+    XDG_CACHE_HOME: path.join(adapter.calls[0]!.input.artifactsDir, "opencode-xdg", "cache"),
+  });
+  expect(JSON.parse(adapter.calls[0]!.env?.OPENCODE_CONFIG_CONTENT ?? "{}")).toEqual({
+    permission: {
+      edit: "deny",
+      bash: "deny",
+      task: "deny",
+      webfetch: "deny",
+      websearch: "deny",
+    },
+  });
+  await expect(stat(adapter.calls[0]!.input.cwd)).rejects.toMatchObject({ code: "ENOENT" });
+  await expect(stat(adapter.calls[0]!.input.artifactsDir)).rejects.toMatchObject({
+    code: "ENOENT",
+  });
+});
+
 function createRunInput(): RunInput {
   return {
     runner: {
@@ -350,6 +411,14 @@ function createRunInput(): RunInput {
     cwd: "/tmp/workspace",
     timeoutMs: 5_000,
     artifactsDir: "/tmp/artifacts",
+  };
+}
+
+function createJudgeInput(overrides: Partial<JudgeInput> = {}): JudgeInput {
+  return {
+    model: overrides.model ?? "opencode-judge-model",
+    prompt: overrides.prompt ?? "Return verdict JSON.",
+    timeoutMs: overrides.timeoutMs ?? 5_000,
   };
 }
 
@@ -430,6 +499,49 @@ class RecordingRunOpenCodeAdapter extends OpenCodeAdapter {
       stdoutPath,
       stderrPath,
       stdout: "session ready: ses_123\n",
+      stderr: "",
+    };
+  }
+}
+
+class RecordingJudgeOpenCodeAdapter extends OpenCodeAdapter {
+  calls: Array<{
+    command: string;
+    args: string[];
+    input: RunInput;
+    env?: Record<string, string>;
+  }> = [];
+
+  constructor(private readonly stdout: string) {
+    super({ type: "opencode", model: "openai/gpt-5" });
+  }
+
+  protected override async runCommand(
+    command: string,
+    args: string[],
+    input: RunInput,
+    options?: { env?: Record<string, string> },
+  ) {
+    this.calls.push({
+      command,
+      args,
+      input,
+      env: options?.env,
+    });
+
+    await mkdir(input.artifactsDir, { recursive: true });
+    const stdoutPath = path.join(input.artifactsDir, "stdout.log");
+    const stderrPath = path.join(input.artifactsDir, "stderr.log");
+    await writeFile(stdoutPath, this.stdout, "utf8");
+    await writeFile(stderrPath, "", "utf8");
+
+    return {
+      startedAt: "2026-04-03T10:00:00.000Z",
+      endedAt: "2026-04-03T10:00:01.000Z",
+      durationMs: 1_000,
+      stdoutPath,
+      stderrPath,
+      stdout: this.stdout,
       stderr: "",
     };
   }
