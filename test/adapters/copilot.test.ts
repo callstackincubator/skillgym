@@ -61,12 +61,12 @@ test("CopilotAdapter judge uses temp cwd, denies writes, and parses verdict JSON
   const adapter = new RecordingJudgeCopilotAdapter({
     type: "copilot",
     commandArgs: ["--experimental", "--yolo", "--allow-all-paths", "--allow-all-urls"],
-    model: "gpt-5.4-mini",
+    model: "configured-judge-model",
   });
 
   const verdict = await adapter.judge(
     createJudgeInput({
-      model: "gpt-5.4-mini",
+      model: "requested-judge-model",
       prompt: "Return verdict JSON.",
     }),
   );
@@ -93,7 +93,7 @@ test("CopilotAdapter judge uses temp cwd, denies writes, and parses verdict JSON
     "-p",
     "Return verdict JSON.",
     "--model",
-    "gpt-5.4-mini",
+    "requested-judge-model",
     "--output-format",
     "json",
     "--stream",

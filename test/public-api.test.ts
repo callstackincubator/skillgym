@@ -1,5 +1,15 @@
 import { describe, expectTypeOf, it } from "vitest";
-import type { Case, SkillgymConfig, Suite, TestCase, TestSuite } from "../src/index.js";
+import { assert } from "../src/index.js";
+import type {
+  Case,
+  JudgeAssertionOptions,
+  JudgeAssertionResult,
+  SkillgymAssert,
+  SkillgymConfig,
+  Suite,
+  TestCase,
+  TestSuite,
+} from "../src/index.js";
 
 describe("public API compatibility", () => {
   it("exports TestCase as an alias of Case", () => {
@@ -14,5 +24,13 @@ describe("public API compatibility", () => {
     expectTypeOf<SkillgymConfig>().toMatchTypeOf<{
       runners: Record<string, { agent: { type: string; model: string } }>;
     }>();
+  });
+
+  it("exports assert.judge from the root public API", () => {
+    expectTypeOf(assert).toMatchTypeOf<
+      SkillgymAssert & {
+        judge: (options: JudgeAssertionOptions) => Promise<JudgeAssertionResult>;
+      }
+    >();
   });
 });

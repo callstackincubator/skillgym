@@ -1,6 +1,8 @@
 import type nodeAssert from "node:assert/strict";
 import type { ExplainOptions } from "./explain.js";
 import type { FailureClass } from "../domain/result.js";
+import type { JudgeVerdict } from "../domain/judge.js";
+import type { AgentType } from "../domain/runner.js";
 import type { SessionReport, ToolCallEvent } from "../domain/session-report.js";
 
 export type Matcher = string | RegExp;
@@ -162,6 +164,18 @@ export interface AssertionClassifier {
   <T>(failureClass: string | FailureClass, callback: () => T): T;
 }
 
+export interface JudgeAssertionOptions {
+  agent: AgentType;
+  model: string;
+  rubric: string;
+  input: string;
+  timeoutMs?: number;
+  message?: string;
+  threshold?: number;
+}
+
+export type JudgeAssertionResult = Pick<JudgeVerdict, "score" | "reason">;
+
 export type SkillgymSoftAssert = typeof nodeAssert & {
   skills: SkillAssertions;
   commands: CommandAssertions;
@@ -178,4 +192,5 @@ export type SkillgymAssert = typeof nodeAssert & {
   toolCalls: ToolCallAssertions;
   output: OutputAssertions;
   classify: AssertionClassifier;
+  judge(options: JudgeAssertionOptions): Promise<JudgeAssertionResult>;
 };

@@ -19,6 +19,7 @@ Available groups:
 - `assert.fileReads.*`
 - `assert.toolCalls.*`
 - `assert.output.*`
+- `assert.judge(...)` for rubric-based LLM scoring
 
 ## Typical patterns
 
@@ -30,7 +31,15 @@ assert.commands.includes(report, commandMatcher("pnpm").arg("test"));
 assert.fileReads.includes(report, /README\.md$/);
 assert.toolCalls.includes(report, { tool: /skill/i });
 assert.match(ctx.finalOutput(), /expo/i);
+await assert.judge({
+  agent: "copilot",
+  model: "gpt-5.4-mini",
+  rubric: "Pass only if required steps appear in the answer.",
+  input: "Session report excerpt.",
+});
 ```
+
+`assert.judge(...)` returns `{ score, reason }` when the judge passes. It throws `AssertionError` when the verdict is `fail` or the optional `threshold` is missed.
 
 ## Hard vs soft assertions
 

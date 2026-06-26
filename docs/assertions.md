@@ -6,6 +6,7 @@
 - grouped helpers for normalized session reports
 - `assert.soft.*` for Jest/Vitest-style sync soft assertions
 - `assert.classify(...)` for attaching structured failure classes to assertion failures
+- `assert.judge(...)` for rubric-based LLM checks that return a score and reason
 
 ```ts
 import { assert } from "skillgym";
@@ -17,7 +18,21 @@ assert.soft.match("skillgym ready", /ready/);
 assert.classify("missing-flag", () => {
   assert.match("--json", /--yaml/);
 });
+const verdict = await assert.judge({
+  agent: "codex",
+  model: "gpt-5",
+  rubric: "Pass only when the output names the required skill.",
+  input: "Session report excerpt.",
+});
 ```
+
+`assert.judge(...)` takes `agent`, `model`, `rubric`, and `input`. It returns `{ score, reason }` on pass and throws `AssertionError` when the judge returns `fail` or the score falls below `threshold`.
+
+Options:
+
+- `timeoutMs?: number` defaults to `120_000`
+- `message?: string` prefixes the assertion failure message
+- `threshold?: number` adds a minimum score check from `0` to `1`
 
 ## Failure classification
 

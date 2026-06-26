@@ -8,6 +8,8 @@ export type {
   CommandMatcherBuilderLike,
   CommandAssertions,
   CommandValueMatcher,
+  JudgeAssertionOptions,
+  JudgeAssertionResult,
   FileReadAssertions,
   Matcher,
   OutputAssertions,
