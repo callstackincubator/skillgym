@@ -1,5 +1,6 @@
 import path from "node:path";
-import { readFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import os from "node:os";
 import type {
   ClaudeCodeAgentConfig,
   ExplainInput,
@@ -11,9 +12,10 @@ import type {
 } from "../domain/adapter.js";
 import type { SessionEvent, SessionReport } from "../domain/session-report.js";
 import type { JudgeInput, JudgeVerdict } from "../domain/judge.js";
+import { parseJudgeVerdict } from "../domain/judge.js";
 import { resolveReportedPath } from "../normalize/reported-path.js";
 import { inferSkillsFromPaths } from "../normalize/skill-detection.js";
-import { writeText } from "../utils/fs.js";
+import { ensureDir, writeText } from "../utils/fs.js";
 import { BaseAdapter } from "./base.js";
 
 interface ClaudeCodeResultRecord {
@@ -92,8 +94,37 @@ export class ClaudeCodeAdapter extends BaseAdapter implements RunnerAdapter {
     return { answers };
   }
 
-  async judge(_input: JudgeInput): Promise<JudgeVerdict> {
-    throw new Error("ClaudeCodeAdapter judge is not supported yet.");
+  async judge(input: JudgeInput): Promise<JudgeVerdict> {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), "skillgym-claude-judge-"));
+    const judgeInput = createJudgeRunInput(input, tempRoot);
+
+    try {
+      await Promise.all([ensureDir(judgeInput.cwd), ensureDir(judgeInput.artifactsDir)]);
+
+      const handle = await this.runPrompt(judgeInput, [
+        ...(this.options.commandArgs ?? []),
+        "-p",
+        "--output-format",
+        "stream-json",
+        "--verbose",
+        "--no-session-persistence",
+        "--disable-slash-commands",
+        "--bare",
+        "--permission-mode",
+        "plan",
+        "--tools",
+        "",
+        "--model",
+        input.model,
+        input.prompt,
+      ]);
+      const artifacts = await this.collect(handle, judgeInput);
+      const report = await this.normalize(judgeInput, artifacts);
+
+      return parseJudgeVerdict(report.finalOutput);
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
   }
 
   private async runPrompt(input: RunInput, args: string[]): Promise<RunHandle> {
@@ -332,6 +363,27 @@ function createExplainQuestionInput(
       "explain",
       `question-${String(index + 1).padStart(2, "0")}`,
     ),
+  };
+}
+
+function createJudgeRunInput(input: JudgeInput, tempRoot: string): RunInput {
+  const runtimeDir = path.join(tempRoot, "runtime");
+  const artifactsDir = path.join(tempRoot, "artifacts");
+
+  return {
+    runner: {
+      id: "claude-code-judge",
+      pathKey: "claude-code-judge",
+      agent: {
+        type: "claude-code",
+        model: input.model,
+      },
+    },
+    prompt: input.prompt,
+    cwd: runtimeDir,
+    timeoutMs: input.timeoutMs,
+    artifactsDir,
+    showRunnerOutput: false,
   };
 }
 
