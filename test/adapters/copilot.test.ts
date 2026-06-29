@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, expect, test } from "vitest";
@@ -9,6 +9,7 @@ import type {
   RunHandle,
   RunInput,
 } from "../../src/domain/adapter.js";
+import type { JudgeInput } from "../../src/domain/judge.js";
 
 const tempDirs: string[] = [];
 
@@ -53,6 +54,78 @@ test("CopilotAdapter run uses JSONL prompt mode with isolated state", async () =
     COPILOT_AUTO_UPDATE: "false",
     NO_COLOR: "1",
     COPILOT_OTEL_FILE_EXPORTER_PATH: "/tmp/artifacts/copilot-otel.jsonl",
+  });
+});
+
+test("CopilotAdapter judge uses temp cwd, denies writes, and parses verdict JSON", async () => {
+  const adapter = new RecordingJudgeCopilotAdapter({
+    type: "copilot",
+    commandArgs: ["--experimental", "--yolo", "--allow-all-paths", "--allow-all-urls"],
+    model: "configured-judge-model",
+  });
+
+  const verdict = await adapter.judge(
+    createJudgeInput({
+      model: "requested-judge-model",
+      prompt: "Return verdict JSON.",
+    }),
+  );
+
+  expect(verdict).toEqual({
+    verdict: "pass",
+    score: 0.75,
+    reason: "meets rubric",
+  });
+  expect(adapter.calls).toHaveLength(1);
+  expect(adapter.calls[0]).toMatchObject({
+    command: "copilot",
+    input: {
+      prompt: "Return verdict JSON.",
+      timeoutMs: 5_000,
+      showRunnerOutput: false,
+    },
+  });
+  expect(adapter.calls[0]?.input.cwd).not.toBe(process.cwd());
+  expect(adapter.calls[0]?.input.cwd).toContain(os.tmpdir());
+  expect(adapter.calls[0]?.input.artifactsDir).toContain(os.tmpdir());
+  expect(adapter.calls[0]?.args).toEqual([
+    "--experimental",
+    "-p",
+    "Return verdict JSON.",
+    "--model",
+    "requested-judge-model",
+    "--output-format",
+    "json",
+    "--stream",
+    "on",
+    "--no-auto-update",
+    "--no-custom-instructions",
+    "--disable-builtin-mcps",
+    "--no-remote",
+    "--no-ask-user",
+    "--allow-all-tools",
+    "--deny-tool=write",
+    "--deny-tool=shell",
+    "--deny-tool=url",
+    "--disallow-temp-dir",
+    "-C",
+    adapter.calls[0]!.input.cwd,
+  ]);
+  expect(adapter.calls[0]?.args).not.toContain("--yolo");
+  expect(adapter.calls[0]?.args).not.toContain("--allow-all-paths");
+  expect(adapter.calls[0]?.args).not.toContain("--allow-all-urls");
+  expect(adapter.calls[0]?.env).toMatchObject({
+    COPILOT_HOME: path.join(adapter.calls[0]!.input.artifactsDir, "copilot-home"),
+    COPILOT_AUTO_UPDATE: "false",
+    NO_COLOR: "1",
+    COPILOT_OTEL_FILE_EXPORTER_PATH: path.join(
+      adapter.calls[0]!.input.artifactsDir,
+      "copilot-otel.jsonl",
+    ),
+  });
+  await expect(stat(adapter.calls[0]!.input.cwd)).rejects.toMatchObject({ code: "ENOENT" });
+  await expect(stat(adapter.calls[0]!.input.artifactsDir)).rejects.toMatchObject({
+    code: "ENOENT",
   });
 });
 
@@ -332,6 +405,14 @@ function createArtifacts(): RawRunArtifacts {
   };
 }
 
+function createJudgeInput(overrides: Partial<JudgeInput> = {}): JudgeInput {
+  return {
+    model: overrides.model ?? "gpt-5.4-mini",
+    prompt: overrides.prompt ?? "Return verdict JSON.",
+    timeoutMs: overrides.timeoutMs ?? 5_000,
+  };
+}
+
 async function createTempDir(): Promise<string> {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), "skillgym-copilot-"));
   tempDirs.push(tempDir);
@@ -389,6 +470,57 @@ class RecordingRunCopilotAdapter extends CopilotAdapter {
       stdoutPath,
       stderrPath,
       stdout: "",
+      stderr: "",
+    };
+  }
+}
+
+class RecordingJudgeCopilotAdapter extends CopilotAdapter {
+  calls: Array<{
+    command: string;
+    args: string[];
+    input: RunInput;
+    env?: Record<string, string>;
+  }> = [];
+
+  protected override async runCommand(
+    command: string,
+    args: string[],
+    input: RunInput,
+    options?: { env?: Record<string, string> },
+  ): Promise<RunHandle & { stdout: string; stderr: string }> {
+    this.calls.push({ command, args, input, env: options?.env });
+
+    await mkdir(input.artifactsDir, { recursive: true });
+
+    const stdoutPath = path.join(input.artifactsDir, "stdout.log");
+    const stderrPath = path.join(input.artifactsDir, "stderr.log");
+    const stdout = [
+      JSON.stringify({
+        type: "assistant.message",
+        timestamp: "2026-06-11T10:00:00.000Z",
+        data: {
+          content: '{"verdict":"pass","score":0.75,"reason":"meets rubric"}',
+          phase: "final",
+        },
+      }),
+      JSON.stringify({
+        type: "result",
+        sessionId: "copilot-judge-1",
+      }),
+      "",
+    ].join("\n");
+
+    await writeFile(stdoutPath, stdout, "utf8");
+    await writeFile(stderrPath, "", "utf8");
+
+    return {
+      startedAt: "2026-06-11T10:00:00.000Z",
+      endedAt: "2026-06-11T10:00:01.000Z",
+      durationMs: 1_000,
+      stdoutPath,
+      stderrPath,
+      stdout,
       stderr: "",
     };
   }

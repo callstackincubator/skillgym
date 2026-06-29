@@ -1084,6 +1084,9 @@ test("executeSuite repeats asserts with persisted temp state and retries failed 
     async explain() {
       throw new Error("not used in repeat-state test");
     },
+    async judge() {
+      throw new Error("not used in repeat-state test");
+    },
   };
 
   const cases: Case[] = [
@@ -1661,6 +1664,9 @@ function createSnapshotAdapter(runner: RunnerInfo, totalTokens: number): RunnerA
       });
     },
     async explain() {
+      throw new Error("not used in snapshot adapter tests");
+    },
+    async judge() {
       throw new Error("not used in snapshot adapter tests");
     },
   };

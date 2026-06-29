@@ -1,5 +1,6 @@
 import path from "node:path";
-import { readFile } from "node:fs/promises";
+import os from "node:os";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import type {
   CopilotAgentConfig,
   ExplainInput,
@@ -9,6 +10,8 @@ import type {
   RunInput,
   RunnerAdapter,
 } from "../domain/adapter.js";
+import type { JudgeInput, JudgeVerdict } from "../domain/judge.js";
+import { parseJudgeVerdict } from "../domain/judge.js";
 import type { SessionEvent, SessionReport } from "../domain/session-report.js";
 import { resolveReportedPath } from "../normalize/reported-path.js";
 import { inferSkillsFromPaths } from "../normalize/skill-detection.js";
@@ -94,6 +97,62 @@ export class CopilotAdapter extends BaseAdapter implements RunnerAdapter {
     }
 
     return { answers };
+  }
+
+  async judge(input: JudgeInput): Promise<JudgeVerdict> {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), "skillgym-copilot-judge-"));
+    const judgeInput = createJudgeRunInput(input, tempRoot);
+    const command = this.options.command ?? "copilot";
+    const commandArgs = (this.options.commandArgs ?? []).filter(
+      (arg) =>
+        arg !== "--yolo" &&
+        !arg.startsWith("--allow-all-paths") &&
+        !arg.startsWith("--allow-all-urls"),
+    );
+
+    try {
+      await Promise.all([prepareCopilotRuntime(judgeInput), ensureDir(judgeInput.cwd)]);
+
+      const handle = await this.runCommand(
+        command,
+        [
+          ...commandArgs,
+          "-p",
+          input.prompt,
+          "--model",
+          input.model,
+          "--output-format",
+          "json",
+          "--stream",
+          "on",
+          "--no-auto-update",
+          "--no-custom-instructions",
+          "--disable-builtin-mcps",
+          "--no-remote",
+          "--no-ask-user",
+          "--allow-all-tools",
+          "--deny-tool=write",
+          "--deny-tool=shell",
+          "--deny-tool=url",
+          "--disallow-temp-dir",
+          "-C",
+          judgeInput.cwd,
+        ],
+        judgeInput,
+        {
+          env: {
+            ...this.options.env,
+            ...getCopilotEnv(judgeInput, undefined, judgeInput.artifactsDir),
+          },
+        },
+      );
+      const artifacts = await this.collect(handle, judgeInput);
+      const report = await this.normalize(judgeInput, artifacts);
+
+      return parseJudgeVerdict(report.finalOutput);
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
   }
 
   private createPromptArgs(prompt: string, cwd: string): string[] {
@@ -344,6 +403,27 @@ function createExplainQuestionInput(
       "explain",
       `question-${String(index + 1).padStart(2, "0")}`,
     ),
+  };
+}
+
+function createJudgeRunInput(input: JudgeInput, tempRoot: string): RunInput {
+  const runtimeDir = path.join(tempRoot, "runtime");
+  const artifactsDir = path.join(tempRoot, "artifacts");
+
+  return {
+    runner: {
+      id: "copilot-judge",
+      pathKey: "copilot-judge",
+      agent: {
+        type: "copilot",
+        model: input.model,
+      },
+    },
+    prompt: input.prompt,
+    cwd: runtimeDir,
+    timeoutMs: input.timeoutMs,
+    artifactsDir,
+    showRunnerOutput: false,
   };
 }
 

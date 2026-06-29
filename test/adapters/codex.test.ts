@@ -319,6 +319,48 @@ test("CodexAdapter run seeds isolated CODEX_HOME from user codex state", async (
   }
 });
 
+test("CodexAdapter judge uses an isolated temp workspace and parses verdict JSON", async () => {
+  const adapter = new RecordingJudgeCodexAdapter({ type: "codex", model: "gpt-5" });
+  const result = await adapter.judge({
+    model: "gpt-5",
+    prompt: "Judge this run.",
+    timeoutMs: 5_000,
+  });
+
+  expect(adapter.calls).toHaveLength(1);
+  expect(adapter.calls[0]).toMatchObject({
+    command: "npx",
+    args: [
+      "codex",
+      "exec",
+      "--model",
+      "gpt-5",
+      "--json",
+      "--sandbox",
+      "read-only",
+      "--ephemeral",
+      "--skip-git-repo-check",
+      "-C",
+      expect.stringContaining(os.tmpdir()),
+      "Judge this run.",
+    ],
+  });
+  expect(adapter.calls[0]?.args).not.toContain("--ignore-user-config");
+  expect(adapter.calls[0]?.args).not.toContain("--ignore-rules");
+  expect(adapter.calls[0]?.input.cwd).not.toBe("/tmp/workspace");
+  expect(adapter.calls[0]?.input.cwd).toContain(os.tmpdir());
+  expect(adapter.calls[0]?.input.artifactsDir).toContain(adapter.calls[0]?.input.cwd ?? "");
+  expect(adapter.calls[0]?.env).toMatchObject({
+    CODEX_HOME: expect.stringContaining("codex-home"),
+    CODEX_SQLITE_HOME: expect.stringContaining("codex-home/sqlite"),
+  });
+  expect(result).toEqual({
+    verdict: "pass",
+    score: 0.75,
+    reason: "meets rubric",
+  });
+});
+
 function createRunInput(overrides: Partial<RunInput> = {}): RunInput {
   return {
     runner: {
@@ -347,6 +389,54 @@ function createArtifacts(): RawRunArtifacts {
     endedAt: "2026-04-03T10:00:01.000Z",
     durationMs: 1_000,
   };
+}
+
+class RecordingJudgeCodexAdapter extends CodexAdapter {
+  calls: Array<{
+    command: string;
+    args: string[];
+    input: RunInput;
+    env?: Record<string, string>;
+  }> = [];
+
+  protected override async runCommand(
+    command: string,
+    args: string[],
+    input: RunInput,
+    options?: { env?: Record<string, string> },
+  ): Promise<RunHandle & { stdout: string; stderr: string }> {
+    this.calls.push({ command, args, input, env: options?.env });
+
+    const stdoutPath = path.join(input.artifactsDir, "stdout.log");
+    const stderrPath = path.join(input.artifactsDir, "stderr.log");
+    await mkdir(input.artifactsDir, { recursive: true });
+    const stdout = [
+      JSON.stringify({ type: "thread.started", thread_id: "judge-thread" }),
+      JSON.stringify({
+        timestamp: "2026-04-03T10:00:01.000Z",
+        type: "response_item",
+        payload: {
+          type: "message",
+          role: "assistant",
+          text: JSON.stringify({ verdict: "pass", score: 0.75, reason: "meets rubric" }),
+          phase: "final_answer",
+        },
+      }),
+      "",
+    ].join("\n");
+    await writeFile(stdoutPath, stdout, "utf8");
+    await writeFile(stderrPath, "", "utf8");
+
+    return {
+      startedAt: "2026-04-03T10:00:00.000Z",
+      endedAt: "2026-04-03T10:00:01.000Z",
+      durationMs: 1_000,
+      stdoutPath,
+      stderrPath,
+      stdout,
+      stderr: "",
+    };
+  }
 }
 
 async function createTempDir(): Promise<string> {

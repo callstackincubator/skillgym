@@ -2,6 +2,12 @@ import { assert } from "skillgym";
 
 assert.equal(1, 1);
 assert.commands.includes(null as never, "pnpm test");
+assert.judge({
+  agent: "codex",
+  model: "gpt-5",
+  rubric: "Return pass only when the answer is correct.",
+  input: "Answer text",
+});
 
 // @ts-expect-error matcher should stay strongly typed
 assert.commands.includes(null as never, 123);

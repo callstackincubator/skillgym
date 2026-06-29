@@ -8,6 +8,7 @@ import type {
   RunnerInfo,
 } from "./runner.js";
 import type { ExplainQuestionArtifact } from "./explain.js";
+import type { JudgeInput, JudgeVerdict } from "./judge.js";
 import type { SessionReport } from "./session-report.js";
 
 export interface RunInput {
@@ -82,4 +83,5 @@ export interface RunnerAdapter {
   collect(handle: RunHandle, input: RunInput): Promise<RawRunArtifacts>;
   normalize(input: RunInput, artifacts: RawRunArtifacts): Promise<SessionReport>;
   explain(input: ExplainInput): Promise<ExplainResult>;
+  judge(input: JudgeInput): Promise<JudgeVerdict>;
 }

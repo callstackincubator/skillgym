@@ -62,6 +62,9 @@ test("executeRunner forwards showRunnerOutput to adapter runs", async () => {
     async explain() {
       throw new Error("not used in executeRunner tests");
     },
+    async judge() {
+      throw new Error("not used in executeRunner tests");
+    },
   };
 
   const result = await executeRunner(
@@ -105,6 +108,9 @@ test("executeRunner marks run as failed when adapter export collection fails", a
     },
     async explain() {
       throw new Error("should not explain after collect failure");
+    },
+    async judge() {
+      throw new Error("should not judge after collect failure");
     },
   };
 
@@ -358,6 +364,9 @@ test("executeRunner marks timeout failures separately from runner crashes", asyn
     async explain() {
       throw new Error("should not explain after timeout");
     },
+    async judge() {
+      throw new Error("should not judge after timeout");
+    },
   };
 
   const result = await executeRunner(
@@ -400,6 +409,9 @@ test("executeRunner marks max-steps failures separately from other runner crashe
     },
     async explain() {
       throw new Error("should not explain after max-steps");
+    },
+    async judge() {
+      throw new Error("should not judge after max-steps");
     },
   };
 
@@ -701,6 +713,9 @@ function createSuccessfulAdapter(
       });
     },
     async explain() {
+      throw new Error("not used in executeRunner tests");
+    },
+    async judge() {
       throw new Error("not used in executeRunner tests");
     },
   };

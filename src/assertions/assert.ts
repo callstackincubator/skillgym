@@ -2,6 +2,7 @@ import nodeAssert from "node:assert/strict";
 import { attachFailureClass, type FailureClassInput } from "../failure-classification.js";
 import { commandAssertions } from "./commands.js";
 import { fileReadAssertions } from "./file-reads.js";
+import { judge as llmJudge } from "./judge.js";
 import { outputAssertions } from "./output.js";
 import { skillAssertions } from "./skills.js";
 import { softAssert } from "./soft.js";
@@ -23,4 +24,5 @@ export const assert: SkillgymAssert = Object.assign(nodeAssert, {
   fileReads: fileReadAssertions,
   toolCalls: toolCallAssertions,
   output: outputAssertions,
+  judge: llmJudge,
 });

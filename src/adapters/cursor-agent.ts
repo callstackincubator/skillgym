@@ -1,5 +1,6 @@
 import path from "node:path";
-import { readFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import os from "node:os";
 import type {
   CursorAgentConfig,
   ExplainInput,
@@ -9,10 +10,12 @@ import type {
   RunInput,
   RunnerAdapter,
 } from "../domain/adapter.js";
+import type { JudgeInput, JudgeVerdict } from "../domain/judge.js";
+import { parseJudgeVerdict } from "../domain/judge.js";
 import type { SessionEvent, SessionReport } from "../domain/session-report.js";
 import { resolveReportedPath } from "../normalize/reported-path.js";
 import { inferSkillsFromPaths } from "../normalize/skill-detection.js";
-import { writeText } from "../utils/fs.js";
+import { ensureDir, writeText } from "../utils/fs.js";
 import { BaseAdapter } from "./base.js";
 
 export class CursorAgentAdapter extends BaseAdapter implements RunnerAdapter {
@@ -80,6 +83,38 @@ export class CursorAgentAdapter extends BaseAdapter implements RunnerAdapter {
     }
 
     return { answers };
+  }
+
+  async judge(input: JudgeInput): Promise<JudgeVerdict> {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), "skillgym-cursor-judge-"));
+    const judgeInput = createJudgeRunInput(input, tempRoot);
+
+    try {
+      await Promise.all([ensureDir(judgeInput.cwd), ensureDir(judgeInput.artifactsDir)]);
+
+      const handle = await this.runPrompt(judgeInput, [
+        ...(this.options.commandArgs ?? []),
+        "-p",
+        "--output-format",
+        "stream-json",
+        "--trust",
+        "--mode",
+        "ask",
+        "--sandbox",
+        "enabled",
+        "--workspace",
+        judgeInput.cwd,
+        "--model",
+        input.model,
+        judgeInput.prompt,
+      ]);
+      const artifacts = await this.collect(handle, judgeInput);
+      const report = await this.normalize(judgeInput, artifacts);
+
+      return parseJudgeVerdict(report.finalOutput);
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
   }
 
   private async runPrompt(input: RunInput, args: string[]): Promise<RunHandle> {
@@ -333,6 +368,27 @@ function createExplainQuestionInput(
       "explain",
       `question-${String(index + 1).padStart(2, "0")}`,
     ),
+  };
+}
+
+function createJudgeRunInput(input: JudgeInput, tempRoot: string): RunInput {
+  const cwd = path.join(tempRoot, "workspace");
+  const artifactsDir = path.join(tempRoot, "artifacts");
+
+  return {
+    runner: {
+      id: "cursor-agent-judge",
+      pathKey: "cursor-agent-judge",
+      agent: {
+        type: "cursor-agent",
+        model: input.model,
+      },
+    },
+    prompt: input.prompt,
+    cwd,
+    timeoutMs: input.timeoutMs,
+    artifactsDir,
+    showRunnerOutput: false,
   };
 }
 

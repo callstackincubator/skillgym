@@ -1,5 +1,6 @@
 import path from "node:path";
-import { copyFile, readdir, readFile } from "node:fs/promises";
+import os from "node:os";
+import { copyFile, mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import type {
   ExplainInput,
   ExplainResult,
@@ -9,6 +10,8 @@ import type {
   RunInput,
   RunnerAdapter,
 } from "../domain/adapter.js";
+import type { JudgeInput, JudgeVerdict } from "../domain/judge.js";
+import { parseJudgeVerdict } from "../domain/judge.js";
 import type { SessionEvent, SessionReport } from "../domain/session-report.js";
 import { resolveReportedPath } from "../normalize/reported-path.js";
 import { inferSkillsFromPaths } from "../normalize/skill-detection.js";
@@ -141,6 +144,51 @@ export class OpenCodeAdapter extends BaseAdapter implements RunnerAdapter {
     }
 
     return { answers };
+  }
+
+  async judge(input: JudgeInput): Promise<JudgeVerdict> {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), "skillgym-opencode-judge-"));
+    const judgeInput = createJudgeRunInput(input, tempRoot);
+    const command = this.options.command ?? "opencode";
+    const args = [
+      ...(this.options.commandArgs ?? []),
+      "run",
+      "--model",
+      input.model,
+      "--format",
+      "json",
+      "--thinking",
+      judgeInput.prompt,
+    ];
+
+    try {
+      await prepareOpenCodeRuntime(judgeInput);
+
+      const handle = await this.runCommand(command, args, judgeInput, {
+        env: getOpenCodeEnv(judgeInput, {
+          ...this.options.env,
+          OPENCODE_CONFIG_CONTENT: JSON.stringify({
+            permission: {
+              edit: "deny",
+              bash: "deny",
+              task: "deny",
+              webfetch: "deny",
+              websearch: "deny",
+            },
+          }),
+        }),
+      });
+
+      const stdout = await readFile(handle.stdoutPath, "utf8");
+      const stderr = await readFile(handle.stderrPath, "utf8");
+      const report = {
+        finalOutput: extractOpenCodeJudgeFinalOutput(stdout, stderr),
+      };
+
+      return parseJudgeVerdict(report.finalOutput);
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
   }
 
   async collect(handle: RunHandle, input: RunInput): Promise<RawRunArtifacts> {
@@ -457,6 +505,27 @@ function createExplainQuestionInput(
   };
 }
 
+function createJudgeRunInput(input: JudgeInput, tempRoot: string): RunInput {
+  const runtimeDir = path.join(tempRoot, "runtime");
+  const artifactsDir = path.join(tempRoot, "artifacts");
+
+  return {
+    runner: {
+      id: "opencode-judge",
+      pathKey: "opencode-judge",
+      agent: {
+        type: "opencode",
+        model: input.model,
+      },
+    },
+    prompt: input.prompt,
+    cwd: runtimeDir,
+    timeoutMs: input.timeoutMs,
+    artifactsDir,
+    showRunnerOutput: false,
+  };
+}
+
 function extractOpenCodeRunError(text: string): string | undefined {
   const lines = text
     .split(/\r?\n/u)
@@ -485,6 +554,86 @@ function extractOpenCodeRunError(text: string): string | undefined {
   }
 
   return undefined;
+}
+
+function extractOpenCodeJudgeFinalOutput(stdout: string, stderr: string): string {
+  const stdoutCandidates = extractOpenCodeJudgeCandidates(stdout);
+  const stderrCandidates = extractOpenCodeJudgeCandidates(stderr);
+  const candidates = stdoutCandidates.length > 0 ? stdoutCandidates : stderrCandidates;
+
+  const jsonLikeCandidate = [...candidates]
+    .reverse()
+    .find((candidate) => looksLikeEmbeddedJson(candidate));
+
+  return jsonLikeCandidate ?? candidates.at(-1) ?? "";
+}
+
+function extractOpenCodeJudgeCandidates(text: string): string[] {
+  const candidates: string[] = [];
+
+  for (const line of text.split(/\r?\n/u)) {
+    const trimmed = line.trim();
+    if (trimmed.length === 0) {
+      continue;
+    }
+
+    try {
+      const parsed = JSON.parse(trimmed) as unknown;
+      const textValue = extractOpenCodeJudgeText(parsed);
+      if (textValue.length > 0) {
+        candidates.push(textValue);
+      }
+    } catch {
+      candidates.push(trimmed);
+    }
+  }
+
+  return candidates;
+}
+
+function extractOpenCodeJudgeText(value: unknown): string {
+  if (!isRecord(value)) {
+    return "";
+  }
+
+  const type = readString(value, "type");
+  if (type === "result") {
+    const result = readString(value, "result");
+    if (result !== undefined && result.length > 0) {
+      return result;
+    }
+  }
+
+  if (type === "text") {
+    const text = readString(value, "text");
+    if (text !== undefined && text.length > 0) {
+      return text;
+    }
+  }
+
+  const message = value.message;
+  if (isRecord(message) && Array.isArray(message.content)) {
+    const text = message.content
+      .map((part) => {
+        if (!isRecord(part)) {
+          return "";
+        }
+
+        return readString(part, "text") ?? "";
+      })
+      .filter((part) => part.length > 0)
+      .join("\n");
+
+    if (text.length > 0) {
+      return text;
+    }
+  }
+
+  return "";
+}
+
+function looksLikeEmbeddedJson(value: string): boolean {
+  return value.includes("{") && value.includes("}");
 }
 
 function getOpenCodePaths(input: RunInput): {
