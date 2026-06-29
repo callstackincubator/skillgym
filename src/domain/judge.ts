@@ -90,7 +90,12 @@ function validateJudgeVerdict(value: unknown): JudgeVerdict {
     throw new Error('Judge verdict must be "pass" or "fail".');
   }
 
-  if (typeof value.score !== "number" || !Number.isFinite(value.score) || value.score < 0 || value.score > 1) {
+  if (
+    typeof value.score !== "number" ||
+    !Number.isFinite(value.score) ||
+    value.score < 0 ||
+    value.score > 1
+  ) {
     throw new Error("Judge score must be a finite number between 0 and 1.");
   }
 

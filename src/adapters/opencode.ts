@@ -561,9 +561,9 @@ function extractOpenCodeJudgeFinalOutput(stdout: string, stderr: string): string
   const stderrCandidates = extractOpenCodeJudgeCandidates(stderr);
   const candidates = stdoutCandidates.length > 0 ? stdoutCandidates : stderrCandidates;
 
-  const jsonLikeCandidate = [...candidates].reverse().find((candidate) =>
-    looksLikeEmbeddedJson(candidate),
-  );
+  const jsonLikeCandidate = [...candidates]
+    .reverse()
+    .find((candidate) => looksLikeEmbeddedJson(candidate));
 
   return jsonLikeCandidate ?? candidates.at(-1) ?? "";
 }

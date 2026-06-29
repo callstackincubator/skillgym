@@ -90,9 +90,7 @@ test("CursorAgentAdapter judge parses stream-json final output", async () => {
     '{"verdict":"fail","score":0.25,"reason":"missing required step"}',
   );
 
-  await expect(
-    adapter.judge(createJudgeInput({ model: "cursor-judge-lite" })),
-  ).resolves.toEqual({
+  await expect(adapter.judge(createJudgeInput({ model: "cursor-judge-lite" }))).resolves.toEqual({
     verdict: "fail",
     score: 0.25,
     reason: "missing required step",

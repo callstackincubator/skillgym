@@ -2,9 +2,7 @@ import { expect, test } from "vitest";
 import { parseJudgeVerdict } from "../../src/domain/judge.js";
 
 test("parseJudgeVerdict accepts direct pass JSON", () => {
-  expect(
-    parseJudgeVerdict('{"verdict":"pass","score":1,"reason":"meets rubric"}'),
-  ).toEqual({
+  expect(parseJudgeVerdict('{"verdict":"pass","score":1,"reason":"meets rubric"}')).toEqual({
     verdict: "pass",
     score: 1,
     reason: "meets rubric",

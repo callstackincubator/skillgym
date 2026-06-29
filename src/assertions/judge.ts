@@ -86,10 +86,7 @@ function requireValidTimeout(timeoutMs: number): void {
 }
 
 function requireValidThreshold(threshold: number | undefined): void {
-  if (
-    threshold !== undefined &&
-    (!Number.isFinite(threshold) || threshold < 0 || threshold > 1)
-  ) {
+  if (threshold !== undefined && (!Number.isFinite(threshold) || threshold < 0 || threshold > 1)) {
     throw new RangeError("assert.judge threshold must be a number between 0 and 1.");
   }
 }
