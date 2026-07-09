@@ -16,6 +16,7 @@ skillgym skills get core
 skillgym run <suite.ts>
 skillgym run <suite.ts> --case <id>
 skillgym run <suite.ts> --runner <runner-id>
+skillgym skills get token-optimization
 ```
 
 Typical agent loop:
@@ -85,6 +86,8 @@ Read the focused skills only when the task needs them:
   Use when benchmarking token regressions or updating snapshot baselines.
 - `skillgym skills get reporters`
   Use when choosing built-in reporters or wiring a custom reporter.
+- `skillgym skills get token-optimization`
+  Use when reducing billable token usage for one explicit prompt, suite, or skill target without broad refactors.
 
 ## Suggested authoring order
 

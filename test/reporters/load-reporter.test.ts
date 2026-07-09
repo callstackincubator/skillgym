@@ -42,6 +42,13 @@ describe("loadReporter", () => {
     expect(reporter.onRunnerFinish).toBeUndefined();
   });
 
+  test("resolves built-in reporter when token-usage is provided", async () => {
+    const reporter = await loadReporter("token-usage", tempDir);
+
+    expect(typeof reporter.onSuiteFinish).toBe("function");
+    expect(reporter.onRunnerStart).toBeUndefined();
+  });
+
   test("resolves built-in reporter when html is provided", async () => {
     const reporter = await loadReporter("html", tempDir);
 

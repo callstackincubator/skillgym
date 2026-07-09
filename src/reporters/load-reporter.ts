@@ -5,6 +5,7 @@ import { createHtmlReporter } from "./html.js";
 import { createJsonReporter } from "./json.js";
 import { createJsonSummaryReporter } from "./json-summary.js";
 import { createStandardReporter } from "./standard.js";
+import { createTokenUsageReporter } from "./token-usage.js";
 import { isBuiltInReporter } from "./builtins.js";
 import { importFromPath } from "../utils/import.js";
 
@@ -39,6 +40,8 @@ export async function loadReporter(
         return createJsonReporter();
       case "json-summary":
         return createJsonSummaryReporter();
+      case "token-usage":
+        return createTokenUsageReporter();
       case "github-actions":
         return createGitHubActionsReporter();
       case "html":

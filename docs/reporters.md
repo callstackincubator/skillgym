@@ -10,6 +10,7 @@ Execution, aggregation, and `results.json` writing stay in the runner. Reporters
 skillgym run <suite.ts> --reporter standard
 skillgym run <suite.ts> --reporter json
 skillgym run <suite.ts> --reporter json-summary
+skillgym run <suite.ts> --reporter token-usage
 skillgym run <suite.ts> --reporter github-actions
 skillgym run <suite.ts> --reporter html
 skillgym run <suite.ts> --reporter ./examples/custom-reporter.ts
@@ -17,7 +18,7 @@ skillgym run <suite.ts> --schedule isolated-by-runner --max-parallel 4
 ```
 
 - Omitting `--reporter` uses the built-in `standard` reporter.
-- Built-in reporters are `standard`, `json`, `json-summary`, `github-actions`, and `html`.
+- Built-in reporters are `standard`, `json`, `json-summary`, `token-usage`, `github-actions`, and `html`.
 - Relative paths resolve from `process.cwd()`.
 
 ## Config
@@ -137,6 +138,18 @@ The built-in `json-summary` reporter writes a trimmed JSON summary to stdout —
 - The output includes per-case and per-runner results with token usage, pass/fail status, artifact paths, and error details, but omits the full session events and raw artifact data.
 - Per-runner results include `failureClass` when present so downstream tooling can keep grouped-failure semantics.
 - It is useful for post-run analysis steps or feeding results to an LLM.
+
+## Token usage reporter
+
+The built-in `token-usage` reporter writes one compact JSON object to stdout at `onSuiteFinish`.
+
+- It emits top-level `passed`, `billable`, `artifacts`, and `rows` fields.
+- Each row represents one `case x runner` result.
+- Passed rows with provider-backed normalized totals expose `billable: { sum, avg }`.
+- Failed rows and rows with derived or unavailable totals stay in the output with `billable: null`.
+- Top-level `billable` aggregates only passed comparable rows, so failed or non-comparable rows do not distort optimization comparisons.
+- No extra token-report artifact is written; use the listed artifact directory and the normal suite-run artifacts for debugging.
+- It is intended for agent loops such as prompt or skill minimization where stdout must stay strict and machine-readable.
 
 ## HTML reporter
 

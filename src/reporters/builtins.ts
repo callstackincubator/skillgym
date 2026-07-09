@@ -2,6 +2,7 @@ export const BUILT_IN_REPORTER_NAMES = [
   "standard",
   "json",
   "json-summary",
+  "token-usage",
   "github-actions",
   "html",
 ] as const;

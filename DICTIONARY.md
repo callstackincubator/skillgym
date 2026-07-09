@@ -37,6 +37,8 @@ Before adding or changing a term, check this file and ask the user for approval.
 - `workspace bootstrap`: Command run in a provisioned workspace before the agent starts.
 - `schedule`: Execution ordering and concurrency policy.
 - `reporter`: Component rendering suite-run progress and results.
+- `token-usage`: Built-in reporter that emits compact JSON billable-token summaries for agent consumption.
+- `token-optimization`: Bundled skill that guides an agent through baseline, minimal edits, and before/after token comparison.
 - `skill detection`: Evidence that a skill was used, with confidence and evidence.
 - `session event`: Normalized event observed during a session.
 - `snapshot baseline`: Stored token baseline for a benchmark case x runner pair.
